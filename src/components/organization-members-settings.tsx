@@ -42,7 +42,7 @@ export function OrganizationMembersSettings() {
   );
 
   const handleInvite = async () => {
-    if (!email.trim()) return;
+    if (!email.trim() || !organization) return;
     setSending(true);
     setError(null);
     setSuccess(null);
@@ -100,6 +100,8 @@ export function OrganizationMembersSettings() {
     }
   };
 
+  if (!organization) return null;
+
   return (
     <Card>
       <CardHeader>
@@ -135,13 +137,13 @@ export function OrganizationMembersSettings() {
           <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5">{error}</p>
         )}
         {success && (
-          <div className="text-xs text-green-600 bg-green-500/10 rounded px-2 py-1.5 space-y-1.5">
-            <p>{success}</p>
+          <div className="text-xs text-green-600 bg-green-500/10 rounded p-2 space-y-1 flex justify-between gap-4">
+            <p className="m-0 truncate">{success}</p>
             {lastInviteUrl && (
               <button
                 type="button"
                 onClick={() => void copyInviteLink(lastInviteUrl)}
-                className="inline-flex items-center gap-1 text-green-700 hover:underline font-medium"
+                className="inline-flex items-center gap-1 text-green-700 hover:underline font-medium shrink-0"
               >
                 {linkCopied ? (
                   <>

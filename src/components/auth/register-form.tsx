@@ -49,11 +49,10 @@ export function RegisterForm() {
       return;
     }
     if (inviteToken) {
-      router.push(`/invite/${inviteToken}`);
+      router.push(`/invite/${inviteToken}/join`);
     } else {
       router.push("/dashboard");
     }
-    router.refresh();
   };
 
   return (
@@ -63,9 +62,13 @@ export function RegisterForm() {
           <div className="inline-flex h-12 w-12 rounded-xl bg-primary flex items-center justify-center mb-4">
             <Zap className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">Create your account</h1>
+          <h1 className="text-2xl font-bold">
+            {inviteToken ? "Create your account to join" : "Create your account"}
+          </h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            Join TrackEzz and start shipping faster.
+            {inviteToken
+              ? "You’ll be added to the project right after signup"
+              : "Join TrackEzz and start shipping faster."}
           </p>
         </div>
 
@@ -102,6 +105,8 @@ export function RegisterForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-9"
                 required
+                readOnly={!!inviteToken && !!prefilledEmail}
+                disabled={!!inviteToken && !!prefilledEmail}
               />
             </div>
           </div>
@@ -133,18 +138,27 @@ export function RegisterForm() {
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Creating account…
               </>
+            ) : inviteToken ? (
+              "Create account & join project"
             ) : (
               "Create account"
             )}
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
+        {inviteToken && <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline font-medium">
+          <Link
+            href={
+              inviteToken
+                ? `/login?email=${encodeURIComponent(prefilledEmail || email)}&callbackUrl=${encodeURIComponent(`/invite/${inviteToken}/join`)}`
+                : "/login"
+            }
+            className="text-primary hover:underline font-medium"
+          >
             Sign in
           </Link>
-        </p>
+        </p>}
       </div>
     </div>
   );

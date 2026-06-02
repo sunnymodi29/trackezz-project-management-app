@@ -1,6 +1,5 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
@@ -10,6 +9,7 @@ import {
   canInviteToProject,
   canManageProject,
   isOrgOwner,
+  isOrgWideProjectAdmin,
 } from "@/lib/auth/rbac";
 import { serializeInvitation } from "@/lib/serializers";
 import { invalidateBootstrapForUser } from "@/lib/org/cache";
@@ -20,11 +20,10 @@ import {
 } from "@/lib/email/brevo";
 import { notifyInvitationReceived } from "@/lib/notifications/service";
 import {
-  ACTIVE_ORG_COOKIE,
-  ACTIVE_PROJECT_COOKIE,
-  orgCookieOptions,
-  projectCookieOptions,
-} from "@/lib/org/cookies";
+  getInvitationWorkspaceTargets,
+} from "@/lib/invitations/workspace-path";
+import { applyInvitationWorkspaceCookies } from "@/lib/org/workspace-cookies";
+import { isRedirectError } from "@/lib/next/redirect-error";
 import type { Invitation, ProjectRole } from "@/types";
 
 const INVITE_TTL_DAYS = 7;
@@ -45,6 +44,15 @@ function appOrigin(): string {
 
 function inviteUrlForToken(token: string): string {
   return `${appOrigin()}/invite/${token}`;
+}
+
+function normalizeInvitationEmail(raw: string): string {
+  const email = raw.trim().toLowerCase();
+  if (!email) throw new Error("Email is required");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Enter a valid email address");
+  }
+  return email;
 }
 
 async function deliverInvitationEmail(
@@ -87,7 +95,7 @@ export async function sendOrganizationProjectAdminInvitation(input: {
     throw new Error("FORBIDDEN: Only the organization owner can invite project admins");
   }
 
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeInvitationEmail(input.email);
   await validateNotDuplicateMember(email, input.organizationId);
 
   const inviter = await prisma.user.findUnique({
@@ -169,19 +177,25 @@ export async function sendProjectInvitation(input: {
       userId_projectId: { userId: session.user.id, projectId: project.id },
     },
   });
+  const isOrgWide = await isOrgWideProjectAdmin(
+    session.user.id,
+    project.organizationId,
+    orgCtx.member,
+  );
 
   if (
     !canInviteToProject(
       session.user.id,
       project.organization,
       orgCtx.member,
-      projectMember
+      projectMember,
+      isOrgWide,
     )
   ) {
     throw new Error("FORBIDDEN: Cannot invite to this project");
   }
 
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeInvitationEmail(input.email);
   await validateNotDuplicateProjectMember(email, project.id);
 
   const inviter = await prisma.user.findUnique({
@@ -282,12 +296,18 @@ export async function resendInvitationEmail(
         },
       },
     });
+    const isOrgWide = await isOrgWideProjectAdmin(
+      session.user.id,
+      invitation.project.organizationId,
+      orgCtx.member,
+    );
     if (
       !canManageProject(
         session.user.id,
         invitation.project.organization,
         orgCtx.member,
-        pm
+        pm,
+        isOrgWide,
       )
     ) {
       throw new Error("FORBIDDEN");
@@ -403,12 +423,18 @@ export async function cancelInvitation(invitationId: string): Promise<void> {
         },
       },
     });
+    const isOrgWide = await isOrgWideProjectAdmin(
+      session.user.id,
+      invitation.project.organizationId,
+      orgCtx.member,
+    );
     if (
       !canManageProject(
         session.user.id,
         invitation.project.organization,
         orgCtx.member,
-        pm
+        pm,
+        isOrgWide,
       )
     ) {
       throw new Error("FORBIDDEN");
@@ -422,6 +448,19 @@ export async function cancelInvitation(invitationId: string): Promise<void> {
   revalidatePath("/dashboard/settings");
 }
 
+export type InvitationInviteState = "pending" | "accepted" | "expired";
+
+function classifyInvitationState(invitation: {
+  status: string;
+  expiresAt: Date;
+}): InvitationInviteState {
+  if (invitation.status === "accepted") return "accepted";
+  if (invitation.status === "expired" || invitation.expiresAt < new Date()) {
+    return "expired";
+  }
+  return "pending";
+}
+
 export async function getInvitationByToken(token: string) {
   const invitation = await prisma.invitation.findUnique({
     where: { token },
@@ -432,20 +471,14 @@ export async function getInvitationByToken(token: string) {
     },
   });
   if (!invitation) return null;
-  if (invitation.status !== "pending" || invitation.expiresAt < new Date()) {
-    return { ...invitation, expired: true as const };
-  }
-  return { ...invitation, expired: false as const };
+
+  return {
+    ...invitation,
+    inviteState: classifyInvitationState(invitation),
+  };
 }
 
 export type AcceptInviteState = { error?: string } | null;
-
-function isRedirectError(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  const digest =
-    "digest" in error ? String((error as { digest: unknown }).digest) : "";
-  return digest.includes("NEXT_REDIRECT");
-}
 
 /** Form action: accept invite, set cookies, redirect to dashboard (reliable in production). */
 export async function acceptInvitationAction(
@@ -483,14 +516,6 @@ export async function acceptInvitation(token: string): Promise<{
     },
   });
   if (!invitation) throw new Error("NOT_FOUND");
-  if (invitation.status !== "pending") throw new Error("Invitation invalid");
-  if (invitation.expiresAt < new Date()) {
-    await prisma.invitation.update({
-      where: { id: invitation.id },
-      data: { status: "expired" },
-    });
-    throw new Error("Invitation expired");
-  }
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -501,6 +526,25 @@ export async function acceptInvitation(token: string): Promise<{
     user.email.toLowerCase() !== invitation.email.toLowerCase()
   ) {
     throw new Error("Sign in with the invited email address");
+  }
+
+  if (invitation.status === "accepted") {
+    const targets = getInvitationWorkspaceTargets(invitation);
+    await applyInvitationWorkspaceCookies(
+      targets.organizationSlug,
+      targets.projectKey,
+    );
+    await invalidateBootstrapForUser(session.user.id, targets.organizationSlug);
+    return targets;
+  }
+
+  if (invitation.status !== "pending") throw new Error("Invitation invalid");
+  if (invitation.expiresAt < new Date()) {
+    await prisma.invitation.update({
+      where: { id: invitation.id },
+      data: { status: "expired" },
+    });
+    throw new Error("Invitation expired");
   }
 
   let organizationSlug = "";
@@ -542,23 +586,6 @@ export async function acceptInvitation(token: string): Promise<{
         update: { role: invitation.projectRole },
       });
 
-      if (invitation.projectRole === "project_admin") {
-        await tx.organizationMember.upsert({
-          where: {
-            userId_organizationId: {
-              userId: session.user!.id!,
-              organizationId: project.organizationId,
-            },
-          },
-          create: {
-            userId: session.user!.id!,
-            organizationId: project.organizationId,
-            role: "project_admin",
-          },
-          update: { role: "project_admin" },
-        });
-      }
-
       organizationSlug = project.organization.slug;
       projectKey = project.key;
     }
@@ -575,11 +602,7 @@ export async function acceptInvitation(token: string): Promise<{
     );
   }
 
-  const cookieStore = await cookies();
-  cookieStore.set(ACTIVE_ORG_COOKIE, organizationSlug, orgCookieOptions());
-  if (projectKey) {
-    cookieStore.set(ACTIVE_PROJECT_COOKIE, projectKey, projectCookieOptions());
-  }
+  await applyInvitationWorkspaceCookies(organizationSlug, projectKey);
 
   await invalidateBootstrapForUser(session.user.id, organizationSlug);
   if (invitation.invitedById !== session.user.id) {

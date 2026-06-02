@@ -170,16 +170,21 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
 
   const handleInvite = async () => {
     if (!project || !inviteEmail.trim()) return;
+    const normalizedEmail = inviteEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Enter a valid email address");
+      return;
+    }
     setInviting(true);
     setError(null);
     setInviteSuccess(null);
     try {
       const result = await sendProjectInvitation({
         projectId: project.id,
-        email: inviteEmail.trim(),
+        email: normalizedEmail,
         role: inviteRole,
       });
-      setInviteSuccess(`Invitation email sent to ${inviteEmail.trim()}`);
+      setInviteSuccess(`Invitation email sent to ${normalizedEmail}`);
       setLastInviteUrl(result.inviteUrl);
       setLinkCopied(false);
       setInviteEmail("");
@@ -410,13 +415,13 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                       </Button>
                     </div>
                     {inviteSuccess && (
-                      <div className="text-xs text-green-600 bg-green-500/10 rounded px-2 py-1.5 space-y-1">
-                        <p>{inviteSuccess}</p>
+                      <div className="text-xs text-green-600 bg-green-500/10 rounded p-2 space-y-1 flex justify-between gap-4">
+                        <p className="m-0 truncate">{inviteSuccess}</p>
                         {lastInviteUrl && (
                           <button
                             type="button"
                             onClick={() => void copyInviteLink(lastInviteUrl)}
-                            className="inline-flex items-center gap-1 text-green-700 hover:underline font-medium"
+                            className="inline-flex items-center gap-1 text-green-700 hover:underline font-medium shrink-0"
                           >
                             {linkCopied ? (
                               <>
@@ -456,7 +461,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                               title="Resend email"
                               disabled={resendingId === inv.id}
                               onClick={() => void handleResendInvite(inv.id)}
-                              className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-50"
+                              className="p-1 rounded-md hover:bg-accent text-muted-foreground disabled:opacity-50"
                             >
                               <Send className="h-3.5 w-3.5" />
                             </button>
@@ -464,7 +469,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                               type="button"
                               title="Cancel invitation"
                               onClick={() => void cancelInvitation(inv.id).then(() => router.refresh())}
-                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground"
+                              className="p-1 rounded-md hover:bg-destructive/10 text-destructive"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>

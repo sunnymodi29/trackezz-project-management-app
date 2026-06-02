@@ -74,6 +74,10 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
       titleRef.current?.focus();
       return;
     }
+    if (!organization) {
+      setError("No organization workspace available");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {

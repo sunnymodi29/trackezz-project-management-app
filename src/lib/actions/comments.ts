@@ -89,6 +89,7 @@ async function assertCanComment(userId: string, issueId: string) {
       userId,
       organization: org,
       orgMember: access.orgMember,
+      isOrgWideProjectAdmin: access.isOrgWideProjectAdmin,
     })
   ) {
     throw new Error("FORBIDDEN: Cannot comment on issues in this project");

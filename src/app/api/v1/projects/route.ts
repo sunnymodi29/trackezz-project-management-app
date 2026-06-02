@@ -11,6 +11,9 @@ export async function GET(request: Request) {
     const organizationSlug = searchParams.get("organization") ?? undefined;
 
     const data = await getBootstrapData(organizationSlug ?? null, user.id!);
+    if (!data.hasWorkspace) {
+      return Response.json({ error: "No workspace access" }, { status: 403 });
+    }
 
     return jsonOk(data.projects);
   } catch (error) {

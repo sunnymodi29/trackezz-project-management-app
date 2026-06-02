@@ -46,8 +46,9 @@ interface DataState extends BootstrapData {
 }
 
 const emptyBootstrap: BootstrapData = {
+  hasWorkspace: false,
   currentUser: { id: "", name: "", email: "", createdAt: new Date() },
-  organization: { id: "", name: "", slug: "", ownerId: "", createdAt: new Date() },
+  organization: null,
   organizationMembers: [],
   permissions: {
     isOrgOwner: false,
@@ -156,7 +157,9 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   patchOrganization: (patch) =>
     set((state) => ({
-      organization: { ...state.organization, ...patch },
+      organization: state.organization
+        ? { ...state.organization, ...patch }
+        : null,
     })),
 
   patchCurrentUser: (patch) =>

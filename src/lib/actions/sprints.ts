@@ -41,6 +41,7 @@ async function assertCanManageSprint(userId: string, projectId: string) {
       userId,
       organization: org,
       orgMember: access.orgMember,
+      isOrgWideProjectAdmin: access.isOrgWideProjectAdmin,
     })
   ) {
     throw new Error("FORBIDDEN");

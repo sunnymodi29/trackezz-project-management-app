@@ -38,7 +38,7 @@ export function AcceptInviteButton({
   const handleSwitchAccount = async () => {
     await clearWorkspaceCookies();
     await signOut({
-      callbackUrl: `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}`)}`,
+      callbackUrl: `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`,
     });
   };
 
@@ -60,7 +60,7 @@ export function AcceptInviteButton({
                 Sign out and use {inviteEmail}
               </Button>
               <Link
-                href={`/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}`)}`}
+                href={`/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`}
                 className="block"
               >
                 <Button variant="ghost" className="w-full">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { resolveSessionEmail } from "@/lib/auth/session-email";
 import { getInvitationByToken } from "@/lib/actions/invitations";
@@ -33,7 +34,37 @@ export default async function InvitePage({
     );
   }
 
-  if ("expired" in invitation && invitation.expired) {
+  const inviteEmail = invitation.email.trim().toLowerCase();
+  const sessionEmail = await resolveSessionEmail(session);
+
+  if (invitation.inviteState === "accepted") {
+    if (
+      session?.user?.id &&
+      sessionEmail &&
+      sessionEmail === inviteEmail
+    ) {
+      redirect(`/invite/${token}/join`);
+    }
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <div className="max-w-md w-full rounded-xl border border-border bg-card p-8 space-y-6 text-center">
+          <h1 className="text-xl font-bold">You&apos;re already on the team</h1>
+          <p className="text-sm text-muted-foreground">
+            This invitation to <strong>{invitation.email}</strong> was already
+            accepted. Sign in with that email to open the project.
+          </p>
+          <Link
+            href={`/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent("/dashboard")}`}
+            className="block"
+          >
+            <Button className="w-full">Sign in</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (invitation.inviteState === "expired") {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md text-center space-y-4">
@@ -41,8 +72,8 @@ export default async function InvitePage({
           <p className="text-muted-foreground text-sm">
             Ask {invitation.invitedBy.name} to send a new invite to {invitation.email}.
           </p>
-          <Link href="/dashboard" className="inline-flex">
-            <Button>Go Back</Button>
+          <Link href="/login" className="inline-flex">
+            <Button>Go to login</Button>
           </Link>
         </div>
       </div>
@@ -59,8 +90,6 @@ export default async function InvitePage({
     invitation.organizationRole?.replace("_", " ") ??
     "member";
 
-  const inviteEmail = invitation.email.trim().toLowerCase();
-  const sessionEmail = await resolveSessionEmail(session);
   const emailMismatch =
     !!session?.user?.id &&
     !!sessionEmail &&
@@ -85,7 +114,7 @@ export default async function InvitePage({
               className="w-full"
             />
             <Link
-              href={`/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}`)}`}
+              href={`/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`}
               className="block"
             >
               <Button variant="ghost" className="w-full">
@@ -99,43 +128,13 @@ export default async function InvitePage({
   }
 
   if (!session?.user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div className="max-w-md w-full rounded-xl border border-border bg-card p-8 space-y-6 text-center">
-          <h1 className="text-xl font-bold">
-            {projectName ? `Join ${projectName}` : `Join ${orgName}`}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {invitation.invitedBy.name} invited <strong>{invitation.email}</strong>
-            {projectName ? (
-              <>
-                {" "}
-                to <strong>{projectName}</strong> at {orgName}
-              </>
-            ) : (
-              <> to manage projects at {orgName}</>
-            )}{" "}
-            as {roleLabel}.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Sign in or create an account with <strong>{invitation.email}</strong> to accept.
-          </p>
-          <div className="flex flex-col gap-2">
-            <Link href={`/login?callbackUrl=/invite/${token}`} className="block">
-              <Button className="w-full">Sign in</Button>
-            </Link>
-            <Link
-              href={`/register?email=${encodeURIComponent(invitation.email)}&invite=${token}`}
-              className="block"
-            >
-              <Button variant="outline" className="w-full">
-                Create account
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+    redirect(
+      `/register?email=${encodeURIComponent(inviteEmail)}&invite=${encodeURIComponent(token)}`,
     );
+  }
+
+  if (sessionEmail === inviteEmail) {
+    redirect(`/invite/${token}/join`);
   }
 
   return (

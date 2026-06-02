@@ -25,8 +25,14 @@ export async function GET(
   try {
     const user = await requireApiUser();
     const { projectId: projectKey } = await params;
-    const { organization } = await getBootstrapData();
-    const projectId = await resolveProjectIdFromRouteParam(projectKey, organization.id);
+    const data = await getBootstrapData();
+    if (!data.organization) {
+      return Response.json({ error: "No workspace access" }, { status: 403 });
+    }
+    const projectId = await resolveProjectIdFromRouteParam(
+      projectKey,
+      data.organization.id,
+    );
     await withRateLimit(user.id!, `issues:${projectId}`);
 
     await requireProjectAccess(user.id!, projectId);
@@ -44,8 +50,14 @@ export async function POST(
   try {
     const user = await requireApiUser();
     const { projectId: projectKey } = await params;
-    const { organization } = await getBootstrapData();
-    const projectId = await resolveProjectIdFromRouteParam(projectKey, organization.id);
+    const data = await getBootstrapData();
+    if (!data.organization) {
+      return Response.json({ error: "No workspace access" }, { status: 403 });
+    }
+    const projectId = await resolveProjectIdFromRouteParam(
+      projectKey,
+      data.organization.id,
+    );
     await withRateLimit(user.id!, `issues:create:${projectId}`);
 
     const body = createSchema.parse(await request.json());

@@ -1,10 +1,12 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { provisionOrganizationForUser } from "@/lib/organizations/setup";
-import { ACTIVE_ORG_COOKIE, ACTIVE_PROJECT_COOKIE } from "@/lib/org/cookies";
+import {
+  clearWorkspaceCookies,
+  setActiveOrganizationCookies,
+} from "@/lib/org/workspace-cookies";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -45,9 +47,10 @@ export async function registerUser(input: z.infer<typeof registerSchema>) {
     organizationSlug = provisioned.organizationSlug;
   }
 
-  const cookieStore = await cookies();
-  cookieStore.delete(ACTIVE_PROJECT_COOKIE);
-  cookieStore.delete(ACTIVE_ORG_COOKIE);
+  await clearWorkspaceCookies();
+  if (organizationSlug) {
+    await setActiveOrganizationCookies(organizationSlug);
+  }
 
   return { success: true, userId: user.id, organizationSlug };
 }

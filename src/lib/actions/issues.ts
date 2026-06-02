@@ -105,6 +105,7 @@ export async function createIssue(input: CreateIssueInput) {
       userId,
       organization: org,
       orgMember: access.orgMember,
+      isOrgWideProjectAdmin: access.isOrgWideProjectAdmin,
     })
   ) {
     throw new Error("FORBIDDEN: Cannot create issues in this project");
@@ -201,6 +202,7 @@ export async function updateIssue(
       userId: session.user.id,
       organization: org,
       orgMember: access.orgMember,
+      isOrgWideProjectAdmin: access.isOrgWideProjectAdmin,
     })
   ) {
     throw new Error("FORBIDDEN: Cannot update issues in this project");
@@ -325,6 +327,7 @@ export async function deleteIssue(issueId: string): Promise<{ projectKey: string
       userId: session.user.id,
       organization: org,
       orgMember: access.orgMember,
+      isOrgWideProjectAdmin: access.isOrgWideProjectAdmin,
     })
   ) {
     throw new Error("FORBIDDEN: Cannot delete issues in this project");

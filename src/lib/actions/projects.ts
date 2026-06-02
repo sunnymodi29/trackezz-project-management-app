@@ -8,6 +8,7 @@ import {
   requireProjectAccess,
   canCreateProject,
   canManageProject,
+  isOrgWideProjectAdmin,
 } from "@/lib/auth/rbac";
 import {
   serializeProject,
@@ -73,7 +74,12 @@ export async function createProject(
     session.user.id,
     input.organizationId
   );
-  if (!canCreateProject(session.user.id, org, member)) {
+  const isOrgWide = await isOrgWideProjectAdmin(
+    session.user.id,
+    input.organizationId,
+    member,
+  );
+  if (!canCreateProject(session.user.id, org, member, isOrgWide)) {
     throw new Error("FORBIDDEN: Cannot create projects");
   }
 
@@ -149,7 +155,8 @@ export async function updateProject(
       session.user.id,
       org,
       access.orgMember,
-      access.projectMember
+      access.projectMember,
+      access.isOrgWideProjectAdmin,
     )
   ) {
     throw new Error("FORBIDDEN");
@@ -216,7 +223,8 @@ export async function deleteProject(projectId: string): Promise<{ projectKey: st
       session.user.id,
       org,
       access.orgMember,
-      access.projectMember
+      access.projectMember,
+      access.isOrgWideProjectAdmin,
     )
   ) {
     throw new Error("FORBIDDEN");
@@ -252,7 +260,8 @@ export async function addProjectMember(
       session.user.id,
       org,
       access.orgMember,
-      access.projectMember
+      access.projectMember,
+      access.isOrgWideProjectAdmin,
     )
   ) {
     throw new Error("FORBIDDEN");
@@ -304,7 +313,8 @@ export async function removeProjectMember(
       session.user.id,
       org,
       access.orgMember,
-      access.projectMember
+      access.projectMember,
+      access.isOrgWideProjectAdmin,
     )
   ) {
     throw new Error("FORBIDDEN");
@@ -321,8 +331,33 @@ export async function removeProjectMember(
     throw new Error("Cannot remove the last project admin");
   }
 
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { key: true },
+  });
+
   await prisma.projectMember.delete({
     where: { userId_projectId: { userId, projectId } },
   });
-  await invalidateOrg(session.user.id, org.slug);
+
+  const remainingProjects = await prisma.projectMember.count({
+    where: { userId, project: { organizationId: org.id } },
+  });
+  if (remainingProjects === 0) {
+    const targetOrgMember = await prisma.organizationMember.findUnique({
+      where: {
+        userId_organizationId: { userId, organizationId: org.id },
+      },
+    });
+    if (targetOrgMember?.role === "project_admin") {
+      await prisma.organizationMember.delete({
+        where: {
+          userId_organizationId: { userId, organizationId: org.id },
+        },
+      });
+    }
+  }
+
+  await invalidateOrg(session.user.id, org.slug, project?.key);
+  await invalidateBootstrapForUser(userId, org.slug);
 }

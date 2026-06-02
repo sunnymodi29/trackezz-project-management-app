@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import {
   canCreateProject,
   getAccessibleProjectIds,
   isOrgOwner,
+  isOrgWideProjectAdmin,
   userHasOrganizationAccess,
 } from "@/lib/auth/rbac";
 import { cacheGet, cacheSet } from "@/lib/redis";
@@ -41,8 +43,9 @@ import type {
 } from "@/types";
 
 export interface BootstrapData {
+  hasWorkspace: boolean;
   currentUser: User;
-  organization: Organization;
+  organization: Organization | null;
   organizationMembers: OrganizationMember[];
   permissions: UserPermissions;
   projects: Project[];
@@ -55,6 +58,72 @@ export interface BootstrapData {
   activityLogs: ActivityLog[];
   invitations: Invitation[];
   aiConversations: AIConversation[];
+}
+
+export type WorkspaceBootstrapData = BootstrapData & {
+  hasWorkspace: true;
+  organization: Organization;
+};
+
+const emptyPermissions: UserPermissions = {
+  isOrgOwner: false,
+  isOrgProjectAdmin: false,
+  canCreateProject: false,
+  canInviteOrgProjectAdmin: false,
+};
+
+async function buildNoWorkspaceBootstrap(
+  userId: string,
+): Promise<BootstrapData> {
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+  if (!currentUser) throw new Error("User not found");
+
+  const notifications = await prisma.notification.findMany({
+    where: { userId: currentUser.id },
+    include: {
+      actor: true,
+      issue: { include: issueInclude },
+      invitation: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
+  return {
+    hasWorkspace: false,
+    currentUser: serializeUser(currentUser),
+    organization: null,
+    organizationMembers: [],
+    permissions: emptyPermissions,
+    projects: [],
+    projectMembers: [],
+    issues: [],
+    sprints: [],
+    epics: [],
+    labels: [],
+    notifications: notifications.map(serializeNotification),
+    activityLogs: [],
+    invitations: [],
+    aiConversations: [],
+  };
+}
+
+/** Redirects to /dashboard when the user has no org/project access. */
+export async function requireWorkspaceBootstrap(
+  organizationSlug?: string | null,
+  userId?: string,
+): Promise<WorkspaceBootstrapData> {
+  const data = await getBootstrapData(organizationSlug, userId);
+  if (!data.hasWorkspace || !data.organization) {
+    redirect("/dashboard");
+  }
+  return {
+    ...data,
+    hasWorkspace: true as const,
+    organization: data.organization,
+  };
 }
 
 /**
@@ -100,10 +169,6 @@ export async function getBootstrapData(
     : null;
 
   if (org && !(await userHasOrganizationAccess(resolvedUserId, org.id))) {
-    if (orgSlugFromCookie) {
-      cookieStore.delete(ACTIVE_ORG_COOKIE);
-      cookieStore.delete(ACTIVE_PROJECT_COOKIE);
-    }
     org = null;
   }
 
@@ -111,7 +176,7 @@ export async function getBootstrapData(
     org = await resolveOrganizationForUser(resolvedUserId);
   }
   if (!org) {
-    throw new Error("No organization. Complete registration or accept an invitation.");
+    return buildNoWorkspaceBootstrap(resolvedUserId);
   }
 
   const cacheKey = `bootstrap:${resolvedUserId}:${org.slug}`;
@@ -271,11 +336,20 @@ export async function getBootstrapData(
   ]);
 
   const owner = isOrgOwner(resolvedUserId, org);
-  const isOrgProjectAdmin = orgMember?.role === "project_admin";
+  const isOrgWide = await isOrgWideProjectAdmin(
+    resolvedUserId,
+    org.id,
+    orgMember,
+  );
   const permissions: UserPermissions = {
     isOrgOwner: owner,
-    isOrgProjectAdmin: isOrgProjectAdmin,
-    canCreateProject: canCreateProject(resolvedUserId, org, orgMember),
+    isOrgProjectAdmin: isOrgWide,
+    canCreateProject: canCreateProject(
+      resolvedUserId,
+      org,
+      orgMember,
+      isOrgWide,
+    ),
     canInviteOrgProjectAdmin: owner,
   };
 
@@ -286,6 +360,7 @@ export async function getBootstrapData(
   }
 
   const result: BootstrapData = {
+    hasWorkspace: true,
     currentUser: serializeUser(currentUser),
     organization: serializeOrganization(org),
     organizationMembers: orgMembers.map(serializeOrganizationMember),

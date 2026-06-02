@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { DashboardDataProvider } from "@/components/dashboard-data-provider";
+import { NoWorkspaceShell } from "@/components/no-workspace-shell";
 import { getBootstrapData } from "@/lib/queries/bootstrap";
 import type { Metadata } from "next";
 
@@ -13,6 +14,14 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const data = await getBootstrapData();
+
+  if (!data.hasWorkspace) {
+    return (
+      <DashboardDataProvider data={data}>
+        <NoWorkspaceShell />
+      </DashboardDataProvider>
+    );
+  }
 
   return (
     <DashboardDataProvider data={data}>

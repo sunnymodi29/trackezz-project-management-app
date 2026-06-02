@@ -39,6 +39,19 @@ export async function requireOrganizationMember(
   };
 }
 
+/** Org invite project_admin with no project rows — access all projects in the org. */
+export async function isOrgWideProjectAdmin(
+  userId: string,
+  organizationId: string,
+  orgMember: { role: OrganizationRole } | null,
+): Promise<boolean> {
+  if (orgMember?.role !== "project_admin") return false;
+  const projectCount = await prisma.projectMember.count({
+    where: { userId, project: { organizationId } },
+  });
+  return projectCount === 0;
+}
+
 export async function requireProjectAccess(userId: string, projectId: string) {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -50,9 +63,13 @@ export async function requireProjectAccess(userId: string, projectId: string) {
   const projectMember = await getProjectMembership(userId, projectId);
 
   const isOrgOwner = orgCtx.isOwner;
-  const isOrgProjectAdmin = orgCtx.member?.role === "project_admin";
+  const isOrgWideAdmin = await isOrgWideProjectAdmin(
+    userId,
+    project.organizationId,
+    orgCtx.member,
+  );
 
-  if (!isOrgOwner && !isOrgProjectAdmin && !projectMember) {
+  if (!isOrgOwner && !isOrgWideAdmin && !projectMember) {
     throw new Error("FORBIDDEN: No access to this project");
   }
 
@@ -61,7 +78,8 @@ export async function requireProjectAccess(userId: string, projectId: string) {
     organizationId: project.organizationId,
     orgMember: orgCtx.member,
     isOrgOwner,
-    isOrgProjectAdmin,
+    isOrgProjectAdmin: isOrgWideAdmin,
+    isOrgWideProjectAdmin: isOrgWideAdmin,
     projectMember,
   };
 }
@@ -76,20 +94,22 @@ export function isOrgOwner(
 export function canCreateProject(
   userId: string,
   organization: { ownerId: string },
-  orgMember: { role: OrganizationRole } | null
+  orgMember: { role: OrganizationRole } | null,
+  isOrgWideProjectAdmin = false,
 ): boolean {
   if (isOrgOwner(userId, organization)) return true;
-  return orgMember?.role === "project_admin";
+  return isOrgWideProjectAdmin;
 }
 
 export function canManageProject(
   userId: string,
   organization: { ownerId: string },
   orgMember: { role: OrganizationRole } | null,
-  projectMember: { role: ProjectRole } | null
+  projectMember: { role: ProjectRole } | null,
+  isOrgWideProjectAdmin = false,
 ): boolean {
   if (isOrgOwner(userId, organization)) return true;
-  if (orgMember?.role === "project_admin") return true;
+  if (isOrgWideProjectAdmin) return true;
   return projectMember?.role === "project_admin";
 }
 
@@ -97,9 +117,16 @@ export function canInviteToProject(
   userId: string,
   organization: { ownerId: string },
   orgMember: { role: OrganizationRole } | null,
-  projectMember: { role: ProjectRole } | null
+  projectMember: { role: ProjectRole } | null,
+  isOrgWideProjectAdmin = false,
 ): boolean {
-  return canManageProject(userId, organization, orgMember, projectMember);
+  return canManageProject(
+    userId,
+    organization,
+    orgMember,
+    projectMember,
+    isOrgWideProjectAdmin,
+  );
 }
 
 export function canManageIssues(
@@ -108,10 +135,11 @@ export function canManageIssues(
     userId: string;
     organization: { ownerId: string };
     orgMember: { role: OrganizationRole } | null;
-  }
+    isOrgWideProjectAdmin?: boolean;
+  },
 ): boolean {
   if (isOrgOwner(opts.userId, opts.organization)) return true;
-  if (opts.orgMember?.role === "project_admin") return true;
+  if (opts.isOrgWideProjectAdmin) return true;
   if (!projectMember) return false;
   return (
     projectMember.role === "project_admin" || projectMember.role === "member"
@@ -159,7 +187,7 @@ export async function getAccessibleProjectIds(
   }
 
   const orgMember = await getOrganizationMembership(userId, organizationId);
-  if (orgMember?.role === "project_admin") {
+  if (await isOrgWideProjectAdmin(userId, organizationId, orgMember)) {
     return "all";
   }
 

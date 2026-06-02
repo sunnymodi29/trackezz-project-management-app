@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { BootstrapData } from "@/lib/queries/bootstrap";
 import { useDataStore } from "@/store/data-store";
 import { useAppStore } from "@/store/app-store";
+import { WorkspaceCookieSync } from "@/components/workspace-cookie-sync";
 
 export function DashboardDataProvider({
   data,
@@ -17,6 +18,7 @@ export function DashboardDataProvider({
 
   useEffect(() => {
     hydrate(data);
+    if (!data.hasWorkspace || projects.length === 0) return;
     const app = useAppStore.getState();
     const valid = projects.some((p) => p.id === app.currentProject.id);
     if (!valid && projects[0]) {
@@ -24,5 +26,10 @@ export function DashboardDataProvider({
     }
   }, [data, hydrate, projects]);
 
-  return <>{children}</>;
+  return (
+    <>
+      <WorkspaceCookieSync hasWorkspace={data.hasWorkspace} />
+      {children}
+    </>
+  );
 }

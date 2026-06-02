@@ -18,7 +18,7 @@ export function InviteSwitchAccountButton({
   const handleClick = async () => {
     await clearWorkspaceCookies();
     await signOut({
-      callbackUrl: `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}`)}`,
+      callbackUrl: `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`,
     });
   };
 

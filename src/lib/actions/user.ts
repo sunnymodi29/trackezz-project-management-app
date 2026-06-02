@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { serializeUser } from "@/lib/serializers";
 import { invalidateBootstrapForUser } from "@/lib/org/cache";
+import { clearWorkspaceCookies } from "@/lib/org/workspace-cookies";
 import {
   FILESYSTEM_STORAGE_MESSAGE,
   isFilesystemStorageAvailable,
@@ -298,4 +299,6 @@ export async function deleteUserAccount(input: {
 
     await tx.user.delete({ where: { id: userId } });
   });
+
+  await clearWorkspaceCookies();
 }

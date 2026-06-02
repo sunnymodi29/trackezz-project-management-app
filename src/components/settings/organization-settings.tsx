@@ -11,13 +11,15 @@ import { updateOrganization } from "@/lib/actions/organization";
 export function OrganizationSettings() {
   const router = useRouter();
   const { organization, permissions, patchOrganization } = useDataStore();
-  const [name, setName] = useState(organization.name);
+  const [name, setName] = useState(organization?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
 
   const canEditOrg = permissions.isOrgOwner;
+
+  if (!organization) return null;
 
   const handleSave = async () => {
     if (!canEditOrg) return;

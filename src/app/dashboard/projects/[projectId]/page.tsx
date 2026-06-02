@@ -1,4 +1,4 @@
-import { getBootstrapData } from "@/lib/queries/bootstrap";
+import { requireWorkspaceBootstrap } from "@/lib/queries/bootstrap";
 import { getProjectByRouteParam } from "@/lib/queries/projects";
 import { notFound } from "next/navigation";
 import {
@@ -37,7 +37,7 @@ export async function generateMetadata({
   params: Promise<{ projectId: string }>;
 }): Promise<Metadata> {
   const { projectId: projectKey } = await params;
-  const data = await getBootstrapData();
+  const data = await requireWorkspaceBootstrap();
   const project = await getProjectByRouteParam(projectKey, data.organization.id);
   return { title: project?.name ?? "Project" };
 }
@@ -48,7 +48,7 @@ export default async function ProjectOverviewPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId: projectKey } = await params;
-  const data = await getBootstrapData();
+  const data = await requireWorkspaceBootstrap();
   const project =
     data.projects.find(
       (p) => p.key.toUpperCase() === projectKey.toUpperCase() || p.id === projectKey,

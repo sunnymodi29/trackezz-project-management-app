@@ -13,8 +13,11 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
+  const data = await getBootstrapData();
+  if (!data.hasWorkspace) return null;
+
   const { currentUser, issues, notifications, projects, sprints, activityLogs } =
-    await getBootstrapData();
+    data;
   const { velocityData } = await getAnalyticsData();
 
   const myIssues = issues

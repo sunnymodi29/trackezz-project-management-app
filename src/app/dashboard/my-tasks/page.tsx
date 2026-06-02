@@ -11,7 +11,10 @@ import type { Issue } from "@/types";
 export const metadata: Metadata = { title: "My Tasks" };
 
 export default async function MyTasksPage() {
-  const { currentUser, issues, projects } = await getBootstrapData();
+  const data = await getBootstrapData();
+  if (!data.hasWorkspace) return null;
+
+  const { currentUser, issues, projects } = data;
   const myIssues = issues.filter((i) => i.assigneeIds.includes(currentUser.id));
   const openIssues = myIssues.filter((i) => i.status !== "done" && i.status !== "cancelled");
   const completedIssues = myIssues.filter((i) => i.status === "done");

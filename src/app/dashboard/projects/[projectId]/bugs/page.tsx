@@ -1,4 +1,4 @@
-import { getBootstrapData } from "@/lib/queries/bootstrap";
+import { requireWorkspaceBootstrap } from "@/lib/queries/bootstrap";
 import { getProjectByRouteParam } from "@/lib/queries/projects";
 import { issuePath } from "@/lib/projects/route";
 import { notFound } from "next/navigation";
@@ -14,7 +14,7 @@ export async function generateMetadata({
   params: Promise<{ projectId: string }>;
 }): Promise<Metadata> {
   const { projectId: projectKey } = await params;
-  const data = await getBootstrapData();
+  const data = await requireWorkspaceBootstrap();
   const project = await getProjectByRouteParam(projectKey, data.organization.id);
   const name = project?.name ?? "Project";
   return { title: `Bugs | ${name}` };
@@ -22,7 +22,7 @@ export async function generateMetadata({
 
 export default async function ProjectBugsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId: projectKey } = await params;
-  const data = await getBootstrapData();
+  const data = await requireWorkspaceBootstrap();
   const project = await getProjectByRouteParam(projectKey, data.organization.id);
   if (!project) notFound();
   const bugs = data.issues.filter((i) => i.projectId === project.id && i.type === "bug");
