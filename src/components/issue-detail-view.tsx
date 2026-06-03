@@ -17,8 +17,13 @@ import { countComments } from "@/lib/comments/tree";
 import {
   X, ExternalLink, Paperclip, Clock, User, Zap,
   Calendar, Tag, Flag, ChevronRight, Edit2, Copy, Trash2,
-  Check,
+  Check, MessageSquare, History, Filter,
 } from "lucide-react";
+import {
+  buildAssigneeFilterOptions,
+  issueMatchesAssigneeFilter,
+  type AssigneeFilterValue,
+} from "@/lib/issues/filters";
 import { coerceDate, dateFromKey, toDateKey } from "@/lib/issues/dates";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +31,7 @@ interface IssueDetailViewProps {
   issueId: string;
   variant?: "drawer" | "page";
   onClose?: () => void;
+  onNavigateIssue?: (issueId: string) => void;
   className?: string;
 }
 
@@ -33,6 +39,7 @@ export function IssueDetailView({
   issueId,
   variant = "drawer",
   onClose,
+  onNavigateIssue,
   className,
 }: IssueDetailViewProps) {
   const router = useRouter();
@@ -57,6 +64,7 @@ export function IssueDetailView({
     ? getProjectMembers(issue.projectId).map((m) => m.user)
     : [];
   const [activeTab, setActiveTab] = useState<"comments" | "activity">("comments");
+  const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilterValue>("all");
 
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(issue?.title ?? "");
@@ -67,10 +75,38 @@ export function IssueDetailView({
     [issue, getActivityLogsForIssue]
   );
 
+  const assigneeFilterOptions = useMemo(
+    () => buildAssigneeFilterOptions(users),
+    [users],
+  );
+
+  const projectIssues = useMemo(
+    () =>
+      issue
+        ? issues.filter((i) => i.projectId === issue.projectId)
+        : [],
+    [issues, issue?.projectId],
+  );
+
+  const filteredProjectIssues = useMemo(
+    () =>
+      issue
+        ? projectIssues
+            .filter(
+              (i) =>
+                i.id !== issue.id && issueMatchesAssigneeFilter(i, assigneeFilter),
+            )
+            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+            .slice(0, 12)
+        : [],
+    [projectIssues, issue, assigneeFilter],
+  );
+
   useEffect(() => {
     if (!issue) return;
     setTitle(issue.title);
     setDescription(issue.description ?? "");
+    setAssigneeFilter("all");
   }, [issue]);
 
   if (!issue) {
@@ -418,7 +454,7 @@ export function IssueDetailView({
                     dueDate: v ? dateFromKey(v) : null,
                   });
                 }}
-                className="text-xs text-foreground bg-transparent border-0 outline-none cursor-pointer hover:bg-accent/50 rounded px-1 -ml-1"
+                className="text-xs text-foreground bg-transparent border-0 outline-none cursor-pointer"
               />
             </MetaRow>
           </div>
@@ -464,22 +500,108 @@ export function IssueDetailView({
           </div>
         )}
 
+        {projectIssues.length > 1 && (
+          <div className="px-5 py-4 border-b border-border">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Filter className="h-3 w-3" />
+                Project issues
+              </div>
+              <CustomSelect
+                options={assigneeFilterOptions}
+                value={assigneeFilter}
+                onChange={(v) => setAssigneeFilter(v as AssigneeFilterValue)}
+                placeholder="Assignee"
+                className="w-40"
+                triggerClassName="h-8 text-xs"
+              />
+            </div>
+            {filteredProjectIssues.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">
+                No other issues match this assignee filter.
+              </p>
+            ) : (
+              <ul className="space-y-1 max-h-40 overflow-y-auto">
+                {filteredProjectIssues.map((item) => (
+                  <li key={item.id}>
+                    {variant === "drawer" && onNavigateIssue ? (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateIssue(item.id)}
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent transition-colors"
+                      >
+                        <IssueTypeIcon type={item.type} />
+                        <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                          {item.issueKey}
+                        </span>
+                        <span className="flex-1 min-w-0 text-xs truncate">{item.title}</span>
+                        <StatusBadge status={item.status} />
+                      </button>
+                    ) : (
+                      <Link
+                        href={issuePath(projectKey, item.id)}
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors"
+                      >
+                        <IssueTypeIcon type={item.type} />
+                        <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                          {item.issueKey}
+                        </span>
+                        <span className="flex-1 min-w-0 text-xs truncate">{item.title}</span>
+                        <StatusBadge status={item.status} />
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {assigneeFilter === "all" && issue.assigneeIds.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {issue.assignees.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setAssigneeFilter(a.id)}
+                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <Avatar src={a.avatarUrl} name={a.name} size="xs" />
+                    {a.name.split(" ")[0]}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setAssigneeFilter("unassigned")}
+                  className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                >
+                  Unassigned
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className={cn("pt-4 flex flex-col", activeTab === "comments" && "flex-1 min-h-0")}>
-          <div className="flex gap-4 border-b border-border mb-2 px-5 shrink-0">
-            {(["comments", "activity"] as const).map((tab) => (
+          <div className="flex gap-2 border-b border-border mb-2 px-5 shrink-0">
+            {(
+              [
+                { id: "comments" as const, label: "Comments", icon: MessageSquare },
+                { id: "activity" as const, label: "Activity", icon: History },
+              ] as const
+            ).map(({ id, label, icon: Icon }) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
                 className={cn(
-                  "pb-2 text-xs font-medium capitalize border-b-2 transition-colors cursor-pointer",
-                  activeTab === tab
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                  "relative flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-colors cursor-pointer rounded-t-md",
+                  activeTab === id
+                    ? "z-10 bg-card text-primary shadow-[inset_0_-2px_0_0_var(--color-primary)]"
+                    : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                 )}
               >
-                {tab}
-                {tab === "comments" && commentCount > 0 && (
-                  <span className="ml-1.5 text-[10px] bg-muted rounded-full px-1.5 py-0.5">
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                {label}
+                {id === "comments" && commentCount > 0 && (
+                  <span className="text-[10px] bg-muted rounded-full px-1.5 py-0.5">
                     {commentCount}
                   </span>
                 )}

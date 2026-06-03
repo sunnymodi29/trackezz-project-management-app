@@ -9,6 +9,7 @@ import {
   canCreateProject,
   canManageProject,
   isOrgWideProjectAdmin,
+  userHasOrganizationAccess,
 } from "@/lib/auth/rbac";
 import {
   serializeProject,
@@ -100,7 +101,19 @@ export async function createProject(
   };
 
   add(session.user.id, "project_admin");
-  for (const m of input.members ?? []) add(m.userId, m.role);
+  add(org.ownerId, "project_admin");
+  for (const m of input.members ?? []) {
+    const allowed = await userHasOrganizationAccess(
+      m.userId,
+      input.organizationId,
+    );
+    if (!allowed) {
+      throw new Error(
+        "Each member must belong to the organization or an existing project in it",
+      );
+    }
+    add(m.userId, m.role);
+  }
 
   const project = await prisma.project.create({
     data: {

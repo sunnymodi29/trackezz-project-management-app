@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, UserPlus, Trash2, Clock, Send, Copy, Check } from "lucide-react";
 import {
@@ -19,16 +19,34 @@ import {
   resendInvitationEmail,
 } from "@/lib/actions/invitations";
 import { formatRelativeTime } from "@/lib/utils";
+import {
+  getProjectOnlyCollaborators,
+  orgMemberRoleLabel,
+} from "@/lib/org/member-display";
 
 export function OrganizationMembersSettings() {
   const router = useRouter();
   const {
     organization,
     organizationMembers,
+    projectMembers,
+    projects,
     invitations,
     permissions,
-    currentUser,
   } = useDataStore();
+
+  const projectOnlyCollaborators = useMemo(
+    () =>
+      getProjectOnlyCollaborators(
+        organizationMembers,
+        projectMembers,
+        projects,
+      ),
+    [organizationMembers, projectMembers, projects],
+  );
+
+  const memberCount =
+    organizationMembers.length + projectOnlyCollaborators.length;
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
@@ -111,8 +129,9 @@ export function OrganizationMembersSettings() {
       </CardHeader>
       <CardContent className="space-y-6">
         <p className="text-sm text-muted-foreground">
-          Project admins can create projects. Project-level members are managed on each
-          project&apos;s Members page.
+          Org-wide project admins can create projects. People invited to a single project
+          appear here with project access only. Change roles on each project&apos;s Members
+          page.
         </p>
 
         {permissions.canInviteOrgProjectAdmin && (
@@ -160,9 +179,7 @@ export function OrganizationMembersSettings() {
         )}
 
         <div className="space-y-2">
-          <h3 className="text-sm font-medium">
-            Members ({organizationMembers.length + (organization.ownerId === currentUser.id ? 0 : 0)})
-          </h3>
+          <h3 className="text-sm font-medium">Members ({memberCount})</h3>
           {organizationMembers.map((m) => (
             <div
               key={m.id}
@@ -173,11 +190,34 @@ export function OrganizationMembersSettings() {
                 <div className="text-sm font-medium truncate">{m.user.name}</div>
                 <div className="text-xs text-muted-foreground truncate">{m.user.email}</div>
               </div>
-              <span className="text-xs capitalize text-muted-foreground">
-                {m.role.replace("_", " ")}
+              <span className="text-xs text-muted-foreground shrink-0">
+                {orgMemberRoleLabel(m, projectMembers, projects)}
               </span>
             </div>
           ))}
+          {projectOnlyCollaborators.map((c) => (
+            <div
+              key={c.userId}
+              className="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
+            >
+              <Avatar src={c.user.avatarUrl} name={c.user.name} size="sm" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{c.user.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{c.user.email}</div>
+                {/* {c.projectNames.length > 0 && (
+                  <div className="text-xs text-muted-foreground truncate mt-0.5">
+                    {c.projectNames.join(", ")}
+                  </div>
+                )} */}
+              </div>
+              <span className="text-xs text-muted-foreground shrink-0">
+                Project access
+              </span>
+            </div>
+          ))}
+          {memberCount === 0 && (
+            <p className="text-sm text-muted-foreground">No members yet.</p>
+          )}
         </div>
 
         {orgInvites.length > 0 && (

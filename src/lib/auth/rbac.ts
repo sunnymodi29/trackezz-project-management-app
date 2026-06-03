@@ -59,14 +59,16 @@ export async function requireProjectAccess(userId: string, projectId: string) {
   });
   if (!project) throw new Error("NOT_FOUND: Project not found");
 
-  const orgCtx = await requireOrganizationMember(userId, project.organizationId);
+  const orgMember = await getOrganizationMembership(
+    userId,
+    project.organizationId,
+  );
   const projectMember = await getProjectMembership(userId, projectId);
-
-  const isOrgOwner = orgCtx.isOwner;
+  const isOrgOwner = project.organization.ownerId === userId;
   const isOrgWideAdmin = await isOrgWideProjectAdmin(
     userId,
     project.organizationId,
-    orgCtx.member,
+    orgMember,
   );
 
   if (!isOrgOwner && !isOrgWideAdmin && !projectMember) {
@@ -76,7 +78,7 @@ export async function requireProjectAccess(userId: string, projectId: string) {
   return {
     project,
     organizationId: project.organizationId,
-    orgMember: orgCtx.member,
+    orgMember,
     isOrgOwner,
     isOrgProjectAdmin: isOrgWideAdmin,
     isOrgWideProjectAdmin: isOrgWideAdmin,

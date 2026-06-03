@@ -586,6 +586,26 @@ export async function acceptInvitation(token: string): Promise<{
         update: { role: invitation.projectRole },
       });
 
+      const orgId = invitation.organizationId ?? project.organizationId;
+      const orgRoleFromInvite =
+        invitation.organizationId && invitation.organizationRole;
+      if (orgId && !orgRoleFromInvite) {
+        await tx.organizationMember.upsert({
+          where: {
+            userId_organizationId: {
+              userId: session.user!.id!,
+              organizationId: orgId,
+            },
+          },
+          create: {
+            userId: session.user!.id!,
+            organizationId: orgId,
+            role: "project_admin",
+          },
+          update: {},
+        });
+      }
+
       organizationSlug = project.organization.slug;
       projectKey = project.key;
     }

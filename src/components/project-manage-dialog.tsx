@@ -582,10 +582,10 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-md border-b-2 -mb-px transition-colors",
+        "relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium rounded-t-md transition-colors",
         active
-          ? "border-primary text-foreground"
-          : "border-transparent text-muted-foreground hover:text-foreground"
+          ? "z-10 bg-card text-primary shadow-[inset_0_-2px_0_0_var(--color-primary)]"
+          : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
       )}
     >
       {icon}

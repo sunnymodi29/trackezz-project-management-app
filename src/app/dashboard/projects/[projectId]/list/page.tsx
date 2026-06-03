@@ -12,6 +12,11 @@ import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/utils";
 import type { IssueType, IssueStatus, Priority } from "@/types";
 import {
+  buildAssigneeFilterOptions,
+  issueMatchesAssigneeFilter,
+  type AssigneeFilterValue,
+} from "@/lib/issues/filters";
+import {
   Search, Plus, ChevronDown, MoreHorizontal,
 } from "lucide-react";
 import IssueDrawer from "@/components/issue-drawer";
@@ -30,7 +35,7 @@ function ListPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { openNewIssue } = useAppStore();
-  const { projects, getIssuesByProject } = useDataStore();
+  const { projects, getIssuesByProject, getProjectMembers } = useDataStore();
   const { persist } = usePersistIssue();
 
   const routeParam = params.projectId as string;
@@ -43,7 +48,16 @@ function ListPageContent() {
   const [typeFilter, setTypeFilter] = useState<IssueType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilterValue>("all");
   const [sortBy, setSortBy] = useState<"updated" | "created" | "priority">("updated");
+
+  const assigneeFilterOptions = useMemo(
+    () =>
+      buildAssigneeFilterOptions(
+        project ? getProjectMembers(project.id).map((m) => m.user) : [],
+      ),
+    [project, getProjectMembers],
+  );
 
   useEffect(() => {
     const issueParam = searchParams.get("issue");
@@ -62,6 +76,7 @@ function ListPageContent() {
           if (typeFilter !== "all" && i.type !== typeFilter) return false;
           if (statusFilter !== "all" && i.status !== statusFilter) return false;
           if (priorityFilter !== "all" && i.priority !== priorityFilter) return false;
+          if (!issueMatchesAssigneeFilter(i, assigneeFilter)) return false;
           return true;
         })
         .sort((a, b) => {
@@ -72,7 +87,7 @@ function ListPageContent() {
           if (sortBy === "created") return b.createdAt.getTime() - a.createdAt.getTime();
           return b.updatedAt.getTime() - a.updatedAt.getTime();
         }),
-    [projectIssues, search, typeFilter, statusFilter, priorityFilter, sortBy]
+    [projectIssues, search, typeFilter, statusFilter, priorityFilter, assigneeFilter, sortBy]
   );
 
   const grouped = useMemo(
@@ -136,6 +151,12 @@ function ListPageContent() {
               { value: "urgent", label: "Urgent" }, { value: "high", label: "High" },
               { value: "medium", label: "Medium" }, { value: "low", label: "Low" },
             ]} />
+            <FilterSelect
+              label="Assignee"
+              value={assigneeFilter}
+              onChange={(v) => setAssigneeFilter(v as AssigneeFilterValue)}
+              options={assigneeFilterOptions}
+            />
             <FilterSelect label="Sort" value={sortBy} onChange={(v) => setSortBy(v as "updated" | "created" | "priority")} options={[
               { value: "updated", label: "Last Updated" },
               { value: "created", label: "Created" },
@@ -178,7 +199,11 @@ function ListPageContent() {
       </div>
 
       {selectedIssueId && (
-        <IssueDrawer issueId={selectedIssueId} onClose={() => setSelectedIssueId(null)} />
+        <IssueDrawer
+          issueId={selectedIssueId}
+          onClose={() => setSelectedIssueId(null)}
+          onNavigateIssue={setSelectedIssueId}
+        />
       )}
     </div>
   );

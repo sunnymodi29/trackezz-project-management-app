@@ -8,8 +8,8 @@ import { useDataStore } from "@/store/data-store";
 import { createProject } from "@/lib/actions/projects";
 import { deriveProjectKey } from "@/lib/projects/project-utils";
 import { PROJECT_ROLE_OPTIONS } from "@/lib/projects/constants";
+import { getAssignableOrgUsers } from "@/lib/org/member-display";
 import type { ProjectRole } from "@/types";
-import { cn } from "@/lib/utils";
 
 interface DraftMember {
   userId: string;
@@ -23,13 +23,22 @@ interface NewProjectModalProps {
 
 export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
   const router = useRouter();
-  const { organization, organizationMembers, permissions, upsertProject, upsertProjectMember } =
-    useDataStore();
+  const {
+    organization,
+    organizationMembers,
+    projectMembers,
+    projects,
+    permissions,
+    currentUser,
+    upsertProject,
+    upsertProjectMember,
+  } = useDataStore();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [keyOverride, setKeyOverride] = useState("");
   const [members, setMembers] = useState<DraftMember[]>([]);
   const [addUserId, setAddUserId] = useState("");
+  const [addRole, setAddRole] = useState<ProjectRole>("member");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -39,19 +48,50 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
     [name, keyOverride]
   );
 
-  const availableToAdd = useMemo(
+  const assignableOrgUsers = useMemo(
     () =>
-      organizationMembers.filter(
-        (m) => !members.some((d) => d.userId === m.userId)
+      getAssignableOrgUsers(
+        organization,
+        organizationMembers,
+        projectMembers,
+        projects,
+        currentUser,
       ),
-    [organizationMembers, members]
+    [
+      organization,
+      organizationMembers,
+      projectMembers,
+      projects,
+      currentUser,
+    ],
   );
 
+  const autoAddedUserIds = useMemo(() => {
+    const ids = new Set<string>([currentUser.id]);
+    if (organization?.ownerId) ids.add(organization.ownerId);
+    return ids;
+  }, [currentUser.id, organization?.ownerId]);
+
+  const availableToAdd = useMemo(
+    () =>
+      assignableOrgUsers.filter(
+        (u) =>
+          !autoAddedUserIds.has(u.userId) &&
+          !members.some((d) => d.userId === u.userId),
+      ),
+    [assignableOrgUsers, autoAddedUserIds, members],
+  );
+
+  /** No other org users to pick besides creator / owner (both added as project admin on create). */
+  const isSoleOrgUser = availableToAdd.length === 0;
+
   useEffect(() => {
-    if (open) {
-      setError(null);
-      setTimeout(() => titleRef.current?.focus(), 50);
-    }
+    if (!open) return;
+    setError(null);
+    setMembers([]);
+    setAddUserId("");
+    setAddRole("member");
+    setTimeout(() => titleRef.current?.focus(), 50);
   }, [open]);
 
   useEffect(() => {
@@ -65,9 +105,14 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
 
   const addMember = () => {
     if (!addUserId) return;
-    setMembers((prev) => [...prev, { userId: addUserId, role: "member" }]);
+    setMembers((prev) => [...prev, { userId: addUserId, role: addRole }]);
     setAddUserId("");
+    setAddRole("member");
   };
+
+  const resolveUser = (userId: string) =>
+    assignableOrgUsers.find((u) => u.userId === userId)?.user ??
+    (userId === currentUser.id ? currentUser : null);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -168,10 +213,12 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
           <div className="space-y-3 pt-2 border-t border-border">
             <label className="text-sm font-medium">Team members</label>
             <p className="text-xs text-muted-foreground">
-              You are added as project admin. Add more members below.
+              {isSoleOrgUser
+                ? "You (and the org owner, if different) are added as project admins automatically."
+                : "You and the org owner are added as project admins. Add existing org users below and choose project admin or member."}
             </p>
             {members.map((m) => {
-              const user = organizationMembers.find((wm) => wm.userId === m.userId)?.user;
+              const user = resolveUser(m.userId);
               if (!user) return null;
               return (
                 <div
@@ -198,7 +245,9 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                   <button
                     type="button"
                     onClick={() =>
-                      setMembers((prev) => prev.filter((row) => row.userId !== m.userId))
+                      setMembers((prev) =>
+                        prev.filter((row) => row.userId !== m.userId)
+                      )
                     }
                     className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                   >
@@ -207,8 +256,8 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                 </div>
               );
             })}
-            {availableToAdd.length > 0 && (
-              <div className="flex gap-2">
+            {!isSoleOrgUser && (
+              <div className="flex flex-col sm:flex-row gap-2">
                 <CustomSelect
                   options={availableToAdd.map((m) => ({
                     value: m.userId,
@@ -217,9 +266,20 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                   }))}
                   value={addUserId}
                   onChange={setAddUserId}
-                  placeholder="Add member..."
+                  placeholder={
+                    availableToAdd.length > 0
+                      ? "Select org member…"
+                      : "All org members added"
+                  }
                   className="flex-1"
                   triggerClassName="h-9"
+                />
+                <CustomSelect
+                  options={PROJECT_ROLE_OPTIONS}
+                  value={addRole}
+                  onChange={(val) => setAddRole(val as ProjectRole)}
+                  className="w-36"
+                  triggerClassName="h-9 text-xs"
                 />
                 <Button
                   type="button"
@@ -227,6 +287,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                   size="icon"
                   onClick={addMember}
                   disabled={!addUserId}
+                  title="Add to project"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
