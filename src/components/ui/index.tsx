@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Button ──────────────────────────────────────────────────────────────────
@@ -370,6 +371,36 @@ export function Loader({
               : `linear-gradient(90deg, transparent, var(--color-primary), var(--color-accent), transparent)`,
           }}
         />
+      </div>
+
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="flex flex-col items-center gap-4 animate-scale-in">
+          <div className="relative flex h-14 w-14 items-center justify-center">
+            <div
+              className="pointer-events-none absolute inset-0 m-auto h-24 w-24 rounded-full bg-primary/55 blur-3xl animate-loader-brand-glow"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute inset-0 m-auto h-16 w-16 rounded-full bg-primary/40 blur-2xl animate-pulse"
+              aria-hidden
+            />
+            <div
+              className={cn(
+                "relative flex h-14 w-14 items-center justify-center rounded-xl bg-primary",
+                "ring-1 ring-white/10 animate-loader-logo-pulse",
+              )}
+            >
+              <Zap
+                className="h-7 w-7 text-primary-foreground animate-loader-zap"
+                aria-hidden
+              />
+            </div>
+          </div>
+
+          <p className="text-xl font-bold tracking-tight text-foreground">
+            Track<span className="text-primary">Ezz</span>
+          </p>
+        </div>
       </div>
     </div>
   );

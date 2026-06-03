@@ -173,6 +173,43 @@ samp {
     transform: rotate(360deg);
   }
 }
+@keyframes loader-logo-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 25px -5px color-mix(in oklch, var(--color-primary), transparent 55%);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 16px 32px -4px color-mix(in oklch, var(--color-primary), transparent 35%);
+  }
+}
+@keyframes loader-zap {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 2px color-mix(in oklch, var(--color-primary-foreground), transparent 50%));
+  }
+  35% {
+    transform: scale(1.12) rotate(-8deg);
+    filter: drop-shadow(0 0 10px var(--color-primary-foreground));
+  }
+  70% {
+    transform: scale(1.05) rotate(6deg);
+    filter: drop-shadow(0 0 6px color-mix(in oklch, var(--color-primary-foreground), transparent 30%));
+  }
+}
+@keyframes loader-brand-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.12);
+  }
+}
 
 .animate-fade-in {
   animation: fadeIn 0.2s ease forwards;
@@ -191,6 +228,15 @@ samp {
 }
 .animate-project-switch-orbit {
   animation: project-switch-orbit 2.4s linear infinite;
+}
+.animate-loader-logo-pulse {
+  animation: loader-logo-pulse 1.8s ease-in-out infinite;
+}
+.animate-loader-zap {
+  animation: loader-zap 1.2s ease-in-out infinite;
+}
+.animate-loader-brand-glow {
+  animation: loader-brand-glow 2s ease-in-out infinite;
 }
 
 /* ── Skeleton Shimmer ──────────────────────────────────────────────────────── */
