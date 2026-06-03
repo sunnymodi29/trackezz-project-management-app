@@ -7,6 +7,27 @@ import { StatusBadge, PriorityBadge, SeverityBadge } from "@/components/ui/issue
 import { Bug, AlertTriangle, ArrowRight, Terminal, Info, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import type { Issue } from "@/types";
+
+function bugStatusDistribution(bugs: Issue[]) {
+  const active = bugs.filter((b) => b.status !== "cancelled");
+  const total = active.length;
+  const fixed = active.filter((b) => b.status === "done").length;
+  const working = active.filter(
+    (b) => b.status === "in-progress" || b.status === "in-review",
+  ).length;
+  const open = active.filter(
+    (b) => b.status === "backlog" || b.status === "todo",
+  ).length;
+  const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+
+  return {
+    total,
+    fixed: { count: fixed, pct: pct(fixed) },
+    working: { count: working, pct: pct(working) },
+    open: { count: open, pct: pct(open) },
+  };
+}
 
 export async function generateMetadata({
   params,
@@ -26,7 +47,12 @@ export default async function ProjectBugsPage({ params }: { params: Promise<{ pr
   const project = await getProjectByRouteParam(projectKey, data.organization.id);
   if (!project) notFound();
   const bugs = data.issues.filter((i) => i.projectId === project.id && i.type === "bug");
-  const openBugs = bugs.filter(b => b.status !== 'done' && b.status !== 'cancelled');
+  const openBugs = bugs.filter(
+    (b) => b.status !== "done" && b.status !== "cancelled",
+  );
+  const distribution = bugStatusDistribution(bugs);
+  const aiSessions = data.aiConversations.filter((c) => c.projectId === project.id);
+  const aiMessageCount = aiSessions.reduce((n, c) => n + c.messages.length, 0);
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto animate-fade-in">
@@ -99,35 +125,99 @@ export default async function ProjectBugsPage({ params }: { params: Promise<{ pr
         )}
       </div>
 
-      {/* Comparison/Statistics Footer */}
       <div className="mt-12 flex flex-col md:flex-row gap-6">
-         <Card className="flex-1 bg-card">
-            <CardHeader><CardTitle className="text-sm">Bug Status Distribution</CardTitle></CardHeader>
-            <CardContent>
-               <div className="flex h-4 rounded-full overflow-hidden">
-                  <div className="bg-emerald-400 h-full" style={{ width: '60%' }} title="Fixed" />
-                  <div className="bg-amber-400 h-full" style={{ width: '25%' }} title="In Progress" />
-                  <div className="bg-red-400 h-full" style={{ width: '15%' }} title="Open" />
-               </div>
-               <div className="flex justify-between mt-3 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"/> Fixed (60%)</span>
-                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-400"/> Working (25%)</span>
-                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-red-400"/> New (15%)</span>
-               </div>
-            </CardContent>
-         </Card>
-         
-         <Card className="md:w-1/3">
-            <CardContent className="pt-6">
-               <div className="flex items-center gap-3 text-sm font-medium">
-                  <Info className="h-4 w-4 text-primary" />
-                  <span>AI Diagnostics Ready</span>
-               </div>
-               <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                  TrackEzz has analyzed 12 sessions. Root cause detection is active for this project.
-               </p>
-            </CardContent>
-         </Card>
+        <Card className="flex-1 bg-card">
+          <CardHeader>
+            <CardTitle className="text-sm">
+              Bug Status Distribution
+              {distribution.total > 0 && (
+                <span className="text-muted-foreground font-normal ml-2">
+                  ({distribution.total} total)
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {distribution.total === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">
+                No bugs recorded for this project yet.
+              </p>
+            ) : (
+              <>
+                <div className="flex h-4 rounded-full overflow-hidden bg-muted/40">
+                  {distribution.fixed.pct > 0 && (
+                    <div
+                      className="bg-emerald-400 h-full min-w-0"
+                      style={{ width: `${distribution.fixed.pct}%` }}
+                      title={`Fixed: ${distribution.fixed.count}`}
+                    />
+                  )}
+                  {distribution.working.pct > 0 && (
+                    <div
+                      className="bg-amber-400 h-full min-w-0"
+                      style={{ width: `${distribution.working.pct}%` }}
+                      title={`In progress: ${distribution.working.count}`}
+                    />
+                  )}
+                  {distribution.open.pct > 0 && (
+                    <div
+                      className="bg-red-400 h-full min-w-0"
+                      style={{ width: `${distribution.open.pct}%` }}
+                      title={`Open: ${distribution.open.count}`}
+                    />
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    Fixed ({distribution.fixed.pct}% · {distribution.fixed.count})
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                    Working ({distribution.working.pct}% · {distribution.working.count})
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    Open ({distribution.open.pct}% · {distribution.open.count})
+                  </span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="md:w-1/3">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 text-sm font-medium">
+              <Info className="h-4 w-4 text-primary" />
+              <span>
+                {aiSessions.length > 0
+                  ? "AI Diagnostics Ready"
+                  : "AI Diagnostics"}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+              {aiSessions.length > 0 ? (
+                <>
+                  TrackEzz has analyzed {aiSessions.length} session
+                  {aiSessions.length !== 1 ? "s" : ""}
+                  {aiMessageCount > 0 && (
+                    <>
+                      {" "}
+                      ({aiMessageCount} message{aiMessageCount !== 1 ? "s" : ""})
+                    </>
+                  )}
+                  . Root cause detection is active for this project.
+                </>
+              ) : (
+                <>
+                  No AI sessions on this project yet. Open a bug and use AI chat
+                  to start root-cause analysis.
+                </>
+              )}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

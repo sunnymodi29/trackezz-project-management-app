@@ -24,7 +24,9 @@ export async function clearActiveProjectCookie(): Promise<void> {
   cookieStore.delete(ACTIVE_PROJECT_COOKIE);
 }
 
-export async function setOrganizationCookie(organizationSlug: string): Promise<void> {
+export async function setOrganizationCookie(
+  organizationSlug: string,
+): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(ACTIVE_ORG_COOKIE, organizationSlug, orgCookieOptions());
 }

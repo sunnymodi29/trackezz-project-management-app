@@ -267,13 +267,21 @@ export async function addProjectMember(
     throw new Error("FORBIDDEN");
   }
 
-  const orgMember = await prisma.organizationMember.findUnique({
-    where: {
-      userId_organizationId: { userId, organizationId: access.organizationId },
-    },
+  const existingProjectMember = await prisma.projectMember.findUnique({
+    where: { userId_projectId: { userId, projectId } },
   });
-  if (!orgMember && org.ownerId !== userId) {
-    throw new Error("User must belong to the organization first");
+
+  // New members must be org members (or the org owner). Project-only invitees
+  // can already be on the project — role changes skip this check.
+  if (!existingProjectMember) {
+    const orgMember = await prisma.organizationMember.findUnique({
+      where: {
+        userId_organizationId: { userId, organizationId: access.organizationId },
+      },
+    });
+    if (!orgMember && org.ownerId !== userId) {
+      throw new Error("User must belong to the organization first");
+    }
   }
 
   const member = await prisma.projectMember.upsert({

@@ -31,22 +31,22 @@ export function SettingsPageClient() {
         </p>
       </div>
 
-      <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border border-border w-fit">
-        <TabButton
-          active={tab === "profile"}
-          onClick={() => setTab("profile")}
-          icon={<User className="h-4 w-4" />}
-          label="Profile"
-        />
-        {canManageOrg && (
+      {canManageOrg && (
+        <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border border-border w-fit">
+          <TabButton
+            active={tab === "profile"}
+            onClick={() => setTab("profile")}
+            icon={<User className="h-4 w-4" />}
+            label="Profile"
+          />
           <TabButton
             active={tab === "organization"}
             onClick={() => setTab("organization")}
             icon={<Building2 className="h-4 w-4" />}
             label="Organization"
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {tab === "organization" && canManageOrg ? (
         <OrganizationSettings />

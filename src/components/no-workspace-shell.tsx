@@ -34,8 +34,8 @@ export function NoWorkspaceShell() {
           <h1 className="text-2xl font-bold">Account</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             You are signed in, but you do not have access to any organization or
-            projects. Update your profile below or sign in with another account if
-            you were invited elsewhere.
+            projects. Update your profile below or sign in with another account
+            if you were invited elsewhere.
           </p>
         </div>
         <UserProfileSettings />
