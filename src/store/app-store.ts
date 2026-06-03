@@ -53,6 +53,10 @@ interface AppState {
   openNewIssue: (dueDate?: Date) => void;
   closeNewIssue: () => void;
 
+  newProjectModalOpen: boolean;
+  openNewProject: () => void;
+  closeNewProject: () => void;
+
   newIssueType: string;
   setNewIssueType: (type: string) => void;
 
@@ -107,6 +111,10 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   closeNewIssue: () =>
     set({ newIssueModalOpen: false, newIssueDefaultDueDate: null }),
+
+  newProjectModalOpen: false,
+  openNewProject: () => set({ newProjectModalOpen: true }),
+  closeNewProject: () => set({ newProjectModalOpen: false }),
 
   newIssueType: "task",
   setNewIssueType: (type) => set({ newIssueType: type }),

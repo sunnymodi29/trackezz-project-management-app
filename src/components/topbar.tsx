@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
-import { Avatar, Skeleton, Tooltip } from "@/components/ui";
+import { Avatar, Tooltip } from "@/components/ui";
 import {
   Bell,
   Sun,
@@ -11,8 +11,8 @@ import {
   Plus,
   Search,
   Menu,
-  ChevronRight,
 } from "lucide-react";
+import { ProjectSwitcher } from "@/components/project-switcher";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -44,8 +44,7 @@ export function Topbar() {
   useEffect(() => {
     setMounted(true);
   }, []);
-  const { toggleSidebar, openCommandPalette, openNewIssue, currentProject } =
-    useAppStore();
+  const { toggleSidebar, openCommandPalette, openNewIssue } = useAppStore();
   const {
     notifications,
     projects,
@@ -87,22 +86,8 @@ export function Topbar() {
             <Menu className="h-4 w-4" />
           </button>
         </Tooltip>
-        {/* Breadcrumb */}
-        <div className="hidden sm:flex items-center gap-1 text-sm text-muted-foreground min-w-72">
-          <Link
-            href="/dashboard"
-            className="hover:text-foreground transition-colors"
-          >
-            Dashboard
-          </Link>
-          <ChevronRight className="h-3 w-3" />
-          <span className="flex items-center gap-1.5 text-foreground font-medium">
-            {currentProject.name ? (
-              currentProject.name
-            ) : (
-              <Skeleton className="h-5 w-24" />
-            )}
-          </span>
+        <div className="min-w-0 flex-1 max-w-[min(100%,360px)]">
+          <ProjectSwitcher />
         </div>
       </div>
 

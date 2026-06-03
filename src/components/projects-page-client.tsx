@@ -23,7 +23,6 @@ import {
   Tooltip,
   Skeleton,
 } from "@/components/ui";
-import { NewProjectModal } from "@/components/new-project-modal";
 import { ProjectManageDialog } from "@/components/project-manage-dialog";
 import { useDataStore } from "@/store/data-store";
 import { projectPath } from "@/lib/projects/route";
@@ -65,11 +64,10 @@ function ProjectListRowSkeleton() {
 
 export function ProjectsPageClient() {
   const router = useRouter();
-  const { beginProjectSwitch, setCurrentProject } = useAppStore();
+  const { beginProjectSwitch, setCurrentProject, openNewProject } = useAppStore();
   const { hydrated, projects, permissions, getProjectMembers } = useDataStore();
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [manageProject, setManageProject] = useState<Project | null>(null);
 
   const switchToProject = useCallback(
@@ -107,7 +105,7 @@ export function ProjectsPageClient() {
             </p>
           </div>
           {permissions.canCreateProject && (
-            <Button className="gap-2" onClick={() => setNewProjectOpen(true)}>
+            <Button className="gap-2" onClick={() => openNewProject()}>
               <Plus className="h-4 w-4" /> New Project
             </Button>
           )}
@@ -176,7 +174,7 @@ export function ProjectsPageClient() {
                 />
               ))}
             {permissions.canCreateProject && hydrated && filtered.length !== 0 && (
-              <CreateProjectCard onClick={() => setNewProjectOpen(true)} />
+              <CreateProjectCard onClick={() => openNewProject()} />
             )}
           </div>
         ) : (
@@ -206,7 +204,7 @@ export function ProjectsPageClient() {
               ))}
             {hydrated && filtered.length === 0 && (
               <EmptyState
-                onCreate={() => setNewProjectOpen(true)}
+                onCreate={() => openNewProject()}
                 canCreate={permissions.canCreateProject}
               />
             )}
@@ -215,16 +213,12 @@ export function ProjectsPageClient() {
 
         {view === "grid" && hydrated && filtered.length === 0 && (
           <EmptyState
-            onCreate={() => setNewProjectOpen(true)}
+            onCreate={() => openNewProject()}
             canCreate={permissions.canCreateProject}
           />
         )}
       </div>
 
-      <NewProjectModal
-        open={newProjectOpen}
-        onClose={() => setNewProjectOpen(false)}
-      />
       <ProjectManageDialog
         project={manageProject}
         onClose={() => setManageProject(null)}

@@ -38,7 +38,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { projectId: projectKey } = await params;
   const data = await requireWorkspaceBootstrap();
-  const project = await getProjectByRouteParam(projectKey, data.organization.id);
+  const project = await getProjectByRouteParam(
+    projectKey,
+    data.organization.id,
+  );
   return { title: project?.name ?? "Project" };
 }
 
@@ -51,7 +54,8 @@ export default async function ProjectOverviewPage({
   const data = await requireWorkspaceBootstrap();
   const project =
     data.projects.find(
-      (p) => p.key.toUpperCase() === projectKey.toUpperCase() || p.id === projectKey,
+      (p) =>
+        p.key.toUpperCase() === projectKey.toUpperCase() || p.id === projectKey,
     ) ?? (await getProjectByRouteParam(projectKey, data.organization.id));
   if (!project) notFound();
   const issues = data.issues.filter((i) => i.projectId === project.id);
@@ -181,29 +185,38 @@ export default async function ProjectOverviewPage({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-1">
-                {issues.slice(0, 8).map((issue) => (
-                  <div
-                    key={issue.id}
-                    className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-accent transition-colors group cursor-pointer"
-                  >
-                    <Link href={issuePath(project.key, issue.id)} className="flex items-center gap-3 w-full">
-                      <IssueTypeIcon type={issue.type} />
-                      <span className="text-[11px] font-mono text-muted-foreground w-16 shrink-0 group-hover:text-primary transition-colors">
-                        {issue.issueKey}
-                      </span>
-                      <span className="flex-1 min-w-0 text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                        {issue.title}
-                      </span>
-                      <PriorityBadge priority={issue.priority} />
-                      <StatusBadge status={issue.status} />
-                      {issue.assignees.length > 0 && (
-                        <AvatarGroup users={issue.assignees} max={2} />
-                      )}
-                    </Link>
-                  </div>
-                ))}
-              </div>
+              {issues.length > 0 ? (
+                <div className="space-y-1">
+                  {issues.slice(0, 8).map((issue) => (
+                    <div
+                      key={issue.id}
+                      className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-accent transition-colors group cursor-pointer"
+                    >
+                      <Link
+                        href={issuePath(project.key, issue.id)}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <IssueTypeIcon type={issue.type} />
+                        <span className="text-[11px] font-mono text-muted-foreground w-16 shrink-0 group-hover:text-primary transition-colors">
+                          {issue.issueKey}
+                        </span>
+                        <span className="flex-1 min-w-0 text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                          {issue.title}
+                        </span>
+                        <PriorityBadge priority={issue.priority} />
+                        <StatusBadge status={issue.status} />
+                        {issue.assignees.length > 0 && (
+                          <AvatarGroup users={issue.assignees} max={2} />
+                        )}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground text-sm">
+                  No issues found
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
