@@ -4,14 +4,7 @@ import { useTheme } from "next-themes";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { Avatar, Tooltip } from "@/components/ui";
-import {
-  Bell,
-  Sun,
-  Moon,
-  Plus,
-  Search,
-  Menu,
-} from "lucide-react";
+import { Bell, Sun, Moon, Plus, Search, Menu } from "lucide-react";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -77,15 +70,13 @@ export function Topbar() {
     <header className="sticky top-0 right-0 left-0 z-30 h-14 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 gap-3 transition-all duration-200">
       {/* Left */}
       <div className="flex items-center gap-3">
-        <Tooltip content="Open menu" side="bottom">
-          <button
-            onClick={toggleSidebar}
-            className="rounded-md p-1.5 hover:bg-accent transition-colors text-muted-foreground md:hidden"
-            aria-label="Open menu"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-        </Tooltip>
+        <button
+          onClick={toggleSidebar}
+          className="rounded-md p-1.5 hover:bg-accent transition-colors text-muted-foreground md:hidden"
+          aria-label="Open menu"
+        >
+          <Menu className="h-4 w-4" />
+        </button>
         <div className="min-w-0 flex-1 max-w-[min(100%,360px)]">
           <ProjectSwitcher />
         </div>

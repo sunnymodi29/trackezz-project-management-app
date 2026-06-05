@@ -19,7 +19,7 @@ import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { setActiveProject } from "@/lib/actions/org";
 import { projectPath } from "@/lib/projects/route";
-import { Skeleton } from "@/components/ui";
+import { Skeleton, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/types";
 
@@ -176,20 +176,21 @@ export function ProjectSwitcher() {
           </span>
         </Link>
 
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className={cn(
-            "shrink-0 rounded-md p-1.5 m-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
-            open && "bg-accent text-foreground",
-          )}
-          aria-expanded={open}
-          aria-haspopup="listbox"
-          aria-label="Switch project"
-        >
-          <ChevronsUpDown className="h-4 w-4" />
-        </button>
-
+        <Tooltip content="Switch project" side="bottom">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className={cn(
+              "shrink-0 rounded-md p-1.5 m-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors",
+              open && "bg-accent text-foreground",
+            )}
+            aria-expanded={open}
+            aria-haspopup="listbox"
+            aria-label="Switch project"
+          >
+            <ChevronsUpDown className="h-4 w-4" />
+          </button>
+        </Tooltip>
         {open && (
           <div
             className="absolute left-0 top-full mt-0 w-[min(100vw-2rem,360px)] rounded-xl border border-border bg-card shadow-2xl z-50 animate-scale-in overflow-hidden"
