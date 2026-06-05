@@ -1,24 +1,48 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Users, Settings } from "lucide-react";
 import { Button, Card, CardHeader, CardTitle, CardContent, Avatar } from "@/components/ui";
 import { useDataStore } from "@/store/data-store";
-import { resolveProjectFromParam } from "@/lib/projects/route";
+import { projectPath, resolveProjectFromParam } from "@/lib/projects/route";
+import { canManageProject } from "@/lib/permissions/client";
 import { ProjectManageDialog } from "@/components/project-manage-dialog";
 import { PROJECT_ROLE_OPTIONS } from "@/lib/projects/constants";
 
 export default function ProjectMembersPage() {
   const params = useParams();
+  const router = useRouter();
   const projectKey = String(params.projectId ?? "");
-  const { projects, permissions, currentUser, getProjectMembers } = useDataStore();
+  const {
+    projects,
+    permissions,
+    projectMembers,
+    currentUser,
+    getProjectMembers,
+  } = useDataStore();
   const [manageOpen, setManageOpen] = useState(false);
 
   const project = useMemo(
     () => resolveProjectFromParam(projects, projectKey),
-    [projects, projectKey]
+    [projects, projectKey],
   );
+
+  const canManage = useMemo(
+    () =>
+      project
+        ? canManageProject(
+            { permissions, projectMembers, currentUser },
+            project.id,
+          )
+        : false,
+    [project, permissions, projectMembers, currentUser],
+  );
+
+  useEffect(() => {
+    if (!project || canManage) return;
+    router.replace(projectPath(project.key));
+  }, [project, canManage, router]);
 
   if (!project) {
     return (
@@ -26,12 +50,11 @@ export default function ProjectMembersPage() {
     );
   }
 
+  if (!canManage) {
+    return null;
+  }
+
   const members = getProjectMembers(project.id);
-  const myRole = members.find((m) => m.userId === currentUser.id)?.role;
-  const canManage =
-    permissions.isOrgOwner ||
-    permissions.isOrgProjectAdmin ||
-    myRole === "project_admin";
 
   const roleLabel = (role: string) =>
     PROJECT_ROLE_OPTIONS.find((o) => o.value === role)?.label ?? role;
@@ -48,11 +71,9 @@ export default function ProjectMembersPage() {
             {project.name} ({project.key})
           </p>
         </div>
-        {canManage && (
-          <Button className="gap-2" size="sm" onClick={() => setManageOpen(true)}>
-            <Settings className="h-4 w-4" /> Manage
-          </Button>
-        )}
+        <Button className="gap-2" size="sm" onClick={() => setManageOpen(true)}>
+          <Settings className="h-4 w-4" /> Manage
+        </Button>
       </div>
 
       <Card>

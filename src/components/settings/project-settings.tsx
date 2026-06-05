@@ -18,6 +18,7 @@ import { useDataStore } from "@/store/data-store";
 import { useAppStore } from "@/store/app-store";
 import { resolveProjectFromParam, projectPath } from "@/lib/projects/route";
 import { updateProject, deleteProject } from "@/lib/actions/projects";
+import { canManageProject } from "@/lib/permissions/client";
 
 export function ProjectSettings() {
   const params = useParams();
@@ -49,16 +50,10 @@ export function ProjectSettings() {
   const [deleting, setDeleting] = useState(false);
 
   const canManage = project
-    ? (() => {
-        const pm = projectMembers.find(
-          (m) => m.projectId === project.id && m.userId === currentUser.id,
-        );
-        return (
-          permissions.isOrgOwner ||
-          permissions.isOrgProjectAdmin ||
-          pm?.role === "project_admin"
-        );
-      })()
+    ? canManageProject(
+        { permissions, projectMembers, currentUser },
+        project.id,
+      )
     : false;
 
   useEffect(() => {
@@ -68,7 +63,12 @@ export function ProjectSettings() {
     setDescription(project.description ?? "");
   }, [project]);
 
-  if (!project) {
+  useEffect(() => {
+    if (!project || canManage) return;
+    router.replace(projectPath(project.key));
+  }, [project, canManage, router]);
+
+  if (!project || !canManage) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
         Project not found.
@@ -132,13 +132,6 @@ export function ProjectSettings() {
             Update project details and manage access.
           </p>
         </div>
-
-        {!canManage && (
-          <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
-            You can view these settings but only project admins can make
-            changes.
-          </p>
-        )}
 
         <Card>
           <CardHeader>

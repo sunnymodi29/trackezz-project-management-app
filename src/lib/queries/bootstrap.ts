@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import {
   canCreateProject,
   getAccessibleProjectIds,
+  hasProjectAdminRoleInOrg,
   isOrgOwner,
   isOrgWideProjectAdmin,
   userHasOrganizationAccess,
@@ -341,6 +342,10 @@ export async function getBootstrapData(
     org.id,
     orgMember,
   );
+  const isProjectAdminInOrg =
+    !owner && !isOrgWide
+      ? await hasProjectAdminRoleInOrg(resolvedUserId, org.id)
+      : false;
   const permissions: UserPermissions = {
     isOrgOwner: owner,
     isOrgProjectAdmin: isOrgWide,
@@ -349,6 +354,7 @@ export async function getBootstrapData(
       org,
       orgMember,
       isOrgWide,
+      isProjectAdminInOrg,
     ),
     canInviteOrgProjectAdmin: owner,
   };

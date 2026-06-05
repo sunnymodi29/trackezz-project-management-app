@@ -8,6 +8,7 @@ import {
   requireProjectAccess,
   canCreateProject,
   canManageProject,
+  hasProjectAdminRoleInOrg,
   isOrgWideProjectAdmin,
   userHasOrganizationAccess,
 } from "@/lib/auth/rbac";
@@ -80,7 +81,19 @@ export async function createProject(
     input.organizationId,
     member,
   );
-  if (!canCreateProject(session.user.id, org, member, isOrgWide)) {
+  const isProjectAdminInOrg = await hasProjectAdminRoleInOrg(
+    session.user.id,
+    input.organizationId,
+  );
+  if (
+    !canCreateProject(
+      session.user.id,
+      org,
+      member,
+      isOrgWide,
+      isProjectAdminInOrg,
+    )
+  ) {
     throw new Error("FORBIDDEN: Cannot create projects");
   }
 

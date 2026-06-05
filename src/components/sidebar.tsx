@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useCallback, useState } from "react";
+import { startTransition, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -10,6 +10,7 @@ import { useDataStore } from "@/store/data-store";
 import { Avatar, Skeleton, Tooltip } from "@/components/ui";
 import { clearWorkspaceCookies, setActiveProject } from "@/lib/actions/org";
 import { cn } from "@/lib/utils";
+import { canManageProject } from "@/lib/permissions/client";
 import type { Project } from "@/types";
 import {
   LayoutDashboard,
@@ -71,9 +72,31 @@ export function Sidebar() {
     projects,
     organization,
     permissions,
+    projectMembers,
     currentUser,
     getUnreadNotificationCount,
   } = useDataStore();
+
+  const canManageCurrentProject = useMemo(
+    () =>
+      currentProject.id
+        ? canManageProject(
+            { permissions, projectMembers, currentUser },
+            currentProject.id,
+          )
+        : false,
+    [permissions, projectMembers, currentUser, currentProject.id],
+  );
+
+  const visibleProjectNav = useMemo(
+    () =>
+      PROJECT_NAV.filter(
+        (item) =>
+          canManageCurrentProject ||
+          (item.href !== "/members" && item.href !== "/settings"),
+      ),
+    [canManageCurrentProject],
+  );
   const hasActiveProject = projects.length > 0 && Boolean(currentProject.id);
   const showProjectSwitcher =
     hasActiveProject && (projects.length > 1 || permissions.canCreateProject);
@@ -215,7 +238,7 @@ export function Sidebar() {
                 <Skeleton className="h-3 w-24" />
               )}
             </div>
-            {PROJECT_NAV.map((item) => {
+            {visibleProjectNav.map((item) => {
               const href = `${projectBase}${item.href}`;
               const active =
                 item.href === ""

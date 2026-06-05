@@ -93,14 +93,32 @@ export function isOrgOwner(
   return organization.ownerId === userId;
 }
 
+/** Project-level admin on any project in the org (not org-wide). */
+export async function hasProjectAdminRoleInOrg(
+  userId: string,
+  organizationId: string,
+): Promise<boolean> {
+  const row = await prisma.projectMember.findFirst({
+    where: {
+      userId,
+      role: "project_admin",
+      project: { organizationId },
+    },
+    select: { id: true },
+  });
+  return !!row;
+}
+
 export function canCreateProject(
   userId: string,
   organization: { ownerId: string },
   orgMember: { role: OrganizationRole } | null,
   isOrgWideProjectAdmin = false,
+  isProjectAdminInOrg = false,
 ): boolean {
   if (isOrgOwner(userId, organization)) return true;
-  return isOrgWideProjectAdmin;
+  if (isOrgWideProjectAdmin) return true;
+  return isProjectAdminInOrg;
 }
 
 export function canManageProject(
