@@ -59,3 +59,10 @@ export function workflowStatusSelectOptions(
   }));
 }
 
+export function randomStatusColor(): string {
+  const hue = Math.floor(Math.random() * 360);
+  const saturation = 55 + Math.floor(Math.random() * 25);
+  const lightness = 48 + Math.floor(Math.random() * 12);
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
