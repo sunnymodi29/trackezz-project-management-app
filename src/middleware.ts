@@ -21,6 +21,15 @@ export default auth((req) => {
   }
 
   if (isLoggedIn && isAuthRoute) {
+    const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
+    if (
+      callbackUrl?.startsWith("/") &&
+      !callbackUrl.startsWith("//") &&
+      callbackUrl.startsWith("/invite/") &&
+      callbackUrl.endsWith("/join")
+    ) {
+      return Response.redirect(new URL(callbackUrl, req.nextUrl.origin));
+    }
     return Response.redirect(new URL("/dashboard", req.nextUrl.origin));
   }
 });

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { hasPendingInviteForEmail } from "@/lib/auth/invite-signup";
 import { hashPassword } from "@/lib/auth/password";
 import { provisionOrganizationForUser } from "@/lib/organizations/setup";
 import {
@@ -37,10 +38,10 @@ export async function registerUser(input: z.infer<typeof registerSchema>) {
   });
 
   let organizationSlug: string | undefined;
-  const skipPersonalOrg = await shouldSkipPersonalOrgOnRegister(
-    email,
-    data.inviteToken,
-  );
+  const skipPersonalOrg =
+    (data.inviteToken
+      ? await shouldSkipPersonalOrgOnRegister(email, data.inviteToken)
+      : false) || (await hasPendingInviteForEmail(email));
 
   if (!skipPersonalOrg) {
     const provisioned = await provisionOrganizationForUser(user.id, data.name);

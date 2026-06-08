@@ -4,7 +4,10 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import authConfig from "@/auth.config";
 import { prisma } from "@/lib/db";
+import { hasPendingInviteForEmail } from "@/lib/auth/invite-signup";
+import { isGoogleAuthEnabled } from "@/lib/auth/google";
 import { verifyPassword } from "@/lib/auth/password";
+import { provisionOrganizationForUser } from "@/lib/organizations/setup";
 import { z } from "zod";
 
 const credentialsSchema = z.object({
@@ -18,11 +21,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // Credentials provider requires JWT sessions (Auth.js limitation)
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   providers: [
-    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
+    ...(isGoogleAuthEnabled()
       ? [
           Google({
-            clientId: process.env.AUTH_GOOGLE_ID,
-            clientSecret: process.env.AUTH_GOOGLE_SECRET,
+            clientId: process.env.AUTH_GOOGLE_ID!,
+            clientSecret: process.env.AUTH_GOOGLE_SECRET!,
             allowDangerousEmailAccountLinking: true,
           }),
         ]
@@ -91,11 +94,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   events: {
     async createUser({ user }) {
-      if (user.email) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { email: user.email.toLowerCase() },
-        });
+      if (!user.id || !user.email) return;
+
+      const email = user.email.toLowerCase();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { email },
+      });
+
+      const skipOrg = await hasPendingInviteForEmail(email);
+      if (!skipOrg) {
+        await provisionOrganizationForUser(
+          user.id,
+          user.name?.trim() || email.split("@")[0] || "User",
+        );
       }
     },
   },
