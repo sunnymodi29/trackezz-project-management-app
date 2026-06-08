@@ -27,7 +27,8 @@ import { ProjectManageDialog } from "@/components/project-manage-dialog";
 import { useDataStore } from "@/store/data-store";
 import { projectPath } from "@/lib/projects/route";
 import { projectIconFromName } from "@/lib/projects/project-utils";
-import type { Project, UserPermissions } from "@/types";
+import type { Project } from "@/types";
+import { canManageProject } from "@/lib/permissions/client";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { setActiveProject } from "@/lib/actions/org";
@@ -66,7 +67,14 @@ export function ProjectsPageClient() {
   const router = useRouter();
   const { beginProjectSwitch, setCurrentProject, openNewProject } =
     useAppStore();
-  const { hydrated, projects, permissions, getProjectMembers } = useDataStore();
+  const {
+    hydrated,
+    projects,
+    permissions,
+    projectMembers,
+    currentUser,
+    getProjectMembers,
+  } = useDataStore();
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [manageProject, setManageProject] = useState<Project | null>(null);
@@ -82,6 +90,15 @@ export function ProjectsPageClient() {
       void setActiveProject(project.key, { revalidate: false });
     },
     [beginProjectSwitch, router, setCurrentProject],
+  );
+
+  const canManageByProjectId = useCallback(
+    (projectId: string) =>
+      canManageProject(
+        { permissions, projectMembers, currentUser },
+        projectId,
+      ),
+    [permissions, projectMembers, currentUser],
   );
 
   const filtered = useMemo(() => {
@@ -170,9 +187,9 @@ export function ProjectsPageClient() {
                   key={project.id}
                   project={project}
                   members={getProjectMembers(project.id)}
+                  canManage={canManageByProjectId(project.id)}
                   onManage={() => setManageProject(project)}
                   onOpen={switchToProject}
-                  permissions={permissions}
                 />
               ))}
             {permissions.canCreateProject &&
@@ -202,6 +219,7 @@ export function ProjectsPageClient() {
                   key={project.id}
                   project={project}
                   members={getProjectMembers(project.id)}
+                  canManage={canManageByProjectId(project.id)}
                   onManage={() => setManageProject(project)}
                   onOpen={switchToProject}
                 />
@@ -250,17 +268,17 @@ function ProjectIcon({ project, name }: { project: Project; name?: string }) {
 function ProjectCard({
   project,
   members,
+  canManage,
   onManage,
   onOpen,
-  permissions,
 }: {
   project: Project;
   members: ReturnType<
     ReturnType<typeof useDataStore.getState>["getProjectMembers"]
   >;
+  canManage: boolean;
   onManage: () => void;
   onOpen: (project: Project, destination?: string) => void;
-  permissions: UserPermissions;
 }) {
   const href = projectPath(project.key);
   return (
@@ -277,23 +295,22 @@ function ProjectCard({
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between mb-4">
             <ProjectIcon project={project} />
-            {permissions.isOrgOwner ||
-              (permissions.isOrgProjectAdmin && (
-                <Tooltip content="Manage project" side="bottom">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onManage();
-                    }}
-                    className="p-1.5 rounded-md hover:bg-muted text-muted-foreground relative z-10 self-center"
-                    aria-label="Manage project"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-              ))}
+            {canManage && (
+              <Tooltip content="Manage project" side="bottom">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onManage();
+                  }}
+                  className="p-1.5 rounded-md hover:bg-muted text-muted-foreground relative z-10 self-center"
+                  aria-label="Manage project"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              </Tooltip>
+            )}
           </div>
           <CardTitle className="text-lg group-hover:text-primary transition-colors">
             {project.name}
@@ -345,6 +362,7 @@ function ProjectCard({
 function ProjectListRow({
   project,
   members,
+  canManage,
   onManage,
   onOpen,
 }: {
@@ -352,6 +370,7 @@ function ProjectListRow({
   members: ReturnType<
     ReturnType<typeof useDataStore.getState>["getProjectMembers"]
   >;
+  canManage: boolean;
   onManage: () => void;
   onOpen: (project: Project, destination?: string) => void;
 }) {
@@ -391,15 +410,20 @@ function ProjectListRow({
       <div className="hidden md:block">
         <MemberAvatars members={members} total={project.memberCount} compact />
       </div>
-      <Tooltip content="Manage project" side="bottom">
-        <button
-          type="button"
-          onClick={onManage}
-          className="p-2 rounded-md hover:bg-muted text-muted-foreground justify-self-end self-center"
-        >
-          <Settings className="h-4 w-4" />
-        </button>
-      </Tooltip>
+      {canManage ? (
+        <Tooltip content="Manage project" side="bottom">
+          <button
+            type="button"
+            onClick={onManage}
+            className="p-2 rounded-md hover:bg-muted text-muted-foreground justify-self-end self-center"
+            aria-label="Manage project"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </Tooltip>
+      ) : (
+        <span className="hidden md:block" aria-hidden />
+      )}
     </div>
   );
 }
