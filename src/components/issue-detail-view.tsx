@@ -4,7 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Issue, IssueStatus, Priority } from "@/types";
-import { StatusBadge, PriorityBadge, IssueTypeIcon, SeverityBadge, LabelChip } from "@/components/ui/issue-badges";
+import { PriorityBadge, IssueTypeIcon, SeverityBadge, LabelChip } from "@/components/ui/issue-badges";
+import { ProjectStatusBadge } from "@/components/project-status-badge";
+import { workflowStatusSelectOptions } from "@/lib/projects/workflow-status";
 import { Avatar, Button, Textarea, CustomSelect, Tooltip, Skeleton } from "@/components/ui";
 import { formatRelativeTime } from "@/lib/utils";
 import { useDataStore } from "@/store/data-store";
@@ -49,6 +51,7 @@ export function IssueDetailView({
   const {
     currentUser,
     getProjectMembers,
+    getWorkflowStatuses,
     projects,
     sprints,
     getActivityLogsForIssue,
@@ -78,6 +81,14 @@ export function IssueDetailView({
   const assigneeFilterOptions = useMemo(
     () => buildAssigneeFilterOptions(users),
     [users],
+  );
+
+  const statusOptions = useMemo(
+    () =>
+      issue
+        ? workflowStatusSelectOptions(getWorkflowStatuses(issue.projectId))
+        : [],
+    [issue, getWorkflowStatuses],
   );
 
   const projectIssues = useMemo(
@@ -317,17 +328,16 @@ export function IssueDetailView({
               <h2 className="text-base font-semibold text-foreground leading-snug mb-3">{issue.title}</h2>
               <div className="flex flex-wrap gap-2 mb-3">
                 <CustomSelect
-                  options={[
-                    { value: "backlog", label: "Backlog" },
-                    { value: "todo", label: "Todo" },
-                    { value: "in-progress", label: "In Progress" },
-                    { value: "in-review", label: "In Review" },
-                    { value: "done", label: "Done" },
-                    { value: "cancelled", label: "Cancelled" },
-                  ]}
+                  options={statusOptions}
                   value={issue.status}
                   onChange={(val) => void handleFieldUpdate({ status: val as IssueStatus })}
-                  renderTrigger={() => <StatusBadge status={issue.status} className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" />}
+                  renderTrigger={() => (
+                    <ProjectStatusBadge
+                      projectId={issue.projectId}
+                      status={issue.status}
+                      className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all"
+                    />
+                  )}
                   className="w-auto"
                 />
                 <CustomSelect
@@ -535,7 +545,7 @@ export function IssueDetailView({
                           {item.issueKey}
                         </span>
                         <span className="flex-1 min-w-0 text-xs truncate">{item.title}</span>
-                        <StatusBadge status={item.status} />
+                        <ProjectStatusBadge projectId={issue.projectId} status={item.status} />
                       </button>
                     ) : (
                       <Link
@@ -547,7 +557,7 @@ export function IssueDetailView({
                           {item.issueKey}
                         </span>
                         <span className="flex-1 min-w-0 text-xs truncate">{item.title}</span>
-                        <StatusBadge status={item.status} />
+                        <ProjectStatusBadge projectId={issue.projectId} status={item.status} />
                       </Link>
                     )}
                   </li>

@@ -12,7 +12,7 @@ const createSchema = z.object({
   title: z.string().min(1).max(500),
   description: z.string().optional(),
   type: z.enum(["task", "bug", "feature", "improvement", "epic", "story"]),
-  status: z.enum(["backlog", "todo", "in-progress", "in-review", "done", "cancelled"]),
+  status: z.string().min(1).max(50),
   priority: z.enum(["urgent", "high", "medium", "low", "none"]),
   estimate: z.number().int().positive().optional(),
   assigneeIds: z.array(z.string()).optional(),

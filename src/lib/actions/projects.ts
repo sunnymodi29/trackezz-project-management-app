@@ -23,6 +23,7 @@ import {
   projectIconFromName,
   randomProjectColor,
 } from "@/lib/projects/project-utils";
+import { seedDefaultWorkflowStatuses } from "@/lib/projects/workflow-status.server";
 import type { Project, ProjectMember, ProjectRole } from "@/types";
 
 async function invalidateOrg(userId: string, organizationSlug: string, projectKey?: string) {
@@ -128,21 +129,25 @@ export async function createProject(
     add(m.userId, m.role);
   }
 
-  const project = await prisma.project.create({
-    data: {
-      name,
-      key,
-      description: input.description?.trim() || null,
-      color,
-      icon,
-      organizationId: input.organizationId,
-      leadId: session.user.id,
-      members: { create: memberRows },
-    },
-    include: {
-      lead: true,
-      _count: { select: { issues: true, members: true } },
-    },
+  const project = await prisma.$transaction(async (tx) => {
+    const created = await tx.project.create({
+      data: {
+        name,
+        key,
+        description: input.description?.trim() || null,
+        color,
+        icon,
+        organizationId: input.organizationId,
+        leadId: session.user.id,
+        members: { create: memberRows },
+      },
+      include: {
+        lead: true,
+        _count: { select: { issues: true, members: true } },
+      },
+    });
+    await seedDefaultWorkflowStatuses(created.id, tx);
+    return created;
   });
 
   const members = await prisma.projectMember.findMany({

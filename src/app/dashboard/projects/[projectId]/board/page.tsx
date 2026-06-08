@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   type DragStartEvent, type DragEndEvent, closestCenter
@@ -11,30 +10,41 @@ import { CSS } from "@dnd-kit/utilities";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { updateIssueStatus } from "@/lib/actions/issues";
-import type { Issue, IssueStatus } from "@/types";
-import { StatusBadge, PriorityIcon, IssueTypeIcon, LabelChip, SeverityBadge } from "@/components/ui/issue-badges";
+import type { Issue } from "@/types";
+import { PriorityIcon, IssueTypeIcon, LabelChip, SeverityBadge } from "@/components/ui/issue-badges";
+import { ProjectStatusBadge } from "@/components/project-status-badge";
+import { WorkflowStatusManager } from "@/components/workflow-status-manager";
 import { Avatar, AvatarGroup, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { Plus, MoreHorizontal, MessageSquare, Paperclip, GripVertical, ExternalLink, X } from "lucide-react";
+import { Plus, MessageSquare, Paperclip, GripVertical } from "lucide-react";
 import IssueDrawer from "@/components/issue-drawer";
 
-const COLUMNS: { id: IssueStatus; label: string; color: string }[] = [
-  { id: "backlog",      label: "Backlog",     color: "border-zinc-500/30" },
-  { id: "todo",         label: "Todo",        color: "border-zinc-400/30" },
-  { id: "in-progress",  label: "In Progress", color: "border-blue-500/30" },
-  { id: "in-review",    label: "In Review",   color: "border-purple-500/30" },
-  { id: "done",         label: "Done",        color: "border-emerald-500/30" },
-];
+interface BoardColumn {
+  id: string;
+  label: string;
+  color: string;
+}
 
 interface BoardState { [key: string]: Issue[] }
 
 export default function BoardPage() {
-  const { currentProject, openIssue, openNewIssue } = useAppStore();
-  const router = useRouter();
+  const { currentProject, openNewIssue } = useAppStore();
   const projectId = currentProject.id;
   const issues = useDataStore((s) => s.issues);
   const upsertIssue = useDataStore((s) => s.upsertIssue);
+  const patchIssue = useDataStore((s) => s.patchIssue);
   const sprints = useDataStore((s) => s.sprints);
+  const getWorkflowStatuses = useDataStore((s) => s.getWorkflowStatuses);
+
+  const columns: BoardColumn[] = useMemo(
+    () =>
+      getWorkflowStatuses(projectId).map((s) => ({
+        id: s.key,
+        label: s.label,
+        color: s.color,
+      })),
+    [getWorkflowStatuses, projectId],
+  );
 
   const activeSprint = sprints.find(
     (s) => s.projectId === projectId && s.status === "active"
@@ -50,11 +60,11 @@ export default function BoardPage() {
 
   const board = useMemo(
     () =>
-      COLUMNS.reduce((acc, col) => {
+      columns.reduce((acc, col) => {
         acc[col.id] = projectIssues.filter((i) => i.status === col.id);
         return acc;
       }, {} as BoardState),
-    [projectIssues]
+    [projectIssues, columns]
   );
 
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
@@ -76,26 +86,24 @@ export default function BoardPage() {
 
     const toCol =
       (over.data.current?.columnId as string | undefined) ??
-      COLUMNS.find((col) => board[col.id]?.some((i) => i.id === over.id))?.id;
+      columns.find((col) => board[col.id]?.some((i) => i.id === over.id))?.id;
 
     if (!toCol || draggedIssue.status === toCol) return;
 
     const optimistic = {
       ...draggedIssue,
-      status: toCol as IssueStatus,
+      status: toCol,
       updatedAt: new Date(),
     };
     upsertIssue(optimistic);
 
-    void updateIssueStatus(draggedIssue.id, toCol as IssueStatus).then((updated) => {
-      upsertIssue(updated);
-      router.refresh();
-    });
+    void updateIssueStatus(draggedIssue.id, toCol)
+      .then((patch) => patchIssue(draggedIssue.id, patch))
+      .catch(() => upsertIssue(draggedIssue));
   };
 
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col">
-      {/* Board header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div>
           <h1 className="text-lg font-bold text-foreground">Board</h1>
@@ -104,21 +112,27 @@ export default function BoardPage() {
             {activeSprint ? ` · ${activeSprint.name}` : ""}
           </p>
         </div>
-        <button
-          onClick={() => openNewIssue()}
-          className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium px-3 py-1.5 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" /> Add Issue
-        </button>
+        <div className="flex items-center gap-2">
+          <WorkflowStatusManager projectId={projectId} />
+          <button
+            onClick={() => openNewIssue()}
+            className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium px-3 py-1.5 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Issue
+          </button>
+        </div>
       </div>
 
-      {/* Kanban */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <div className="flex-1 overflow-x-auto">
-          <div className="flex gap-4 p-6 h-full" style={{ minWidth: `${COLUMNS.length * 300}px` }}>
-            {COLUMNS.map((col) => (
+          <div
+            className="flex gap-4 p-6 h-full"
+            style={{ minWidth: `${Math.max(columns.length, 1) * 300}px` }}
+          >
+            {columns.map((col) => (
               <KanbanColumn
                 key={col.id}
+                projectId={projectId}
                 column={col}
                 issues={board[col.id] ?? []}
                 onAddIssue={() => openNewIssue()}
@@ -133,7 +147,6 @@ export default function BoardPage() {
         </DragOverlay>
       </DndContext>
 
-      {/* Issue Drawer */}
       {drawerIssueId && (
         <IssueDrawer issueId={drawerIssueId} onClose={() => setDrawerIssueId(null)} />
       )}
@@ -141,21 +154,22 @@ export default function BoardPage() {
   );
 }
 
-function KanbanColumn({ column, issues, onAddIssue, onOpenIssue }: {
-  column: { id: IssueStatus; label: string; color: string };
+function KanbanColumn({ projectId, column, issues, onAddIssue, onOpenIssue }: {
+  projectId: string;
+  column: BoardColumn;
   issues: Issue[];
   onAddIssue: () => void;
   onOpenIssue: (issue: Issue) => void;
 }) {
   return (
     <div
-      className={cn("flex flex-col rounded-xl border bg-muted/30 w-72 shrink-0", column.color)}
+      className="flex flex-col rounded-xl border bg-muted/30 w-72 shrink-0"
+      style={{ borderColor: `${column.color}50` }}
       data-column-id={column.id}
     >
-      {/* Column header */}
       <div className="flex items-center justify-between px-3 py-3">
         <div className="flex items-center gap-2">
-          <StatusBadge status={column.id} />
+          <ProjectStatusBadge projectId={projectId} status={column.id} />
           <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
             {issues.length}
           </span>
@@ -172,7 +186,6 @@ function KanbanColumn({ column, issues, onAddIssue, onOpenIssue }: {
         </Tooltip>
       </div>
 
-      {/* Cards */}
       <SortableContext items={issues.map((i) => i.id)} strategy={verticalListSortingStrategy}>
         <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2" data-column-id={column.id}>
           {issues.map((issue) => (
@@ -217,7 +230,6 @@ function IssueCard({ issue, onOpen, listeners, attributes, isDragging }: {
       )}
       onClick={() => onOpen(issue)}
     >
-      {/* Type + Key + Drag handle */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           <IssueTypeIcon type={issue.type} />
@@ -239,10 +251,8 @@ function IssueCard({ issue, onOpen, listeners, attributes, isDragging }: {
         </div>
       </div>
 
-      {/* Title */}
       <p className="text-sm font-medium text-foreground mb-2 line-clamp-2 leading-snug">{issue.title}</p>
 
-      {/* Labels */}
       {issue.labels.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">
           {issue.labels.slice(0, 2).map((l) => <LabelChip key={l.id} name={l.name} color={l.color} />)}
@@ -250,7 +260,6 @@ function IssueCard({ issue, onOpen, listeners, attributes, isDragging }: {
         </div>
       )}
 
-      {/* Footer */}
       <div className="flex items-center justify-between mt-2">
         <PriorityIcon priority={issue.priority} />
         <div className="flex items-center gap-2">

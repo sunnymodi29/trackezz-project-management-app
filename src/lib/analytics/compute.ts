@@ -1,6 +1,11 @@
 import type { BootstrapData } from "@/lib/queries/bootstrap";
 import { coerceDate, startOfDay } from "@/lib/issues/dates";
-import type { Issue, IssueStatus, IssueType, Priority, Sprint } from "@/types";
+import {
+  getWorkflowStatusColor,
+  getWorkflowStatusLabel,
+  sortWorkflowStatuses,
+} from "@/lib/projects/workflow-status";
+import type { Issue, IssueType, Priority, Sprint } from "@/types";
 import type {
   OrgAnalytics,
   BurndownPoint,
@@ -8,7 +13,7 @@ import type {
   DistributionPoint,
 } from "@/lib/analytics/types";
 
-const STATUS_ORDER: IssueStatus[] = [
+const DEFAULT_STATUS_ORDER = [
   "backlog",
   "todo",
   "in-progress",
@@ -17,23 +22,41 @@ const STATUS_ORDER: IssueStatus[] = [
   "cancelled",
 ];
 
-const STATUS_LABELS: Record<IssueStatus, string> = {
-  backlog: "Backlog",
-  todo: "Todo",
-  "in-progress": "In Progress",
-  "in-review": "In Review",
-  done: "Done",
-  cancelled: "Cancelled",
-};
-
-const STATUS_COLORS: Record<IssueStatus, string> = {
-  backlog: "#71717a",
-  todo: "#a1a1aa",
-  "in-progress": "#60a5fa",
-  "in-review": "#c084fc",
-  done: "#34d399",
-  cancelled: "#f87171",
-};
+function buildStatusDistribution(
+  data: BootstrapData,
+  issues: Issue[],
+  projectId: string | null,
+) {
+  const workflowRows = projectId
+    ? data.workflowStatuses.filter((s) => s.projectId === projectId)
+    : sortWorkflowStatuses(data.workflowStatuses);
+  const order = [
+    ...workflowRows.map((s) => s.key),
+    ...DEFAULT_STATUS_ORDER.filter(
+      (k) => !workflowRows.some((s) => s.key === k),
+    ),
+  ];
+  for (const issue of issues) {
+    if (!order.includes(issue.status)) order.push(issue.status);
+  }
+  const labels: Record<string, string> = {};
+  const colors: Record<string, string> = {};
+  for (const row of workflowRows) {
+    labels[row.key] = row.label;
+    colors[row.key] = row.color;
+  }
+  for (const key of order) {
+    labels[key] ??= getWorkflowStatusLabel(workflowRows, key);
+    colors[key] ??= getWorkflowStatusColor(workflowRows, key);
+  }
+  return countDistribution(
+    issues.map((i) => ({ key: i.status })),
+    order,
+    labels,
+    colors,
+    (x) => x.key,
+  );
+}
 
 const PRIORITY_ORDER: Priority[] = ["urgent", "high", "medium", "low", "none"];
 
@@ -376,13 +399,7 @@ export function computeOrgAnalytics(
     },
     burndown: computeBurndown(activeSprintEntity, issues),
     velocity: computeVelocity(sprints, issues),
-    statusDistribution: countDistribution(
-      issues.map((i) => ({ key: i.status })),
-      STATUS_ORDER,
-      STATUS_LABELS,
-      STATUS_COLORS,
-      (x) => x.key
-    ),
+    statusDistribution: buildStatusDistribution(data, issues, projectId),
     priorityDistribution: countDistribution(
       issues.map((i) => ({ key: i.priority })),
       PRIORITY_ORDER,

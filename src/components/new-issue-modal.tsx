@@ -10,6 +10,7 @@ import { Button, Textarea, Input, CustomSelect } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { previewNextIssueKey, parseIssueNumberFromKey } from "@/lib/issues/issue-key";
 import { dateFromKey } from "@/lib/issues/dates";
+import { workflowStatusSelectOptions } from "@/lib/projects/workflow-status";
 import type { IssueType, Priority, IssueStatus } from "@/types";
 
 function formatDateInput(d: Date): string {
@@ -36,18 +37,13 @@ const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
   { value: "none",   label: "⚪ No Priority" },
 ];
 
-const STATUS_OPTIONS: { value: IssueStatus; label: string }[] = [
-  { value: "backlog",     label: "Backlog" },
-  { value: "todo",        label: "Todo" },
-  { value: "in-progress", label: "In Progress" },
-  { value: "in-review",   label: "In Review" },
-  { value: "done",        label: "Done" },
-];
-
 export function NewIssueModal() {
   const { newIssueModalOpen, closeNewIssue, currentProject, setCurrentProject, newIssueDefaultDueDate } = useAppStore();
   const router = useRouter();
-  const { projects, currentUser, getProjectMembers, upsertIssue, patchProject } = useDataStore();
+  const { projects, currentUser, getProjectMembers, getWorkflowStatuses, upsertIssue, patchProject } = useDataStore();
+  const statusOptions = workflowStatusSelectOptions(
+    getWorkflowStatuses(currentProject.id),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [type, setType]         = useState<IssueType>("task");
   const [title, setTitle]       = useState("");
@@ -199,7 +195,7 @@ export function NewIssueModal() {
             </MetaField>
             <MetaField label="Status">
               <CustomSelect
-                options={STATUS_OPTIONS}
+                options={statusOptions}
                 value={status}
                 onChange={(val) => setStatus(val as IssueStatus)}
                 triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"

@@ -6,7 +6,10 @@ import { issuePath, resolveProjectFromParam } from "@/lib/projects/route";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { usePersistIssue } from "@/lib/issues/use-persist-issue";
-import { StatusBadge, PriorityBadge, IssueTypeIcon, LabelChip } from "@/components/ui/issue-badges";
+import { PriorityBadge, IssueTypeIcon, LabelChip } from "@/components/ui/issue-badges";
+import { ProjectStatusBadge } from "@/components/project-status-badge";
+import { WorkflowStatusManager } from "@/components/workflow-status-manager";
+import { workflowStatusSelectOptions } from "@/lib/projects/workflow-status";
 import { Avatar, AvatarGroup, Button, Input, CustomSelect } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/utils";
@@ -35,13 +38,18 @@ function ListPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { openNewIssue } = useAppStore();
-  const { projects, getIssuesByProject, getProjectMembers } = useDataStore();
+  const { projects, getIssuesByProject, getProjectMembers, getWorkflowStatuses } = useDataStore();
   const { persist } = usePersistIssue();
 
   const routeParam = params.projectId as string;
   const project = resolveProjectFromParam(projects, routeParam) ?? projects[0];
   const projectKey = project?.key ?? "";
   const projectIssues = getIssuesByProject(project?.id ?? "");
+  const workflowStatuses = project ? getWorkflowStatuses(project.id) : [];
+  const statusOptions = useMemo(
+    () => workflowStatusSelectOptions(workflowStatuses),
+    [workflowStatuses],
+  );
 
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -90,16 +98,21 @@ function ListPageContent() {
     [projectIssues, search, typeFilter, statusFilter, priorityFilter, assigneeFilter, sortBy]
   );
 
-  const grouped = useMemo(
-    () =>
-      filtered.reduce<Record<string, Issue[]>>((acc, issue) => {
-        const key = issue.status;
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(issue);
-        return acc;
-      }, {}),
-    [filtered]
-  );
+  const grouped = useMemo(() => {
+    const map = filtered.reduce<Record<string, Issue[]>>((acc, issue) => {
+      const key = issue.status;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(issue);
+      return acc;
+    }, {});
+    const orderedKeys = [
+      ...statusOptions.map((o) => o.value),
+      ...Object.keys(map).filter((k) => !statusOptions.some((o) => o.value === k)),
+    ];
+    return orderedKeys
+      .filter((k) => map[k]?.length)
+      .map((k) => [k, map[k]!] as const);
+  }, [filtered, statusOptions]);
 
   const handleIssueFieldChange = async (
     issue: Issue,
@@ -120,9 +133,12 @@ function ListPageContent() {
                 {project ? ` · ${project.name}` : ""}
               </p>
             </div>
-            <Button size="sm" onClick={() => openNewIssue()} className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" /> New Issue
-            </Button>
+            <div className="flex items-center gap-2">
+              {project && <WorkflowStatusManager projectId={project.id} />}
+              <Button size="sm" onClick={() => openNewIssue()} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> New Issue
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -142,9 +158,7 @@ function ListPageContent() {
             ]} />
             <FilterSelect label="Status" value={statusFilter} onChange={(v) => setStatusFilter(v as IssueStatus | "all")} options={[
               { value: "all", label: "All Status" },
-              { value: "backlog", label: "Backlog" }, { value: "todo", label: "Todo" },
-              { value: "in-progress", label: "In Progress" }, { value: "in-review", label: "In Review" },
-              { value: "done", label: "Done" }, { value: "cancelled", label: "Cancelled" },
+              ...statusOptions,
             ]} />
             <FilterSelect label="Priority" value={priorityFilter} onChange={(v) => setPriorityFilter(v as Priority | "all")} options={[
               { value: "all", label: "All Priority" },
@@ -176,11 +190,13 @@ function ListPageContent() {
             <div className="w-20 hidden xl:block">Updated</div>
           </div>
 
-          {Object.entries(grouped).map(([status, issues]) => (
+          {grouped.map(([status, issues]) => (
             <IssueGroup
               key={status}
-              status={status as IssueStatus}
+              projectId={project?.id ?? ""}
+              status={status}
               issues={issues}
+              statusOptions={statusOptions}
               projectKey={projectKey}
               onSelect={setSelectedIssueId}
               selectedId={selectedIssueId ?? undefined}
@@ -230,9 +246,11 @@ function FilterSelect({ label, value, onChange, options }: {
   );
 }
 
-function IssueGroup({ status, issues, projectKey, onSelect, selectedId, onFieldChange }: {
-  status: IssueStatus;
+function IssueGroup({ projectId, status, issues, statusOptions, projectKey, onSelect, selectedId, onFieldChange }: {
+  projectId: string;
+  status: string;
   issues: Issue[];
+  statusOptions: { value: string; label: string }[];
   projectKey: string;
   onSelect: (id: string) => void;
   selectedId?: string;
@@ -246,7 +264,7 @@ function IssueGroup({ status, issues, projectKey, onSelect, selectedId, onFieldC
         className="w-full flex items-center gap-2 px-6 py-2 hover:bg-muted/50 transition-colors text-left"
       >
         <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", !open && "-rotate-90")} />
-        <StatusBadge status={status} />
+        <ProjectStatusBadge projectId={projectId} status={status} />
         <span className="text-xs text-muted-foreground">{issues.length}</span>
       </button>
 
@@ -277,17 +295,16 @@ function IssueGroup({ status, issues, projectKey, onSelect, selectedId, onFieldC
           </div>
           <div className="w-28 hidden md:block shrink-0 relative" onClick={(e) => e.stopPropagation()}>
             <CustomSelect
-              options={[
-                { value: "backlog", label: "Backlog" },
-                { value: "todo", label: "Todo" },
-                { value: "in-progress", label: "In Progress" },
-                { value: "in-review", label: "In Review" },
-                { value: "done", label: "Done" },
-                { value: "cancelled", label: "Cancelled" },
-              ]}
+              options={statusOptions}
               value={issue.status}
               onChange={(val) => void onFieldChange(issue, { status: val as IssueStatus })}
-              renderTrigger={() => <StatusBadge status={issue.status} className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" />}
+              renderTrigger={() => (
+                <ProjectStatusBadge
+                  projectId={projectId}
+                  status={issue.status}
+                  className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all"
+                />
+              )}
             />
           </div>
           <div className="w-24 hidden lg:block shrink-0 relative" onClick={(e) => e.stopPropagation()}>

@@ -23,6 +23,7 @@ import {
   serializeActivityLog,
   serializeInvitation,
   serializeAIConversation,
+  serializeWorkflowStatus,
 } from "@/lib/serializers";
 import { getIssues, issueInclude } from "@/lib/queries/issues";
 import { ACTIVE_ORG_COOKIE, ACTIVE_PROJECT_COOKIE } from "@/lib/org/cookies";
@@ -41,6 +42,7 @@ import type {
   Invitation,
   AIConversation,
   UserPermissions,
+  WorkflowStatus,
 } from "@/types";
 
 export interface BootstrapData {
@@ -59,6 +61,7 @@ export interface BootstrapData {
   activityLogs: ActivityLog[];
   invitations: Invitation[];
   aiConversations: AIConversation[];
+  workflowStatuses: WorkflowStatus[];
 }
 
 export type WorkspaceBootstrapData = BootstrapData & {
@@ -108,6 +111,7 @@ async function buildNoWorkspaceBootstrap(
     activityLogs: [],
     invitations: [],
     aiConversations: [],
+    workflowStatuses: [],
   };
 }
 
@@ -254,6 +258,7 @@ export async function getBootstrapData(
     activityLogs,
     invitations,
     aiConversations,
+    workflowStatuses,
   ] = await Promise.all([
     prisma.organizationMember.findMany({
       where: { organizationId: org.id },
@@ -334,6 +339,12 @@ export async function getBootstrapData(
           include: { messages: { orderBy: { createdAt: "asc" } } },
         })
       : Promise.resolve([]),
+    projectIds.length > 0
+      ? prisma.workflowStatus.findMany({
+          where: { projectId: { in: projectIds } },
+          orderBy: { position: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
 
   const owner = isOrgOwner(resolvedUserId, org);
@@ -386,6 +397,7 @@ export async function getBootstrapData(
     activityLogs: activityLogs.map(serializeActivityLog),
     invitations: invitations.map((inv) => serializeInvitation(inv)),
     aiConversations: aiConversations.map(serializeAIConversation),
+    workflowStatuses: workflowStatuses.map(serializeWorkflowStatus),
   };
 
   await cacheSet(cacheKey, result, 120);

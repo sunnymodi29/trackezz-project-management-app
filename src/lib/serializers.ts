@@ -1,6 +1,5 @@
 import { buildCommentTree } from "@/lib/comments/tree";
 import type {
-  IssueStatus as AppIssueStatus,
   SprintStatus as AppSprintStatus,
   User,
   Organization,
@@ -19,6 +18,7 @@ import type {
   ActivityLog,
   Invitation,
   AIConversation,
+  WorkflowStatus,
 } from "@/types";
 import type {
   User as DbUser,
@@ -40,33 +40,9 @@ import type {
   Invitation as DbInvitation,
   AIConversation as DbAIConversation,
   AIMessage as DbAIMessage,
-  IssueStatus,
+  WorkflowStatus as DbWorkflowStatus,
   SprintStatus,
 } from "@/generated/prisma/client";
-
-export function toAppIssueStatus(status: IssueStatus): AppIssueStatus {
-  const map: Record<IssueStatus, AppIssueStatus> = {
-    backlog: "backlog",
-    todo: "todo",
-    in_progress: "in-progress",
-    in_review: "in-review",
-    done: "done",
-    cancelled: "cancelled",
-  };
-  return map[status];
-}
-
-export function toDbIssueStatus(status: AppIssueStatus): IssueStatus {
-  const map: Record<AppIssueStatus, IssueStatus> = {
-    backlog: "backlog",
-    todo: "todo",
-    "in-progress": "in_progress",
-    "in-review": "in_review",
-    done: "done",
-    cancelled: "cancelled",
-  };
-  return map[status];
-}
 
 export function toAppSprintStatus(status: SprintStatus): AppSprintStatus {
   return status as AppSprintStatus;
@@ -167,8 +143,20 @@ export function serializeLabel(label: DbLabel): Label {
   };
 }
 
+export function serializeWorkflowStatus(row: DbWorkflowStatus): WorkflowStatus {
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    key: row.key,
+    label: row.label,
+    color: row.color,
+    position: row.position,
+    createdAt: row.createdAt,
+  };
+}
+
 export function serializeSprint(
-  sprint: DbSprint & { _count?: { issues: number }; issues?: { status: IssueStatus }[] }
+  sprint: DbSprint & { _count?: { issues: number }; issues?: { status: string }[] }
 ): Sprint {
   const issues = sprint.issues ?? [];
   const issueCount = sprint._count?.issues ?? issues.length;
@@ -188,7 +176,7 @@ export function serializeSprint(
 }
 
 export function serializeEpic(
-  epic: DbEpic & { issues?: { status: IssueStatus }[] }
+  epic: DbEpic & { issues?: { status: string }[] }
 ): Epic {
   const issues = epic.issues ?? [];
   const issueCount = issues.length;
@@ -271,7 +259,7 @@ export function serializeIssue(issue: FullIssue): Issue {
     title: issue.title,
     description: issue.description ?? undefined,
     type: issue.type,
-    status: toAppIssueStatus(issue.status),
+    status: issue.status,
     priority: issue.priority,
     severity: issue.severity ?? undefined,
     reporterId: issue.reporterId,

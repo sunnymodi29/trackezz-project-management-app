@@ -1,26 +1,38 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { invalidateBootstrapForUser } from "@/lib/org/cache";
 import { requireProjectAccess, canManageIssues } from "@/lib/auth/rbac";
 import { issueInclude } from "@/lib/queries/issues";
-import { serializeIssue, toDbIssueStatus, toAppIssueStatus } from "@/lib/serializers";
+import { serializeIssue } from "@/lib/serializers";
 import {
   notifyIssueAssigned,
   notifyIssueStatusChange,
 } from "@/lib/notifications/service";
+import { getWorkflowStatusLabel } from "@/lib/projects/workflow-status";
+import { assertValidProjectStatus } from "@/lib/projects/workflow-status.server";
 import type { Issue, IssueStatus, IssueType, Priority } from "@/types";
 
-const STATUS_LABELS: Record<IssueStatus, string> = {
-  backlog: "Backlog",
-  todo: "Todo",
-  "in-progress": "In Progress",
-  "in-review": "In Review",
-  done: "Done",
-  cancelled: "Cancelled",
-};
+async function statusLabelFor(projectId: string, statusKey: string) {
+  const rows = await prisma.workflowStatus.findMany({
+    where: { projectId },
+  });
+  return getWorkflowStatusLabel(
+    rows.map((r) => ({
+      id: r.id,
+      projectId: r.projectId,
+      key: r.key,
+      label: r.label,
+      color: r.color,
+      position: r.position,
+      createdAt: r.createdAt,
+    })),
+    statusKey,
+  );
+}
 
 export interface UpdateIssueInput {
   title?: string;
@@ -30,6 +42,19 @@ export interface UpdateIssueInput {
   assigneeIds?: string[];
   dueDate?: Date | null;
   sprintId?: string | null;
+}
+
+/** Partial issue fields returned by fast list/board updates. */
+export interface IssueQuickPatch {
+  id: string;
+  status?: IssueStatus;
+  priority?: Priority;
+  updatedAt: Date;
+}
+
+export interface IssueQuickPatchInput {
+  status?: IssueStatus;
+  priority?: Priority;
 }
 
 async function revalidateIssueViews(
@@ -120,6 +145,8 @@ export async function createIssue(input: CreateIssueInput) {
   const issueNumber = project.issueCounter;
   const issueKey = `${project.key}-${issueNumber}`;
 
+  await assertValidProjectStatus(input.projectId, input.status);
+
   const issue = await prisma.issue.create({
     data: {
       issueNumber,
@@ -127,7 +154,7 @@ export async function createIssue(input: CreateIssueInput) {
       title: input.title.trim(),
       description: input.description,
       type: input.type,
-      status: toDbIssueStatus(input.status),
+      status: input.status,
       priority: input.priority,
       reporterId: userId,
       projectId: input.projectId,
@@ -210,6 +237,10 @@ export async function updateIssue(
 
   const priorAssigneeIds = existing.assignees.map((a) => a.userId);
 
+  if (input.status !== undefined) {
+    await assertValidProjectStatus(existing.projectId, input.status);
+  }
+
   if (input.assigneeIds !== undefined) {
     await prisma.issueAssignee.deleteMany({ where: { issueId } });
     if (input.assigneeIds.length > 0) {
@@ -224,9 +255,7 @@ export async function updateIssue(
     data: {
       ...(input.title !== undefined && { title: input.title.trim() }),
       ...(input.description !== undefined && { description: input.description }),
-      ...(input.status !== undefined && {
-        status: toDbIssueStatus(input.status),
-      }),
+      ...(input.status !== undefined && { status: input.status }),
       ...(input.priority !== undefined && { priority: input.priority }),
       ...(input.dueDate !== undefined && { dueDate: input.dueDate }),
       ...(input.sprintId !== undefined && { sprintId: input.sprintId }),
@@ -278,7 +307,7 @@ export async function updateIssue(
     }
   }
 
-  if (input.status !== undefined && input.status !== toAppIssueStatus(existing.status)) {
+  if (input.status !== undefined && input.status !== existing.status) {
     const watcherIds = [
       ...priorAssigneeIds,
       existing.reporterId,
@@ -287,7 +316,7 @@ export async function updateIssue(
       issueId,
       issueKey: existing.issueKey,
       issueTitle: issue.title,
-      statusLabel: STATUS_LABELS[input.status],
+      statusLabel: await statusLabelFor(existing.projectId, input.status),
       recipientIds: watcherIds,
       actorId: session.user.id,
       organizationSlug: orgSlug,
@@ -348,10 +377,163 @@ export async function deleteIssue(issueId: string): Promise<{ projectKey: string
   return { projectKey: existing.project.key };
 }
 
+async function scheduleQuickPatchSideEffects(params: {
+  userId: string;
+  issueId: string;
+  issueKey: string;
+  issueTitle: string;
+  projectId: string;
+  organizationId: string;
+  orgSlug: string;
+  priorStatus: string;
+  priorAssigneeIds: string[];
+  reporterId: string;
+  newStatus?: IssueStatus;
+  newPriority?: Priority;
+  statusLabel?: string;
+}) {
+  after(async () => {
+    const changes: string[] = [];
+    if (params.newStatus !== undefined) {
+      changes.push(`status → ${params.newStatus}`);
+    }
+    if (params.newPriority !== undefined) {
+      changes.push(`priority → ${params.newPriority}`);
+    }
+    if (changes.length === 0) return;
+
+    await logIssueActivity(
+      params.userId,
+      params.issueId,
+      params.projectId,
+      params.organizationId,
+      "updated issue",
+      `${params.issueKey}: ${changes.join(", ")}`,
+    );
+
+    if (
+      params.newStatus !== undefined &&
+      params.newStatus !== params.priorStatus &&
+      params.statusLabel
+    ) {
+      await notifyIssueStatusChange({
+        issueId: params.issueId,
+        issueKey: params.issueKey,
+        issueTitle: params.issueTitle,
+        statusLabel: params.statusLabel,
+        recipientIds: [...params.priorAssigneeIds, params.reporterId],
+        actorId: params.userId,
+        organizationSlug: params.orgSlug,
+      });
+    }
+  });
+}
+
+export async function patchIssueFields(
+  issueId: string,
+  input: IssueQuickPatchInput,
+): Promise<IssueQuickPatch> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const existing = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: {
+      issueKey: true,
+      title: true,
+      status: true,
+      priority: true,
+      reporterId: true,
+      projectId: true,
+      assignees: { select: { userId: true } },
+      project: {
+        select: {
+          key: true,
+          organizationId: true,
+          organization: { select: { slug: true, ownerId: true } },
+        },
+      },
+    },
+  });
+  if (!existing) throw new Error("NOT_FOUND: Issue not found");
+
+  const access = await requireProjectAccess(session.user.id, existing.projectId);
+  const org = existing.project.organization;
+
+  if (
+    !canManageIssues(access.projectMember, {
+      userId: session.user.id,
+      organization: org,
+      orgMember: access.orgMember,
+      isOrgWideProjectAdmin: access.isOrgWideProjectAdmin,
+    })
+  ) {
+    throw new Error("FORBIDDEN: Cannot update issues in this project");
+  }
+
+  const data: { status?: string; priority?: Priority } = {};
+  let statusLabel: string | undefined;
+
+  if (input.status !== undefined) {
+    if (input.status === existing.status) {
+      return {
+        id: issueId,
+        status: input.status,
+        updatedAt: new Date(),
+      };
+    }
+    const row = await assertValidProjectStatus(existing.projectId, input.status);
+    data.status = input.status;
+    statusLabel = row.label;
+  }
+
+  if (input.priority !== undefined && input.priority !== existing.priority) {
+    data.priority = input.priority;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return {
+      id: issueId,
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.priority !== undefined ? { priority: input.priority } : {}),
+      updatedAt: new Date(),
+    };
+  }
+
+  const updated = await prisma.issue.update({
+    where: { id: issueId },
+    data,
+    select: { id: true, status: true, priority: true, updatedAt: true },
+  });
+
+  await scheduleQuickPatchSideEffects({
+    userId: session.user.id,
+    issueId,
+    issueKey: existing.issueKey,
+    issueTitle: existing.title,
+    projectId: existing.projectId,
+    organizationId: existing.project.organizationId,
+    orgSlug: org.slug,
+    priorStatus: existing.status,
+    priorAssigneeIds: existing.assignees.map((a) => a.userId),
+    reporterId: existing.reporterId,
+    newStatus: data.status,
+    newPriority: data.priority,
+    statusLabel,
+  });
+
+  return {
+    id: updated.id,
+    ...(data.status !== undefined ? { status: updated.status } : {}),
+    ...(data.priority !== undefined ? { priority: updated.priority } : {}),
+    updatedAt: updated.updatedAt,
+  };
+}
+
 export async function updateIssueStatus(
   issueId: string,
-  status: IssueStatus
-): Promise<Issue> {
-  return updateIssue(issueId, { status });
+  status: IssueStatus,
+): Promise<IssueQuickPatch> {
+  return patchIssueFields(issueId, { status });
 }
 

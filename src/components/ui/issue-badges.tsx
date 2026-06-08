@@ -33,7 +33,7 @@ export function PriorityBadge({ priority, className: customClass }: { priority: 
 }
 
 // ── Status Icon & Label ────────────────────────────────────────────────────
-const statusConfig: Record<IssueStatus, { label: string; icon: React.ReactNode; className: string; bg: string }> = {
+const statusConfig: Record<string, { label: string; icon: React.ReactNode; className: string; bg: string }> = {
   backlog:     { label: "Backlog",     icon: <Circle className="h-3.5 w-3.5" />,         className: "text-zinc-500",   bg: "bg-zinc-500/10" },
   todo:        { label: "Todo",        icon: <Circle className="h-3.5 w-3.5" />,         className: "text-zinc-300",   bg: "bg-zinc-500/10" },
   "in-progress":{ label: "In Progress",icon: <PlayCircle className="h-3.5 w-3.5" />,     className: "text-blue-400",   bg: "bg-blue-500/10" },
@@ -47,11 +47,46 @@ export function StatusIcon({ status }: { status: IssueStatus }) {
   return <span className={className}>{icon}</span>;
 }
 
-export function StatusBadge({ status, className: customClass }: { status: IssueStatus; className?: string }) {
-  const { label, icon, className, bg } = statusConfig[status] ?? statusConfig.backlog;
+export function StatusBadge({
+  status,
+  label,
+  color,
+  className: customClass,
+}: {
+  status: IssueStatus;
+  label?: string;
+  color?: string;
+  className?: string;
+}) {
+  const fallback = statusConfig[status] ?? statusConfig.backlog;
+  const displayLabel = label ?? fallback.label;
+
+  if (color) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium border",
+          customClass,
+        )}
+        style={{
+          color,
+          borderColor: `${color}40`,
+          backgroundColor: `${color}15`,
+        }}
+      >
+        <span
+          className="h-1.5 w-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: color }}
+        />
+        {displayLabel}
+      </span>
+    );
+  }
+
+  const { icon, className, bg } = fallback;
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", className, bg, customClass)}>
-      {icon}{label}
+      {icon}{displayLabel}
     </span>
   );
 }

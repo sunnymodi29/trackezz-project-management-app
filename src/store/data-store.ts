@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import type { BootstrapData } from "@/lib/queries/bootstrap";
 import { refreshSprintCounts } from "@/lib/sprints/counts";
+import { sortWorkflowStatuses } from "@/lib/projects/workflow-status";
 import type {
   ActivityLog,
   Issue,
@@ -12,6 +13,7 @@ import type {
   ProjectMember,
   Sprint,
   User,
+  WorkflowStatus,
 } from "@/types";
 
 interface DataState extends BootstrapData {
@@ -19,6 +21,10 @@ interface DataState extends BootstrapData {
   hydrate: (data: BootstrapData) => void;
   setIssues: (issues: Issue[]) => void;
   upsertIssue: (issue: Issue) => void;
+  patchIssue: (
+    issueId: string,
+    patch: Partial<Pick<Issue, "status" | "priority" | "updatedAt">>,
+  ) => void;
   removeIssue: (issueId: string) => void;
   upsertSprint: (sprint: Sprint) => void;
   removeSprint: (sprintId: string) => void;
@@ -43,6 +49,14 @@ interface DataState extends BootstrapData {
   markAllNotificationsRead: () => void;
   getIssuesByProject: (projectId: string) => Issue[];
   getMyIssues: () => Issue[];
+  getWorkflowStatuses: (projectId: string) => WorkflowStatus[];
+  upsertWorkflowStatus: (status: WorkflowStatus) => void;
+  removeWorkflowStatus: (projectId: string, statusKey: string) => void;
+  patchIssueStatusBulk: (
+    projectId: string,
+    fromKey: string,
+    toKey: string,
+  ) => void;
 }
 
 const emptyBootstrap: BootstrapData = {
@@ -66,6 +80,7 @@ const emptyBootstrap: BootstrapData = {
   activityLogs: [],
   invitations: [],
   aiConversations: [],
+  workflowStatuses: [],
 };
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -86,6 +101,17 @@ export const useDataStore = create<DataState>((set, get) => ({
       const issues = exists
         ? state.issues.map((i) => (i.id === issue.id ? issue : i))
         : [issue, ...state.issues];
+      return {
+        issues,
+        sprints: refreshSprintCounts(state.sprints, issues),
+      };
+    }),
+
+  patchIssue: (issueId, patch) =>
+    set((state) => {
+      const issues = state.issues.map((i) =>
+        i.id === issueId ? { ...i, ...patch } : i,
+      );
       return {
         issues,
         sprints: refreshSprintCounts(state.sprints, issues),
@@ -195,6 +221,9 @@ export const useDataStore = create<DataState>((set, get) => ({
         epics: state.epics.filter((e) => e.projectId !== projectId),
         projectMembers: state.projectMembers.filter(
           (m) => m.projectId !== projectId
+        ),
+        workflowStatuses: state.workflowStatuses.filter(
+          (s) => s.projectId !== projectId
         ),
       };
     }),
@@ -313,4 +342,34 @@ export const useDataStore = create<DataState>((set, get) => ({
     get().issues.filter((i) =>
       i.assigneeIds.includes(get().currentUser.id)
     ),
+
+  getWorkflowStatuses: (projectId) =>
+    sortWorkflowStatuses(
+      get().workflowStatuses.filter((s) => s.projectId === projectId),
+    ),
+
+  upsertWorkflowStatus: (status) =>
+    set((state) => {
+      const exists = state.workflowStatuses.some((s) => s.id === status.id);
+      const workflowStatuses = exists
+        ? state.workflowStatuses.map((s) => (s.id === status.id ? status : s))
+        : [...state.workflowStatuses, status];
+      return { workflowStatuses: sortWorkflowStatuses(workflowStatuses) };
+    }),
+
+  removeWorkflowStatus: (projectId, statusKey) =>
+    set((state) => ({
+      workflowStatuses: state.workflowStatuses.filter(
+        (s) => !(s.projectId === projectId && s.key === statusKey),
+      ),
+    })),
+
+  patchIssueStatusBulk: (projectId, fromKey, toKey) =>
+    set((state) => ({
+      issues: state.issues.map((i) =>
+        i.projectId === projectId && i.status === fromKey
+          ? { ...i, status: toKey, updatedAt: new Date() }
+          : i
+      ),
+    })),
 }));

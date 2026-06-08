@@ -10,13 +10,18 @@ export type IssueType =
   | "improvement"
   | "epic"
   | "story";
-export type IssueStatus =
-  | "backlog"
-  | "todo"
-  | "in-progress"
-  | "in-review"
-  | "done"
-  | "cancelled";
+/** Workflow status key (built-in defaults or per-project custom). */
+export type IssueStatus = string;
+
+export interface WorkflowStatus {
+  id: string;
+  projectId: string;
+  key: string;
+  label: string;
+  color: string;
+  position: number;
+  createdAt: Date;
+}
 export type Severity = "critical" | "major" | "minor" | "trivial";
 export type OrganizationRole = "owner" | "project_admin";
 export type ProjectRole = "project_admin" | "member";
@@ -264,7 +269,7 @@ export interface AIMessage {
 
 // Board / Kanban Types
 export interface BoardColumn {
-  id: IssueStatus;
+  id: string;
   title: string;
   issues: Issue[];
 }
@@ -279,7 +284,7 @@ export interface ProjectStats {
   completionRate: number;
   avgResolutionTime: string;
   issuesByPriority: Record<Priority, number>;
-  issuesByStatus: Record<IssueStatus, number>;
+  issuesByStatus: Record<string, number>;
   issuesByType: Record<IssueType, number>;
   recentActivity: ActivityLog[];
   burndownData: { date: string; remaining: number; ideal: number }[];

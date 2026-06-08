@@ -30,15 +30,6 @@ enum IssueType {
   story
 }
 
-enum IssueStatus {
-  backlog
-  todo
-  in_progress
-  in_review
-  done
-  cancelled
-}
-
 enum Priority {
   urgent
   high
@@ -211,9 +202,25 @@ model Project {
   activityLogs    ActivityLog[]
   aiConversations AIConversation[]
   savedViews      SavedView[]
-  invitations     Invitation[]
+  invitations      Invitation[]
+  workflowStatuses WorkflowStatus[]
 
   @@unique([organizationId, key])
+}
+
+model WorkflowStatus {
+  id        String   @id @default(cuid())
+  projectId String
+  key       String
+  label     String
+  color     String   @default("#71717a")
+  position  Int
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, key])
+  @@index([projectId, position])
 }
 
 model ProjectMember {
@@ -272,7 +279,7 @@ model Issue {
   title             String
   description       String?
   type              IssueType   @default(task)
-  status            IssueStatus @default(backlog)
+  status            String      @default("backlog")
   priority          Priority    @default(medium)
   severity          Severity?
   reporterId        String
