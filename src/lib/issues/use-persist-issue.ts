@@ -11,6 +11,23 @@ import { isQuickIssuePatch } from "@/lib/issues/quick-patch";
 import { useDataStore } from "@/store/data-store";
 import type { Issue } from "@/types";
 
+function applyOptimisticPatch(existing: Issue, input: UpdateIssueInput): Issue {
+  const next: Issue = { ...existing, updatedAt: new Date() };
+  if (input.title !== undefined) next.title = input.title;
+  if (input.description !== undefined) next.description = input.description;
+  if (input.status !== undefined) next.status = input.status;
+  if (input.priority !== undefined) next.priority = input.priority;
+  if (input.assigneeIds !== undefined) next.assigneeIds = input.assigneeIds;
+  if (input.dueDate !== undefined) {
+    next.dueDate = input.dueDate ?? undefined;
+  }
+  if (input.sprintId !== undefined) {
+    next.sprintId = input.sprintId ?? undefined;
+    if (input.sprintId === null) next.sprint = undefined;
+  }
+  return next;
+}
+
 export function usePersistIssue() {
   const router = useRouter();
   const upsertIssue = useDataStore((s) => s.upsertIssue);
@@ -26,11 +43,7 @@ export function usePersistIssue() {
       setSaving(true);
       setError(null);
 
-      const optimistic: Issue = {
-        ...existing,
-        ...input,
-        updatedAt: new Date(),
-      };
+      const optimistic = applyOptimisticPatch(existing, input);
       upsertIssue(optimistic);
 
       try {

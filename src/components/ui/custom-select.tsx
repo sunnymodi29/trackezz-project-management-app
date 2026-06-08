@@ -215,7 +215,7 @@ export function CustomSelect({
       tabIndex={disabled ? -1 : 0}
     >
       {renderTrigger ? (
-        <div onClick={() => !disabled && setIsOpen(!isOpen)} className="cursor-pointer">
+        <div onClick={() => !disabled && setIsOpen(!isOpen)} className="cursor-pointer flex">
           {renderTrigger(selectedOptions)}
         </div>
       ) : (
