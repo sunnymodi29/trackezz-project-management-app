@@ -5,10 +5,26 @@ import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { createIssue } from "@/lib/actions/issues";
 import { useRouter } from "next/navigation";
-import { X, Bug, Zap, Star, CheckCircle2, Layers, BookOpen, ChevronDown, Paperclip, AlertCircle } from "lucide-react";
+import {
+  X,
+  Bug,
+  Zap,
+  Star,
+  CheckCircle2,
+  Layers,
+  BookOpen,
+  ChevronDown,
+  Paperclip,
+  AlertCircle,
+} from "lucide-react";
 import { Button, Textarea, Input, CustomSelect } from "@/components/ui";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { normalizeRichTextForSave } from "@/lib/rich-text";
 import { cn } from "@/lib/utils";
-import { previewNextIssueKey, parseIssueNumberFromKey } from "@/lib/issues/issue-key";
+import {
+  previewNextIssueKey,
+  parseIssueNumberFromKey,
+} from "@/lib/issues/issue-key";
 import { dateFromKey } from "@/lib/issues/dates";
 import { workflowStatusSelectOptions } from "@/lib/projects/workflow-status";
 import type { IssueType, Priority, IssueStatus } from "@/types";
@@ -20,57 +36,104 @@ function formatDateInput(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-const TYPE_OPTIONS: { value: IssueType; label: string; icon: React.ReactNode }[] = [
-  { value: "task",        label: "Task",        icon: <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" /> },
-  { value: "bug",         label: "Bug",         icon: <Bug className="h-3.5 w-3.5 text-red-400" /> },
-  { value: "feature",     label: "Feature",     icon: <Star className="h-3.5 w-3.5 text-purple-400" /> },
-  { value: "improvement", label: "Improvement", icon: <Zap className="h-3.5 w-3.5 text-teal-400" /> },
-  { value: "epic",        label: "Epic",        icon: <Layers className="h-3.5 w-3.5 text-amber-400" /> },
-  { value: "story",       label: "Story",       icon: <BookOpen className="h-3.5 w-3.5 text-green-400" /> },
+const TYPE_OPTIONS: {
+  value: IssueType;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    value: "task",
+    label: "Task",
+    icon: <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />,
+  },
+  {
+    value: "bug",
+    label: "Bug",
+    icon: <Bug className="h-3.5 w-3.5 text-red-400" />,
+  },
+  {
+    value: "feature",
+    label: "Feature",
+    icon: <Star className="h-3.5 w-3.5 text-purple-400" />,
+  },
+  {
+    value: "improvement",
+    label: "Improvement",
+    icon: <Zap className="h-3.5 w-3.5 text-teal-400" />,
+  },
+  {
+    value: "epic",
+    label: "Epic",
+    icon: <Layers className="h-3.5 w-3.5 text-amber-400" />,
+  },
+  {
+    value: "story",
+    label: "Story",
+    icon: <BookOpen className="h-3.5 w-3.5 text-green-400" />,
+  },
 ];
 
 const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
   { value: "urgent", label: "🔴 Urgent" },
-  { value: "high",   label: "🟠 High" },
+  { value: "high", label: "🟠 High" },
   { value: "medium", label: "🟡 Medium" },
-  { value: "low",    label: "🔵 Low" },
-  { value: "none",   label: "⚪ No Priority" },
+  { value: "low", label: "🔵 Low" },
+  { value: "none", label: "⚪ No Priority" },
 ];
 
 export function NewIssueModal() {
-  const { newIssueModalOpen, closeNewIssue, currentProject, setCurrentProject, newIssueDefaultDueDate } = useAppStore();
+  const {
+    newIssueModalOpen,
+    closeNewIssue,
+    currentProject,
+    setCurrentProject,
+    newIssueDefaultDueDate,
+  } = useAppStore();
   const router = useRouter();
-  const { projects, currentUser, getProjectMembers, getWorkflowStatuses, upsertIssue, patchProject } = useDataStore();
+  const {
+    projects,
+    currentUser,
+    getProjectMembers,
+    getWorkflowStatuses,
+    upsertIssue,
+    patchProject,
+  } = useDataStore();
   const statusOptions = workflowStatusSelectOptions(
     getWorkflowStatuses(currentProject.id),
   );
   const [submitting, setSubmitting] = useState(false);
-  const [type, setType]         = useState<IssueType>("task");
-  const [title, setTitle]       = useState("");
-  const [description, setDesc]  = useState("");
+  const [type, setType] = useState<IssueType>("task");
+  const [title, setTitle] = useState("");
+  const [description, setDesc] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
-  const [status, setStatus]     = useState<IssueStatus>("todo");
+  const [status, setStatus] = useState<IssueStatus>("todo");
   const [estimate, setEstimate] = useState("");
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [showBugFields, setShowBugFields] = useState(false);
   const [reproSteps, setReproSteps] = useState("");
   const [expected, setExpected] = useState("");
-  const [actual, setActual]     = useState("");
-  const [env, setEnv]           = useState("");
-  const [dueDate, setDueDate]   = useState("");
+  const [actual, setActual] = useState("");
+  const [env, setEnv] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (newIssueModalOpen) {
-      setDueDate(newIssueDefaultDueDate ? formatDateInput(newIssueDefaultDueDate) : "");
+      setDueDate(
+        newIssueDefaultDueDate ? formatDateInput(newIssueDefaultDueDate) : "",
+      );
       setTimeout(() => titleRef.current?.focus(), 50);
     }
   }, [newIssueModalOpen, newIssueDefaultDueDate]);
 
-  useEffect(() => { setShowBugFields(type === "bug"); }, [type]);
+  useEffect(() => {
+    setShowBugFields(type === "bug");
+  }, [type]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeNewIssue(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeNewIssue();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [closeNewIssue]);
@@ -79,17 +142,20 @@ export function NewIssueModal() {
 
   const nextIssueKeyPreview = previewNextIssueKey(
     currentProject.key,
-    currentProject.issueCounter ?? 0
+    currentProject.issueCounter ?? 0,
   );
 
   const handleSubmit = async () => {
-    if (!title.trim()) { titleRef.current?.focus(); return; }
+    if (!title.trim()) {
+      titleRef.current?.focus();
+      return;
+    }
     setSubmitting(true);
     try {
       const issue = await createIssue({
         projectId: currentProject.id,
         title,
-        description: description || undefined,
+        description: normalizeRichTextForSave(description),
         type,
         status,
         priority,
@@ -112,7 +178,14 @@ export function NewIssueModal() {
       }
       router.refresh();
       closeNewIssue();
-      setTitle(""); setDesc(""); setReproSteps(""); setExpected(""); setActual(""); setEnv(""); setAssigneeIds([]); setDueDate("");
+      setTitle("");
+      setDesc("");
+      setReproSteps("");
+      setExpected("");
+      setActual("");
+      setEnv("");
+      setAssigneeIds([]);
+      setDueDate("");
     } finally {
       setSubmitting(false);
     }
@@ -120,16 +193,23 @@ export function NewIssueModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeNewIssue} />
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col animate-scale-in rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={closeNewIssue}
+      />
+      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col animate-scale-in rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <CustomSelect
-              options={projects.map(p => ({ value: p.id, label: p.name, icon: <span>{p.icon}</span> }))}
+              options={projects.map((p) => ({
+                value: p.id,
+                label: p.name,
+                icon: <span>{p.icon}</span>,
+              }))}
               value={currentProject.id}
               onChange={(val) => {
-                const project = projects.find(p => p.id === val);
+                const project = projects.find((p) => p.id === val);
                 if (project) setCurrentProject(project);
               }}
               className="w-36 shrink-0"
@@ -142,35 +222,46 @@ export function NewIssueModal() {
               className="w-36 shrink-0"
               triggerClassName="bg-muted border-border hover:bg-accent/40 h-7"
             />
-            <span className="text-xs text-muted-foreground font-mono">{nextIssueKeyPreview}</span>
+            <span className="text-xs text-muted-foreground font-mono">
+              {nextIssueKeyPreview}
+            </span>
           </div>
-          <button onClick={closeNewIssue} className="rounded-md p-1 hover:bg-accent transition-colors">
+          <button
+            onClick={closeNewIssue}
+            className="rounded-md p-1 hover:bg-accent transition-colors"
+          >
             <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          <input
-            ref={titleRef}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Issue title..."
-            className="w-full bg-transparent text-lg font-semibold text-foreground placeholder:text-muted-foreground outline-none"
-          />
-          <Textarea
-            value={description}
-            onChange={(e) => setDesc(e.target.value)}
-            placeholder="Add a description..."
-            className="min-h-[100px] border-dashed"
-          />
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 flex gap-8">
+          <div className="space-y-2 w-4/5">
+            <input
+              ref={titleRef}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Issue title..."
+              className="w-full bg-transparent text-lg font-semibold text-foreground placeholder:text-muted-foreground outline-none border-b border-border pb-1.5"
+            />
+            <RichTextEditor
+              value={description}
+              onChange={setDesc}
+              placeholder="Add a description..."
+              minHeight="120px"
+            />
+          </div>
 
           {/* Meta row */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="gap-3 flex flex-col">
             <MetaField label="Assignees">
               <CustomSelect
                 multiple
-                options={getProjectMembers(currentProject.id).map(m => ({ value: m.user.id, label: m.user.name, avatarUrl: m.user.avatarUrl }))}
+                options={getProjectMembers(currentProject.id).map((m) => ({
+                  value: m.user.id,
+                  label: m.user.name,
+                  avatarUrl: m.user.avatarUrl,
+                }))}
                 value={assigneeIds}
                 onChange={setAssigneeIds}
                 placeholder="Unassigned"
@@ -179,12 +270,23 @@ export function NewIssueModal() {
                   return (
                     <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto w-full bg-transparent text-xs text-foreground outline-none cursor-pointer p-1 rounded hover:bg-accent/50 min-h-[24px]">
                       {selectedList.length === 0 ? (
-                        <span className="text-muted-foreground italic text-[10px]">Unassigned</span>
+                        <span className="text-muted-foreground italic text-[10px]">
+                          Unassigned
+                        </span>
                       ) : (
-                        selectedList.map(o => (
-                          <div key={o.value} className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm flex items-center gap-1.5 text-[10px]">
-                            {o.avatarUrl && <img src={o.avatarUrl} alt={o.label} className="h-3.5 w-3.5 rounded-full object-cover" />}
-                            <span>{o.label.split(' ')[0]}</span>
+                        selectedList.map((o) => (
+                          <div
+                            key={o.value}
+                            className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm flex items-center gap-1.5 text-[10px]"
+                          >
+                            {o.avatarUrl && (
+                              <img
+                                src={o.avatarUrl}
+                                alt={o.label}
+                                className="h-3.5 w-3.5 rounded-full object-cover"
+                              />
+                            )}
+                            <span>{o.label.split(" ")[0]}</span>
                           </div>
                         ))
                       )}
@@ -210,7 +312,14 @@ export function NewIssueModal() {
               />
             </MetaField>
             <MetaField label="Estimate (pts)">
-              <input value={estimate} onChange={(e) => setEstimate(e.target.value)} type="number" min="0" placeholder="0" className="w-full bg-transparent text-xs text-foreground outline-none" />
+              <input
+                value={estimate}
+                onChange={(e) => setEstimate(e.target.value)}
+                type="number"
+                min="0"
+                placeholder="0"
+                className="w-full bg-transparent text-xs text-foreground outline-none"
+              />
             </MetaField>
             <MetaField label="Due date">
               <input
@@ -233,21 +342,49 @@ export function NewIssueModal() {
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Environment</label>
-                  <Input value={env} onChange={(e) => setEnv(e.target.value)} placeholder="e.g. Production, Chrome 121, macOS 14" className="h-8 text-xs" />
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Environment
+                  </label>
+                  <Input
+                    value={env}
+                    onChange={(e) => setEnv(e.target.value)}
+                    placeholder="e.g. Production, Chrome 121, macOS 14"
+                    className="h-8 text-xs"
+                  />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Reproduction Steps</label>
-                  <Textarea value={reproSteps} onChange={(e) => setReproSteps(e.target.value)} placeholder="1. Go to...\n2. Click...\n3. See error" className="min-h-[80px] text-xs" />
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Reproduction Steps
+                  </label>
+                  <Textarea
+                    value={reproSteps}
+                    onChange={(e) => setReproSteps(e.target.value)}
+                    placeholder="1. Go to...\n2. Click...\n3. See error"
+                    className="min-h-[80px] text-xs"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Expected Result</label>
-                    <Textarea value={expected} onChange={(e) => setExpected(e.target.value)} placeholder="What should happen?" className="min-h-[60px] text-xs" />
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Expected Result
+                    </label>
+                    <Textarea
+                      value={expected}
+                      onChange={(e) => setExpected(e.target.value)}
+                      placeholder="What should happen?"
+                      className="min-h-[60px] text-xs"
+                    />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Actual Result</label>
-                    <Textarea value={actual} onChange={(e) => setActual(e.target.value)} placeholder="What actually happened?" className="min-h-[60px] text-xs" />
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Actual Result
+                    </label>
+                    <Textarea
+                      value={actual}
+                      onChange={(e) => setActual(e.target.value)}
+                      placeholder="What actually happened?"
+                      className="min-h-[60px] text-xs"
+                    />
                   </div>
                 </div>
               </div>
@@ -261,8 +398,14 @@ export function NewIssueModal() {
             <Paperclip className="h-3.5 w-3.5" /> Attach files
           </button> */}
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={closeNewIssue}>Cancel</Button>
-            <Button size="sm" onClick={handleSubmit} disabled={!title.trim() || submitting}>
+            <Button variant="outline" size="sm" onClick={closeNewIssue}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={!title.trim() || submitting}
+            >
               {submitting ? "Creating…" : "Create Issue"}
             </Button>
           </div>
@@ -272,10 +415,18 @@ export function NewIssueModal() {
   );
 }
 
-function MetaField({ label, children }: { label: string; children: React.ReactNode }) {
+function MetaField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-      <div className="text-[10px] font-medium text-muted-foreground mb-1">{label}</div>
+      <div className="text-[10px] font-medium text-muted-foreground mb-1">
+        {label}
+      </div>
       {children}
     </div>
   );

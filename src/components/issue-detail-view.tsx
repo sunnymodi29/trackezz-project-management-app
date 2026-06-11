@@ -7,7 +7,9 @@ import type { Issue, IssueStatus, Priority } from "@/types";
 import { PriorityBadge, IssueTypeIcon, SeverityBadge, LabelChip } from "@/components/ui/issue-badges";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { workflowStatusSelectOptions } from "@/lib/projects/workflow-status";
-import { Avatar, Button, Textarea, CustomSelect, Tooltip, Skeleton } from "@/components/ui";
+import { Avatar, Button, CustomSelect, Tooltip, Skeleton } from "@/components/ui";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { normalizeRichTextForSave } from "@/lib/rich-text";
 import { formatRelativeTime } from "@/lib/utils";
 import { useDataStore } from "@/store/data-store";
 import { projectKeyForId, projectPath, issuePath, getIssueShareUrl } from "@/lib/projects/route";
@@ -28,6 +30,7 @@ import {
 } from "@/lib/issues/filters";
 import { coerceDate, dateFromKey, toDateKey } from "@/lib/issues/dates";
 import { cn } from "@/lib/utils";
+import { RichTextContent } from "@/components/ui/rich-text-content";
 
 interface IssueDetailViewProps {
   issueId: string;
@@ -289,11 +292,11 @@ export function IssueDetailView({
                 className="w-full bg-transparent text-base font-semibold text-foreground outline-none border-b border-primary/30 pb-1"
                 placeholder="Issue title"
               />
-              <Textarea
+              <RichTextEditor
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="text-sm min-h-[100px] bg-muted/20"
+                onChange={setDescription}
                 placeholder="Issue description"
+                minHeight="120px"
               />
               <div className="flex justify-end gap-2">
                 <Button
@@ -314,7 +317,7 @@ export function IssueDetailView({
                   onClick={async () => {
                     await handleFieldUpdate({
                       title: title.trim(),
-                      description: description || "",
+                      description: normalizeRichTextForSave(description) ?? "",
                     });
                     setIsEditing(false);
                   }}
@@ -355,7 +358,7 @@ export function IssueDetailView({
                 />
               </div>
               {issue.description && (
-                <p className="text-sm text-muted-foreground leading-relaxed">{issue.description}</p>
+                <RichTextContent content={issue.description} />
               )}
             </>
           )}

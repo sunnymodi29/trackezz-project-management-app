@@ -3,7 +3,11 @@
 import { useRef, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { Comment, Issue, User } from "@/types";
-import { Avatar, Button, Textarea, Tooltip } from "@/components/ui";
+import type { Editor } from "@tiptap/react";
+import { Avatar, Button, Tooltip } from "@/components/ui";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextContent } from "@/components/ui/rich-text-content";
+import { hasRichTextContent, looksLikeHtml } from "@/lib/rich-text";
 import { formatRelativeTime } from "@/lib/utils";
 import { parseCommentContent, linkifyPlainText } from "@/lib/comments/render";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -44,7 +48,7 @@ export function IssueCommentSection({
   const [deletingComment, setDeletingComment] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<Editor | null>(null);
   const composerRef = useRef<HTMLDivElement>(null);
 
   const commentTree = useMemo(() => issue.comments, [issue.comments]);
@@ -53,7 +57,7 @@ export function IssueCommentSection({
   const scrollToComposer = useCallback(() => {
     requestAnimationFrame(() => {
       composerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      textareaRef.current?.focus();
+      editorRef.current?.commands.focus();
     });
   }, []);
 
@@ -67,8 +71,7 @@ export function IssueCommentSection({
 
   const submitComment = async (content: string, file?: File | null) => {
     if (submitting) return;
-    const trimmed = content.trim();
-    if (!trimmed && !file) return;
+    if (!hasRichTextContent(content) && !file) return;
 
     setSubmitting(true);
     try {
@@ -76,12 +79,12 @@ export function IssueCommentSection({
       if (file) {
         const formData = new FormData();
         formData.set("issueId", issue.id);
-        formData.set("content", trimmed);
+        formData.set("content", content);
         if (replyTo) formData.set("parentId", replyTo.id);
         formData.set("file", file);
         updated = await addIssueCommentWithUpload(formData);
       } else {
-        updated = await addIssueComment(issue.id, trimmed, {
+        updated = await addIssueComment(issue.id, content, {
           parentId: replyTo?.id,
         });
       }
@@ -133,16 +136,10 @@ export function IssueCommentSection({
   };
 
   const insertEmoji = (emoji: string) => {
-    const el = textareaRef.current;
-    if (el) {
-      const start = el.selectionStart ?? commentText.length;
-      const end = el.selectionEnd ?? commentText.length;
-      const next = commentText.slice(0, start) + emoji + commentText.slice(end);
-      setCommentText(next);
-      requestAnimationFrame(() => {
-        el.focus();
-        el.selectionStart = el.selectionEnd = start + emoji.length;
-      });
+    const editor = editorRef.current;
+    if (editor) {
+      editor.chain().focus().insertContent(emoji).run();
+      setCommentText(editor.getHTML());
     } else {
       setCommentText((t) => t + emoji);
     }
@@ -154,7 +151,7 @@ export function IssueCommentSection({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 comments-container">
         {commentTree.length === 0 && (
           <div className="text-center py-8 text-xs text-muted-foreground">
             <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -224,24 +221,23 @@ export function IssueCommentSection({
         )}
         <div className="flex gap-3">
           <Avatar src={currentUser.avatarUrl} name={currentUser.name} size="sm" />
-          <div className="flex-1 relative rounded-lg border border-border bg-muted/30 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
-            <textarea
-              ref={textareaRef}
+          <div className="flex-1 relative rounded-lg border border-border bg-muted/30 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all overflow-hidden">
+            <RichTextEditor
               value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                  void submitComment(commentText, pendingFile);
-                }
-              }}
+              onChange={setCommentText}
+              variant="compact"
+              borderless
+              editorRef={editorRef}
+              minHeight="60px"
+              className="bg-transparent"
               placeholder={
                 replyTo
                   ? `Reply to ${replyTo.author.name}... (Ctrl+Enter)`
                   : "Add a comment... (Ctrl+Enter to submit)"
               }
-              className="w-full bg-transparent px-3 pt-2.5 pb-1 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[60px]"
+              onCtrlEnter={() => void submitComment(commentText, pendingFile)}
             />
-            <div className="flex items-center justify-between px-2 pb-2">
+            <div className="flex items-center justify-between p-2 border-t border-border/60">
               <div className="flex items-center gap-1 relative">
                 <Tooltip content="Add emoji" side="top">
                   <button
@@ -257,7 +253,7 @@ export function IssueCommentSection({
                   open={emojiOpen}
                   onClose={() => setEmojiOpen(false)}
                   onSelect={(emoji) => {
-                    if (!commentText.trim() && !pendingFile) {
+                    if (!hasRichTextContent(commentText) && !pendingFile) {
                       void postEmojiComment(emoji);
                     } else {
                       insertEmoji(emoji);
@@ -289,7 +285,7 @@ export function IssueCommentSection({
               <button
                 type="button"
                 onClick={() => void submitComment(commentText, pendingFile)}
-                disabled={(!commentText.trim() && !pendingFile) || submitting}
+                disabled={(!hasRichTextContent(commentText) && !pendingFile) || submitting}
                 className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="h-3 w-3" /> {submitting ? "Sending…" : "Send"}
@@ -341,7 +337,7 @@ function CommentItem({
   const isAuthor = comment.authorId === currentUserId;
 
   const saveEdit = async () => {
-    if (!editText.trim()) return;
+    if (!hasRichTextContent(editText)) return;
     setSaving(true);
     try {
       await onEdit(comment.id, editText);
@@ -367,10 +363,12 @@ function CommentItem({
 
         {isEditing ? (
           <div className="space-y-2">
-            <Textarea
+            <RichTextEditor
               value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              className="text-sm min-h-[72px] bg-muted/20"
+              onChange={setEditText}
+              variant="compact"
+              minHeight="72px"
+              onCtrlEnter={() => void saveEdit()}
             />
             <div className="flex justify-end gap-2">
               <Button
@@ -384,7 +382,11 @@ function CommentItem({
               >
                 Cancel
               </Button>
-              <Button size="sm" disabled={saving || !editText.trim()} onClick={() => void saveEdit()}>
+              <Button
+                size="sm"
+                disabled={saving || !hasRichTextContent(editText)}
+                onClick={() => void saveEdit()}
+              >
                 {saving ? "Saving…" : "Save"}
               </Button>
             </div>
@@ -521,6 +523,9 @@ function CommentBody({
           );
         }
         if (!seg.value) return null;
+        if (looksLikeHtml(seg.value)) {
+          return <RichTextContent key={i} content={seg.value} className="text-foreground" />;
+        }
         return <PlainCommentText key={i} text={seg.value} />;
       })}
     </div>
