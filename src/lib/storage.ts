@@ -11,12 +11,17 @@ export type StoredUpload = {
   type: string;
 };
 
-/** Vercel Blob (token or OIDC + store id). */
+/**
+ * Vercel Blob credentials:
+ * - BLOB_READ_WRITE_TOKEN (static token), or
+ * - BLOB_STORE_ID on Vercel (OIDC injected at runtime), or
+ * - BLOB_STORE_ID + VERCEL_OIDC_TOKEN locally (`vercel env pull`)
+ */
 export function isBlobStorageAvailable(): boolean {
-  return Boolean(
-    process.env.BLOB_READ_WRITE_TOKEN ||
-      (process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN),
-  );
+  if (process.env.BLOB_READ_WRITE_TOKEN) return true;
+  if (!process.env.BLOB_STORE_ID) return false;
+  if (process.env.VERCEL) return true;
+  return Boolean(process.env.VERCEL_OIDC_TOKEN);
 }
 
 /** Local disk — dev fallback when Blob is not configured. */
@@ -29,7 +34,7 @@ export function isUploadStorageAvailable(): boolean {
 }
 
 export const UPLOAD_UNAVAILABLE_MESSAGE =
-  "File uploads are not configured. Add a Vercel Blob store (BLOB_READ_WRITE_TOKEN) or run locally without VERCEL.";
+  "File uploads are not configured. Connect a Vercel Blob store to this project, then redeploy.";
 
 export function isVercelBlobUrl(url: string): boolean {
   return url.includes("blob.vercel-storage.com");
