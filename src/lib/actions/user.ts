@@ -1,9 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
-import { randomUUID } from "crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
@@ -11,8 +8,11 @@ import { serializeUser } from "@/lib/serializers";
 import { invalidateBootstrapForUser } from "@/lib/org/cache";
 import { clearWorkspaceCookies } from "@/lib/org/workspace-cookies";
 import {
-  FILESYSTEM_STORAGE_MESSAGE,
-  isFilesystemStorageAvailable,
+  UPLOAD_UNAVAILABLE_MESSAGE,
+  deleteStoredFile,
+  isUploadStorageAvailable,
+  isVercelBlobUrl,
+  storeAvatarFile,
 } from "@/lib/storage";
 import type { User } from "@/types";
 
@@ -76,32 +76,25 @@ export async function uploadUserAvatar(formData: FormData): Promise<User> {
     throw new Error("Use JPEG, PNG, GIF, or WebP");
   }
 
-  if (!isFilesystemStorageAvailable()) {
-    throw new Error(FILESYSTEM_STORAGE_MESSAGE);
+  if (!isUploadStorageAvailable()) {
+    throw new Error(UPLOAD_UNAVAILABLE_MESSAGE);
   }
 
   const userId = session.user.id;
-  const uploadsDir = path.join(process.cwd(), "public", "uploads", "avatars", userId);
-  await mkdir(uploadsDir, { recursive: true });
+  const existing = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { avatarUrl: true, image: true },
+  });
+  const oldUrl = existing?.avatarUrl ?? existing?.image;
+  if (oldUrl && (isVercelBlobUrl(oldUrl) || oldUrl.startsWith("/uploads/"))) {
+    await deleteStoredFile(oldUrl);
+  }
 
-  const ext =
-    type === "image/jpeg"
-      ? "jpg"
-      : type === "image/png"
-        ? "png"
-        : type === "image/gif"
-          ? "gif"
-          : "webp";
-  const filename = `${randomUUID()}.${ext}`;
-  const filepath = path.join(uploadsDir, filename);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(filepath, buffer);
-
-  const avatarUrl = `/uploads/avatars/${userId}/${filename}`;
+  const stored = await storeAvatarFile(userId, file);
 
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { avatarUrl, image: avatarUrl },
+    data: { avatarUrl: stored.url, image: stored.url },
   });
 
   const slug = await getUserOrgSlug(userId);
@@ -114,6 +107,15 @@ export async function uploadUserAvatar(formData: FormData): Promise<User> {
 export async function removeUserAvatar(): Promise<User> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const existing = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { avatarUrl: true, image: true },
+  });
+  const oldUrl = existing?.avatarUrl ?? existing?.image;
+  if (oldUrl && (isVercelBlobUrl(oldUrl) || oldUrl.startsWith("/uploads/"))) {
+    await deleteStoredFile(oldUrl);
+  }
 
   const user = await prisma.user.update({
     where: { id: session.user.id },

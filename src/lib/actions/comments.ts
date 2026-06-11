@@ -1,9 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
-import { randomUUID } from "crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { invalidateBootstrapForUser } from "@/lib/org/cache";
@@ -12,8 +9,9 @@ import { issueInclude } from "@/lib/queries/issues";
 import { serializeIssue } from "@/lib/serializers";
 import { notifyIssueComment } from "@/lib/notifications/service";
 import {
-  FILESYSTEM_STORAGE_MESSAGE,
-  isFilesystemStorageAvailable,
+  UPLOAD_UNAVAILABLE_MESSAGE,
+  isUploadStorageAvailable,
+  storeUploadedFile,
 } from "@/lib/storage";
 import type { Issue } from "@/types";
 
@@ -121,41 +119,33 @@ async function saveIssueUpload(
     throw new Error("File too large (max 10MB)");
   }
 
-  if (!isFilesystemStorageAvailable()) {
-    throw new Error(FILESYSTEM_STORAGE_MESSAGE);
+  if (!isUploadStorageAvailable()) {
+    throw new Error(UPLOAD_UNAVAILABLE_MESSAGE);
   }
 
-  const uploadsDir = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "issues",
-    issueId
-  );
-  await mkdir(uploadsDir, { recursive: true });
-
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const filename = `${randomUUID()}-${safeName}`;
-  const filepath = path.join(uploadsDir, filename);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(filepath, buffer);
-
-  const url = `/uploads/issues/${issueId}/${filename}`;
-  const type = file.type || "application/octet-stream";
+  const stored = await storeUploadedFile({
+    file,
+    keyPrefix: `issues/${issueId}`,
+  });
 
   await prisma.attachment.create({
     data: {
       name: file.name,
-      url,
-      storagePath: filepath,
-      size: file.size,
-      type,
+      url: stored.url,
+      storagePath: stored.storagePath,
+      size: stored.size,
+      type: stored.type,
       issueId,
       uploadedById,
     },
   });
 
-  return { name: file.name, url, type, size: file.size };
+  return {
+    name: file.name,
+    url: stored.url,
+    type: stored.type,
+    size: stored.size,
+  };
 }
 
 export async function addIssueComment(
