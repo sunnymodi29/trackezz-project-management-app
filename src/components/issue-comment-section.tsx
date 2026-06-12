@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useMemo, useCallback } from "react";
+import { useRef, useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Comment, Issue, User } from "@/types";
 import type { Editor } from "@tiptap/react";
@@ -13,6 +13,7 @@ import { parseCommentContent, linkifyPlainText } from "@/lib/comments/render";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { countComments } from "@/lib/comments/tree";
+import { commentDomId, getCommentShareUrl } from "@/lib/comments/share";
 import { EmojiPicker } from "@/components/emoji-picker";
 import {
   addIssueComment,
@@ -22,20 +23,31 @@ import {
   deleteComment,
 } from "@/lib/actions/comments";
 import {
-  MessageSquare, Paperclip, Send, Smile, Reply, X,
-  Pencil, Trash2,
+  MessageSquare,
+  Paperclip,
+  Send,
+  Smile,
+  Reply,
+  X,
+  Pencil,
+  Trash2,
+  Link2,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 interface IssueCommentSectionProps {
   issue: Issue;
   currentUser: User;
+  projectKey: string;
+  highlightCommentId?: string;
   onIssueUpdate: (issue: Issue) => void;
 }
 
 export function IssueCommentSection({
   issue,
   currentUser,
+  projectKey,
+  highlightCommentId,
   onIssueUpdate,
 }: IssueCommentSectionProps) {
   const router = useRouter();
@@ -46,13 +58,37 @@ export function IssueCommentSection({
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [deleteCommentId, setDeleteCommentId] = useState<string | null>(null);
   const [deletingComment, setDeletingComment] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<Editor | null>(null);
   const composerRef = useRef<HTMLDivElement>(null);
 
   const commentTree = useMemo(() => issue.comments, [issue.comments]);
   const totalCount = countComments(flattenComments(commentTree));
+  useEffect(() => {
+    if (!highlightCommentId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const scrollToComment = () => {
+      if (cancelled) return;
+      const el = document.getElementById(commentDomId(highlightCommentId));
+      if (!el) {
+        if (attempts++ < 40) setTimeout(scrollToComment, 100);
+        return;
+      }
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    scrollToComment();
+    return () => {
+      cancelled = true;
+    };
+  }, [highlightCommentId, issue.id, commentTree]);
 
   const scrollToComposer = useCallback(() => {
     requestAnimationFrame(() => {
@@ -66,7 +102,7 @@ export function IssueCommentSection({
       setReplyTo(comment);
       scrollToComposer();
     },
-    [scrollToComposer]
+    [scrollToComposer],
   );
 
   const submitComment = async (content: string, file?: File | null) => {
@@ -129,7 +165,9 @@ export function IssueCommentSection({
       setDeleteCommentId(null);
       router.refresh();
     } catch (e) {
-      console.error(e instanceof Error ? e.message : "Failed to delete comment");
+      console.error(
+        e instanceof Error ? e.message : "Failed to delete comment",
+      );
     } finally {
       setDeletingComment(false);
     }
@@ -162,8 +200,11 @@ export function IssueCommentSection({
           <CommentItem
             key={comment.id}
             comment={comment}
+            issueId={issue.id}
+            projectKey={projectKey}
             currentUserId={currentUser.id}
             depth={0}
+            highlightCommentId={highlightCommentId}
             onReply={handleReply}
             onReaction={handleReaction}
             onEdit={handleEdit}
@@ -191,11 +232,17 @@ export function IssueCommentSection({
         onClose={() => setLightboxImage(null)}
       />
 
-      <div ref={composerRef} className="border-t border-border p-4 shrink-0 scroll-mt-4">
+      <div
+        ref={composerRef}
+        className="border-t border-border p-4 shrink-0 scroll-mt-4"
+      >
         {replyTo && (
           <div className="flex items-center justify-between mb-2 px-2 py-1.5 rounded-md bg-muted/50 text-xs">
             <span className="text-muted-foreground">
-              Replying to <span className="font-medium text-foreground">{replyTo.author.name}</span>
+              Replying to{" "}
+              <span className="font-medium text-foreground">
+                {replyTo.author.name}
+              </span>
             </span>
             <button
               type="button"
@@ -220,7 +267,11 @@ export function IssueCommentSection({
           </div>
         )}
         <div className="flex gap-3">
-          <Avatar src={currentUser.avatarUrl} name={currentUser.name} size="sm" />
+          <Avatar
+            src={currentUser.avatarUrl}
+            name={currentUser.name}
+            size="sm"
+          />
           <div className="flex-1 relative rounded-lg border border-border bg-muted/30 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all overflow-hidden">
             <RichTextEditor
               value={commentText}
@@ -285,7 +336,10 @@ export function IssueCommentSection({
               <button
                 type="button"
                 onClick={() => void submitComment(commentText, pendingFile)}
-                disabled={(!hasRichTextContent(commentText) && !pendingFile) || submitting}
+                disabled={
+                  (!hasRichTextContent(commentText) && !pendingFile) ||
+                  submitting
+                }
                 className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="h-3 w-3" /> {submitting ? "Sending…" : "Send"}
@@ -312,8 +366,11 @@ function flattenComments(comments: Comment[]): Comment[] {
 
 function CommentItem({
   comment,
+  issueId,
+  projectKey,
   currentUserId,
   depth,
+  highlightCommentId,
   onReply,
   onReaction,
   onEdit,
@@ -321,8 +378,11 @@ function CommentItem({
   onImageClick,
 }: {
   comment: Comment;
+  issueId: string;
+  projectKey: string;
   currentUserId: string;
   depth: number;
+  highlightCommentId?: string;
   onReply: (c: Comment) => void;
   onReaction: (commentId: string, emoji: string) => void;
   onEdit: (commentId: string, content: string) => void;
@@ -333,8 +393,10 @@ function CommentItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.content);
   const [saving, setSaving] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const reactionGroups = groupReactions(comment.reactions, currentUserId);
   const isAuthor = comment.authorId === currentUserId;
+  const isHighlighted = highlightCommentId === comment.id;
 
   const saveEdit = async () => {
     if (!hasRichTextContent(editText)) return;
@@ -347,17 +409,73 @@ function CommentItem({
     }
   };
 
+  const handleCopyLink = async () => {
+    const url = getCommentShareUrl(
+      window.location.origin,
+      projectKey,
+      issueId,
+      comment.id,
+    );
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    } catch {
+      console.error("Failed to copy comment link");
+    }
+  };
+
   return (
-    <div className={cn("flex gap-3", depth > 0 && "ml-8 mt-3")}>
-      <Avatar src={comment.author.avatarUrl} name={comment.author.name} size="sm" />
+    <div
+      id={commentDomId(comment.id)}
+      className={cn(
+        "group/comment flex gap-3",
+        depth > 0 && "ml-8 mt-3",
+        isHighlighted &&
+          "comment-highlight-target -mx-2 px-2 py-1.5 rounded-tr-lg rounded-br-lg border-l-4 border-primary! bg-primary/5",
+      )}
+    >
+      <Avatar
+        src={comment.author.avatarUrl}
+        name={comment.author.name}
+        size="sm"
+      />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-semibold text-foreground">{comment.author.name}</span>
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <span className="text-xs font-semibold text-foreground">
+            {comment.author.name}
+          </span>
           <span className="text-[10px] text-muted-foreground">
             {formatRelativeTime(comment.createdAt)}
           </span>
           {comment.updatedAt.getTime() > comment.createdAt.getTime() + 1000 && (
-            <span className="text-[10px] text-muted-foreground italic">(edited)</span>
+            <span className="text-[10px] text-muted-foreground italic">
+              (edited)
+            </span>
+          )}
+          {!isEditing && (
+            <Tooltip
+              content={linkCopied ? "Copied!" : "Copy comment link"}
+              side="top"
+            >
+              <button
+                type="button"
+                onClick={() => void handleCopyLink()}
+                aria-label={linkCopied ? "Link copied" : "Copy comment link"}
+                className={cn(
+                  "ml-auto rounded p-1 text-muted-foreground transition-all duration-200 ease-out hover:bg-accent hover:text-foreground",
+                  linkCopied
+                    ? "translate-x-0 opacity-100"
+                    : "-translate-x-2 opacity-0 pointer-events-none group-hover/comment:translate-x-0 group-hover/comment:opacity-100 group-hover/comment:pointer-events-auto",
+                )}
+              >
+                {linkCopied ? (
+                  <Check className="h-3.5 w-3.5 text-primary" />
+                ) : (
+                  <Link2 className="h-3.5 w-3.5 rotate-315" />
+                )}
+              </button>
+            </Tooltip>
           )}
         </div>
 
@@ -393,7 +511,10 @@ function CommentItem({
           </div>
         ) : (
           <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
-            <CommentBody content={comment.content} onImageClick={onImageClick} />
+            <CommentBody
+              content={comment.content}
+              onImageClick={onImageClick}
+            />
           </div>
         )}
 
@@ -408,7 +529,7 @@ function CommentItem({
                   "flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs transition-colors",
                   reacted
                     ? "border-primary/40 bg-primary/10 text-foreground"
-                    : "border-border bg-muted hover:bg-accent"
+                    : "border-border bg-muted hover:bg-accent",
                 )}
               >
                 {emoji} {count}
@@ -466,8 +587,11 @@ function CommentItem({
           <CommentItem
             key={reply.id}
             comment={reply}
+            issueId={issueId}
+            projectKey={projectKey}
             currentUserId={currentUserId}
             depth={depth + 1}
+            highlightCommentId={highlightCommentId}
             onReply={onReply}
             onReaction={onReaction}
             onEdit={onEdit}
@@ -524,7 +648,13 @@ function CommentBody({
         }
         if (!seg.value) return null;
         if (looksLikeHtml(seg.value)) {
-          return <RichTextContent key={i} content={seg.value} className="text-foreground" />;
+          return (
+            <RichTextContent
+              key={i}
+              content={seg.value}
+              className="text-foreground"
+            />
+          );
         }
         return <PlainCommentText key={i} text={seg.value} />;
       })}
@@ -559,7 +689,10 @@ function PlainCommentText({ text }: { text: string }) {
   );
 }
 
-function groupReactions(reactions: Comment["reactions"], currentUserId: string) {
+function groupReactions(
+  reactions: Comment["reactions"],
+  currentUserId: string,
+) {
   const map = new Map<string, { count: number; reacted: boolean }>();
   for (const r of reactions) {
     const entry = map.get(r.emoji) ?? { count: 0, reacted: false };

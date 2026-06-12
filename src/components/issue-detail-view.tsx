@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { COMMENT_QUERY_PARAM } from "@/lib/comments/share";
 import type { Issue, IssueStatus, Priority } from "@/types";
 import { PriorityBadge, IssueTypeIcon, SeverityBadge, LabelChip } from "@/components/ui/issue-badges";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
@@ -37,16 +38,24 @@ interface IssueDetailViewProps {
   variant?: "drawer" | "page";
   onClose?: () => void;
   onNavigateIssue?: (issueId: string) => void;
+  /** Open comments tab and highlight this comment (from ?comment= URL). */
+  highlightCommentId?: string;
   className?: string;
 }
 
-export function IssueDetailView({
+function IssueDetailViewInner({
   issueId,
   variant = "drawer",
   onClose,
   onNavigateIssue,
+  highlightCommentId: highlightCommentIdProp,
   className,
 }: IssueDetailViewProps) {
+  const searchParams = useSearchParams();
+  const highlightCommentId =
+    highlightCommentIdProp ??
+    searchParams.get(COMMENT_QUERY_PARAM) ??
+    undefined;
   const router = useRouter();
   const issues = useDataStore((s) => s.issues);
   const hydrated = useDataStore((s) => s.hydrated);
@@ -122,6 +131,10 @@ export function IssueDetailView({
     setDescription(issue.description ?? "");
     setAssigneeFilter("all");
   }, [issue]);
+
+  useEffect(() => {
+    if (highlightCommentId) setActiveTab("comments");
+  }, [highlightCommentId, issueId]);
 
   if (!issue) {
     if (!hydrated) {
@@ -626,6 +639,8 @@ export function IssueDetailView({
               <IssueCommentSection
                 issue={issue}
                 currentUser={currentUser}
+                projectKey={projectKey}
+                highlightCommentId={highlightCommentId}
                 onIssueUpdate={(updated) => {
                   upsertIssue(updated);
                   router.refresh();
@@ -672,7 +687,13 @@ export function IssueDetailView({
   );
 }
 
-export default IssueDetailView;
+export function IssueDetailView(props: IssueDetailViewProps) {
+  return (
+    <Suspense fallback={null}>
+      <IssueDetailViewInner {...props} />
+    </Suspense>
+  );
+}
 
 function Field({ label, value, mono, className }: { label: string; value: string; mono?: boolean; className?: string }) {
   return (

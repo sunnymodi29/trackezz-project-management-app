@@ -177,18 +177,23 @@ samp {
   0%,
   100% {
     transform: scale(1);
-    box-shadow: 0 10px 25px -5px color-mix(in oklch, var(--color-primary), transparent 55%);
+    box-shadow: 0 10px 25px -5px
+      color-mix(in oklch, var(--color-primary), transparent 55%);
   }
   50% {
     transform: scale(1.06);
-    box-shadow: 0 16px 32px -4px color-mix(in oklch, var(--color-primary), transparent 35%);
+    box-shadow: 0 16px 32px -4px
+      color-mix(in oklch, var(--color-primary), transparent 35%);
   }
 }
 @keyframes loader-zap {
   0%,
   100% {
     transform: scale(1) rotate(0deg);
-    filter: drop-shadow(0 0 2px color-mix(in oklch, var(--color-primary-foreground), transparent 50%));
+    filter: drop-shadow(
+      0 0 2px
+        color-mix(in oklch, var(--color-primary-foreground), transparent 50%)
+    );
   }
   35% {
     transform: scale(1.12) rotate(-8deg);
@@ -196,7 +201,10 @@ samp {
   }
   70% {
     transform: scale(1.05) rotate(6deg);
-    filter: drop-shadow(0 0 6px color-mix(in oklch, var(--color-primary-foreground), transparent 30%));
+    filter: drop-shadow(
+      0 0 6px
+        color-mix(in oklch, var(--color-primary-foreground), transparent 30%)
+    );
   }
 }
 @keyframes loader-brand-glow {
@@ -386,4 +394,11 @@ samp {
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+/* ── Comment highlight (shared link) ─────────────────────────────────────── */
+.comment-highlight-target {
+  scroll-margin-top: 5rem;
+  scroll-margin-bottom: 2rem;
+  animation: none;
 }

@@ -239,42 +239,7 @@ export function AvatarGroup({ users, max = 3 }: AvatarGroupProps) {
   );
 }
 
-// ── Tooltip ────────────────────────────────────────────────────────────────
-type TooltipSide = "top" | "bottom" | "left" | "right";
-
-export function Tooltip({
-  children,
-  content,
-  side = "top",
-  className,
-}: {
-  children: React.ReactNode;
-  content: string;
-  side?: TooltipSide;
-  className?: string;
-}) {
-  const sideClass = {
-    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-    left: "right-full top-1/2 -translate-y-1/2 mr-2",
-    right: "left-full top-1/2 -translate-y-1/2 ml-2",
-  }[side];
-
-  return (
-    <div className={cn("relative group inline-flex", className)}>
-      {children}
-      <div
-        role="tooltip"
-        className={cn(
-          "absolute px-2 py-1 text-xs rounded-md bg-popover border border-border text-popover-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg",
-          sideClass,
-        )}
-      >
-        {content}
-      </div>
-    </div>
-  );
-}
+export { Tooltip } from "./tooltip";
 
 // ── Skeleton ───────────────────────────────────────────────────────────────
 export function Skeleton({ className }: { className?: string }) {

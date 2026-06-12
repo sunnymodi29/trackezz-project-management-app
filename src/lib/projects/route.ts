@@ -45,6 +45,11 @@ export function sprintPath(projectKey: string, sprintId: string): string {
   return `${projectPath(projectKey)}/sprints/${encodeURIComponent(sprintId)}`;
 }
 
+/** Link to a project member (members page). */
+export function userPath(projectKey: string, userId: string): string {
+  return `${projectPath(projectKey, "/members")}?member=${encodeURIComponent(userId)}`;
+}
+
 export function getIssueShareUrl(
   origin: string,
   projectKey: string,
@@ -52,3 +57,5 @@ export function getIssueShareUrl(
 ): string {
   return `${origin}${issuePath(projectKey, issueId)}`;
 }
+
+export { getCommentShareUrl, issuePathWithComment } from "@/lib/comments/share";
