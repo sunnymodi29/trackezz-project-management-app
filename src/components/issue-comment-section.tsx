@@ -394,6 +394,7 @@ function CommentItem({
   const [editText, setEditText] = useState(comment.content);
   const [saving, setSaving] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const reactionGroups = groupReactions(comment.reactions, currentUserId);
   const isAuthor = comment.authorId === currentUserId;
   const isHighlighted = highlightCommentId === comment.id;
@@ -426,21 +427,23 @@ function CommentItem({
   };
 
   return (
-    <div
-      id={commentDomId(comment.id)}
-      className={cn(
-        "group/comment flex gap-3",
-        depth > 0 && "ml-8 mt-3",
-        isHighlighted &&
-          "comment-highlight-target -mx-2 px-2 py-1.5 rounded-tr-lg rounded-br-lg border-l-4 border-primary! bg-primary/5",
-      )}
-    >
-      <Avatar
-        src={comment.author.avatarUrl}
-        name={comment.author.name}
-        size="sm"
-      />
-      <div className="flex-1 min-w-0">
+    <div className={cn(depth > 0 && "ml-8 mt-3")}>
+      <div
+        id={commentDomId(comment.id)}
+        className={cn(
+          "flex gap-3",
+          isHighlighted &&
+            "comment-highlight-target -mx-2 px-2 py-1.5 rounded-tr-lg rounded-br-lg border-l-4 border-primary! bg-primary/5",
+        )}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <Avatar
+          src={comment.author.avatarUrl}
+          name={comment.author.name}
+          size="sm"
+        />
+        <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span className="text-xs font-semibold text-foreground">
             {comment.author.name}
@@ -464,9 +467,9 @@ function CommentItem({
                 aria-label={linkCopied ? "Link copied" : "Copy comment link"}
                 className={cn(
                   "ml-auto rounded p-1 text-muted-foreground transition-all duration-200 ease-out hover:bg-accent hover:text-foreground",
-                  linkCopied
-                    ? "translate-x-0 opacity-100"
-                    : "-translate-x-2 opacity-0 pointer-events-none group-hover/comment:translate-x-0 group-hover/comment:opacity-100 group-hover/comment:pointer-events-auto",
+                  linkCopied || hovered
+                    ? "translate-x-0 opacity-100 pointer-events-auto"
+                    : "-translate-x-2 opacity-0 pointer-events-none",
                 )}
               >
                 {linkCopied ? (
@@ -583,23 +586,25 @@ function CommentItem({
           </div>
         )}
 
-        {comment.replies?.map((reply) => (
-          <CommentItem
-            key={reply.id}
-            comment={reply}
-            issueId={issueId}
-            projectKey={projectKey}
-            currentUserId={currentUserId}
-            depth={depth + 1}
-            highlightCommentId={highlightCommentId}
-            onReply={onReply}
-            onReaction={onReaction}
-            onEdit={onEdit}
-            onDeleteRequest={onDeleteRequest}
-            onImageClick={onImageClick}
-          />
-        ))}
+        </div>
       </div>
+
+      {comment.replies?.map((reply) => (
+        <CommentItem
+          key={reply.id}
+          comment={reply}
+          issueId={issueId}
+          projectKey={projectKey}
+          currentUserId={currentUserId}
+          depth={depth + 1}
+          highlightCommentId={highlightCommentId}
+          onReply={onReply}
+          onReaction={onReaction}
+          onEdit={onEdit}
+          onDeleteRequest={onDeleteRequest}
+          onImageClick={onImageClick}
+        />
+      ))}
     </div>
   );
 }
