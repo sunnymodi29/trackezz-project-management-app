@@ -48,7 +48,7 @@ const MAIN_NAV = [
 
 const PROJECT_NAV = [
   { label: "Overview", href: "", icon: LayoutDashboard },
-  { label: "Issues", href: "/list", icon: ListTodo },
+  { label: "Issues", href: "/issues", icon: ListTodo },
   { label: "Board", href: "/board", icon: SquareKanban },
   { label: "Backlog", href: "/backlog", icon: Layers },
   { label: "Sprints", href: "/sprints", icon: Target },

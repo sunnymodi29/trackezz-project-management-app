@@ -346,7 +346,7 @@ function ProjectCard({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onOpen(project, projectPath(project.key, "list"));
+                  onOpen(project, projectPath(project.key, "issues"));
                 }}
               >
                 <List className="h-4 w-4" />

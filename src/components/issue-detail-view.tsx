@@ -202,7 +202,7 @@ function IssueDetailViewInner({
       removeIssue(issue.id);
       setDeleteConfirmOpen(false);
       onClose?.();
-      router.push(projectPath(key, "/list"));
+      router.push(projectPath(key, "/issues"));
       router.refresh();
     } catch (e) {
       console.error(e instanceof Error ? e.message : "Failed to delete issue");

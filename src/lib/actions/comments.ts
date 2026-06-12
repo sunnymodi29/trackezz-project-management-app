@@ -28,6 +28,7 @@ async function revalidateIssueViews(
   revalidatePath("/dashboard/my-tasks");
   revalidatePath("/dashboard/inbox");
   revalidatePath(`/dashboard/projects/${projectKey}`);
+  revalidatePath(`/dashboard/projects/${projectKey}/issues`);
   if (issueId) {
     revalidatePath(`/dashboard/projects/${projectKey}/issues/${issueId}`);
   }

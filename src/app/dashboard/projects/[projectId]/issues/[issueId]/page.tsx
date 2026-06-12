@@ -19,7 +19,7 @@ function IssuePageContent() {
     <div className="flex flex-col h-[calc(100vh-56px)] bg-background">
       <div className="px-6 py-3 border-b border-border bg-card/50 shrink-0">
         <Link
-          href={projectPath(projectKey, "/list")}
+          href={projectPath(projectKey, "/issues")}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

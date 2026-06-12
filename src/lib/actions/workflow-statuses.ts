@@ -20,7 +20,7 @@ async function revalidateWorkflowViews(
 ) {
   await invalidateBootstrapForUser(userId, orgSlug);
   revalidatePath(`/dashboard/projects/${projectKey}`);
-  revalidatePath(`/dashboard/projects/${projectKey}/list`);
+  revalidatePath(`/dashboard/projects/${projectKey}/issues`);
   revalidatePath(`/dashboard/projects/${projectKey}/board`);
 }
 
