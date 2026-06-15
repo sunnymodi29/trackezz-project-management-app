@@ -24,7 +24,7 @@ import {
   isSameMonth,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, Checkbox } from "@/components/ui";
 import { IssueTypeIcon, PriorityIcon, StatusBadge } from "@/components/ui/issue-badges";
 import { useAppStore } from "@/store/app-store";
 import { usePersistIssue } from "@/lib/issues/use-persist-issue";
@@ -161,11 +161,10 @@ export function ProjectCalendar({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={showDone}
-                onChange={(e) => setShowDone(e.target.checked)}
-                className="rounded border-border"
+                onCheckedChange={setShowDone}
+                aria-label="Show completed issues"
               />
               Show completed
             </label>
@@ -242,7 +241,7 @@ export function ProjectCalendar({
                     past={past}
                     saving={saving}
                     onSelectIssue={setSelectedIssueId}
-                    onAddIssue={() => openNewIssue(startOfDay(day))}
+                    onAddIssue={() => openNewIssue({ dueDate: startOfDay(day) })}
                   />
                 );
               })}

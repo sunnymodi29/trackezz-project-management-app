@@ -103,6 +103,11 @@ samp {
   opacity: 0.4;
 }
 
+.custom-select-options::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
 /* ── App Sizing Tokens ─────────────────────────────────────────────────────── */
 :root {
   --sidebar-width: 240px;

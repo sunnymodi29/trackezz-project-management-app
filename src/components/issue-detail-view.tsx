@@ -8,7 +8,7 @@ import type { Issue, IssueStatus, Priority } from "@/types";
 import { PriorityBadge, IssueTypeIcon, SeverityBadge, LabelChip } from "@/components/ui/issue-badges";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { workflowStatusSelectOptions } from "@/lib/projects/workflow-status";
-import { Avatar, Button, CustomSelect, Tooltip, Skeleton } from "@/components/ui";
+import { Avatar, Button, CustomSelect, DatePicker, Tooltip, Skeleton } from "@/components/ui";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { normalizeRichTextForSave } from "@/lib/rich-text";
 import { formatRelativeTime } from "@/lib/utils";
@@ -467,20 +467,19 @@ function IssueDetailViewInner({
               <span className="text-xs text-foreground">{issue.estimate ? `${issue.estimate} pts` : "—"}</span>
             </MetaRow>
             <MetaRow label="Due Date" icon={<Calendar className="h-3.5 w-3.5" />}>
-              <input
-                type="date"
+              <DatePicker
                 disabled={saving}
                 value={(() => {
                   const d = coerceDate(issue.dueDate);
                   return d ? toDateKey(d) : "";
                 })()}
-                onChange={(e) => {
-                  const v = e.target.value;
+                onChange={(v) => {
                   void persist(issue.id, {
                     dueDate: v ? dateFromKey(v) : null,
                   });
                 }}
-                className="text-xs text-foreground bg-transparent border-0 outline-none cursor-pointer"
+                placeholder="No due date"
+                triggerClassName="h-6 border-0 bg-transparent px-0 shadow-none hover:bg-accent/30"
               />
             </MetaRow>
           </div>

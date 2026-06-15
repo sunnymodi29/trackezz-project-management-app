@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { Button, Input, Textarea } from "@/components/ui";
+import { Button, Input, Textarea, DatePicker, Checkbox } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { toDateKey } from "@/lib/issues/dates";
 import type { Sprint } from "@/types";
-
-function formatDateInput(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 function defaultEndDate(start: Date): Date {
   const end = new Date(start);
@@ -45,8 +39,8 @@ export function SprintFormModal({
   const isEdit = Boolean(sprint);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
-  const [startDate, setStartDate] = useState(formatDateInput(new Date()));
-  const [endDate, setEndDate] = useState(formatDateInput(defaultEndDate(new Date())));
+  const [startDate, setStartDate] = useState(toDateKey(new Date()));
+  const [endDate, setEndDate] = useState(toDateKey(defaultEndDate(new Date())));
   const [startImmediately, setStartImmediately] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,15 +49,15 @@ export function SprintFormModal({
     if (sprint) {
       setName(sprint.name);
       setGoal(sprint.goal ?? "");
-      setStartDate(formatDateInput(sprint.startDate));
-      setEndDate(formatDateInput(sprint.endDate));
+      setStartDate(toDateKey(sprint.startDate));
+      setEndDate(toDateKey(sprint.endDate));
       setStartImmediately(false);
     } else {
       const start = new Date();
       setName("");
       setGoal("");
-      setStartDate(formatDateInput(start));
-      setEndDate(formatDateInput(defaultEndDate(start)));
+      setStartDate(toDateKey(start));
+      setEndDate(toDateKey(defaultEndDate(start)));
       setStartImmediately(false);
     }
     setError(null);
@@ -133,31 +127,37 @@ export function SprintFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Start</label>
-              <Input
-                type="date"
+              <DatePicker
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(v) => {
+                  setStartDate(v);
+                  if (v && endDate && endDate < v) {
+                    setEndDate(v);
+                  }
+                }}
                 disabled={loading}
+                clearable={false}
+                max={endDate || undefined}
               />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">End</label>
-              <Input
-                type="date"
+              <DatePicker
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={setEndDate}
                 disabled={loading}
+                clearable={false}
+                min={startDate || undefined}
               />
             </div>
           </div>
           {!isEdit && (
             <label className="flex items-center gap-2 text-xs cursor-pointer">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={startImmediately}
-                onChange={(e) => setStartImmediately(e.target.checked)}
+                onCheckedChange={setStartImmediately}
                 disabled={loading}
-                className="rounded border-border"
+                aria-label="Start sprint immediately"
               />
               Start sprint immediately (completes any other active sprint)
             </label>

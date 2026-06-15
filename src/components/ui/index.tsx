@@ -277,6 +277,14 @@ export { CustomSelect as Select } from "./custom-select";
 export { CustomSelect } from "./custom-select";
 export type { CustomSelectOption } from "./custom-select";
 
+// ── Date Picker ───────────────────────────────────────────────────────────────
+export { DatePicker } from "./date-picker";
+export type { DatePickerProps } from "./date-picker";
+
+// ── Checkbox ──────────────────────────────────────────────────────────────────
+export { Checkbox } from "./checkbox";
+export type { CheckboxProps } from "./checkbox";
+
 // ── Switch ─────────────────────────────────────────────────────────────────
 interface SwitchProps {
   checked: boolean;

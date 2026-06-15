@@ -22,8 +22,13 @@ interface CustomSelectProps {
   triggerClassName?: string;
   optionsClassName?: string;
   disabled?: boolean;
-  renderTrigger?: (selected: CustomSelectOption | CustomSelectOption[] | null) => React.ReactNode;
-  renderOption?: (option: CustomSelectOption, isSelected: boolean) => React.ReactNode;
+  renderTrigger?: (
+    selected: CustomSelectOption | CustomSelectOption[] | null,
+  ) => React.ReactNode;
+  renderOption?: (
+    option: CustomSelectOption,
+    isSelected: boolean,
+  ) => React.ReactNode;
 }
 
 export function CustomSelect({
@@ -59,7 +64,10 @@ export function CustomSelect({
   // Click outside listener
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -102,7 +110,12 @@ export function CustomSelect({
     if (disabled) return;
 
     if (!isOpen) {
-      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (
+        e.key === "Enter" ||
+        e.key === " " ||
+        e.key === "ArrowDown" ||
+        e.key === "ArrowUp"
+      ) {
         e.preventDefault();
         setIsOpen(true);
       }
@@ -120,7 +133,9 @@ export function CustomSelect({
         break;
       case "ArrowUp":
         e.preventDefault();
-        setHighlightedIndex((prev) => (prev - 1 + options.length) % options.length);
+        setHighlightedIndex(
+          (prev) => (prev - 1 + options.length) % options.length,
+        );
         break;
       case "Enter":
       case " ":
@@ -142,7 +157,9 @@ export function CustomSelect({
   // Sync scroll on keyboard highlight
   useEffect(() => {
     if (isOpen && highlightedIndex >= 0 && optionsRef.current) {
-      const highlightedEl = optionsRef.current.children[highlightedIndex] as HTMLElement;
+      const highlightedEl = optionsRef.current.children[
+        highlightedIndex
+      ] as HTMLElement;
       if (highlightedEl) {
         highlightedEl.scrollIntoView({ block: "nearest" });
       }
@@ -215,7 +232,10 @@ export function CustomSelect({
       tabIndex={disabled ? -1 : 0}
     >
       {renderTrigger ? (
-        <div onClick={() => !disabled && setIsOpen(!isOpen)} className="cursor-pointer flex">
+        <div
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          className="cursor-pointer flex"
+        >
           {renderTrigger(selectedOptions)}
         </div>
       ) : (
@@ -225,14 +245,14 @@ export function CustomSelect({
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
             "flex h-8 w-full items-center justify-between rounded-md border border-input bg-card/50 px-3 py-1 text-xs shadow-sm transition-all hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 text-left",
-            triggerClassName
+            triggerClassName,
           )}
         >
           <div className="flex-1 truncate pr-2">{defaultTriggerContent()}</div>
           <ChevronDown
             className={cn(
               "h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200",
-              isOpen && "rotate-180"
+              isOpen && "rotate-180",
             )}
           />
         </button>
@@ -242,13 +262,15 @@ export function CustomSelect({
         <div
           ref={optionsRef}
           className={cn(
-            "absolute z-50 min-w-full max-w-[280px] max-h-[220px] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl p-1 animate-scale-in focus:outline-none scrollbar",
+            "custom-select-options absolute z-50 min-w-full max-w-[280px] max-h-[220px] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl p-1 animate-scale-in focus:outline-none scrollbar",
             openUpward ? "bottom-full mb-1" : "top-full mt-1",
-            optionsClassName
+            optionsClassName,
           )}
         >
           {options.length === 0 ? (
-            <div className="text-center text-xs text-muted-foreground py-3">No options available</div>
+            <div className="text-center text-xs text-muted-foreground py-3">
+              No options available
+            </div>
           ) : (
             options.map((option, index) => {
               const isSelected = multiple
@@ -264,9 +286,12 @@ export function CustomSelect({
                     handleSelectOption(option.value);
                   }}
                   className={cn(
-                    "flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors cursor-pointer select-none gap-2",
-                    isHighlighted ? "bg-accent/80 text-foreground" : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
-                    isSelected && "bg-primary/10 text-primary font-medium hover:bg-primary/15"
+                    "flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors cursor-pointer select-none gap-2 mb-0.5",
+                    isHighlighted
+                      ? "bg-accent/80 text-foreground"
+                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+                    isSelected &&
+                      "bg-primary/10 text-primary font-medium hover:bg-primary/15",
                   )}
                 >
                   {renderOption ? (
@@ -284,7 +309,9 @@ export function CustomSelect({
                       <span className="truncate">{option.label}</span>
                     </div>
                   )}
-                  {isSelected && <Check className="h-3 w-3 text-primary shrink-0" />}
+                  {isSelected && (
+                    <Check className="h-3 w-3 text-primary shrink-0" />
+                  )}
                 </div>
               );
             })

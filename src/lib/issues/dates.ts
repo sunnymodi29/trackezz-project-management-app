@@ -33,3 +33,28 @@ export function isPastDay(date: Date): boolean {
   const today = startOfDay(new Date());
   return startOfDay(date).getTime() < today.getTime();
 }
+
+export function formatDateDisplay(value: Date | string | null | undefined): string {
+  const d =
+    typeof value === "string"
+      ? value
+        ? dateFromKey(value)
+        : null
+      : coerceDate(value);
+  if (!d) return "";
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function isDateKeyInRange(
+  key: string,
+  min?: string,
+  max?: string,
+): boolean {
+  if (min && key < min) return false;
+  if (max && key > max) return false;
+  return true;
+}

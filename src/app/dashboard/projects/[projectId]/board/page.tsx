@@ -2,16 +2,31 @@
 
 import { useState, useMemo } from "react";
 import {
-  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
-  type DragStartEvent, type DragEndEvent, closestCenter
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+  closestCenter,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { updateIssueStatus } from "@/lib/actions/issues";
 import type { Issue } from "@/types";
-import { PriorityIcon, IssueTypeIcon, LabelChip, SeverityBadge } from "@/components/ui/issue-badges";
+import {
+  PriorityIcon,
+  IssueTypeIcon,
+  LabelChip,
+  SeverityBadge,
+} from "@/components/ui/issue-badges";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { WorkflowStatusManager } from "@/components/workflow-status-manager";
 import { Avatar, AvatarGroup, Tooltip } from "@/components/ui";
@@ -25,7 +40,9 @@ interface BoardColumn {
   color: string;
 }
 
-interface BoardState { [key: string]: Issue[] }
+interface BoardState {
+  [key: string]: Issue[];
+}
 
 export default function BoardPage() {
   const { currentProject, openNewIssue } = useAppStore();
@@ -47,7 +64,7 @@ export default function BoardPage() {
   );
 
   const activeSprint = sprints.find(
-    (s) => s.projectId === projectId && s.status === "active"
+    (s) => s.projectId === projectId && s.status === "active",
   );
 
   const projectIssues = useMemo(() => {
@@ -64,13 +81,15 @@ export default function BoardPage() {
         acc[col.id] = projectIssues.filter((i) => i.status === col.id);
         return acc;
       }, {} as BoardState),
-    [projectIssues, columns]
+    [projectIssues, columns],
   );
 
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [drawerIssueId, setDrawerIssueId] = useState<string | null>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   const onDragStart = ({ active }: DragStartEvent) => {
     const issue = projectIssues.find((i) => i.id === active.id);
@@ -123,7 +142,12 @@ export default function BoardPage() {
         </div>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
         <div className="flex-1 overflow-x-auto">
           <div
             className="flex gap-4 p-6 h-full"
@@ -135,7 +159,7 @@ export default function BoardPage() {
                 projectId={projectId}
                 column={col}
                 issues={board[col.id] ?? []}
-                onAddIssue={() => openNewIssue()}
+                onAddIssue={() => openNewIssue({ status: col.id })}
                 onOpenIssue={(issue) => setDrawerIssueId(issue.id)}
               />
             ))}
@@ -143,18 +167,29 @@ export default function BoardPage() {
         </div>
 
         <DragOverlay>
-          {activeIssue && <IssueCard issue={activeIssue} onOpen={() => {}} isDragging />}
+          {activeIssue && (
+            <IssueCard issue={activeIssue} onOpen={() => {}} isDragging />
+          )}
         </DragOverlay>
       </DndContext>
 
       {drawerIssueId && (
-        <IssueDrawer issueId={drawerIssueId} onClose={() => setDrawerIssueId(null)} />
+        <IssueDrawer
+          issueId={drawerIssueId}
+          onClose={() => setDrawerIssueId(null)}
+        />
       )}
     </div>
   );
 }
 
-function KanbanColumn({ projectId, column, issues, onAddIssue, onOpenIssue }: {
+function KanbanColumn({
+  projectId,
+  column,
+  issues,
+  onAddIssue,
+  onOpenIssue,
+}: {
   projectId: string;
   column: BoardColumn;
   issues: Issue[];
@@ -186,10 +221,21 @@ function KanbanColumn({ projectId, column, issues, onAddIssue, onOpenIssue }: {
         </Tooltip>
       </div>
 
-      <SortableContext items={issues.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2" data-column-id={column.id}>
+      <SortableContext
+        items={issues.map((i) => i.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div
+          className="flex-1 overflow-y-auto px-2 pb-2 space-y-2"
+          data-column-id={column.id}
+        >
           {issues.map((issue) => (
-            <SortableIssueCard key={issue.id} issue={issue} onOpen={onOpenIssue} columnId={column.id} />
+            <SortableIssueCard
+              key={issue.id}
+              issue={issue}
+              onOpen={onOpenIssue}
+              columnId={column.id}
+            />
           ))}
           {issues.length === 0 && (
             <div className="flex items-center justify-center h-20 text-xs text-muted-foreground border border-dashed border-border rounded-lg">
@@ -202,22 +248,53 @@ function KanbanColumn({ projectId, column, issues, onAddIssue, onOpenIssue }: {
   );
 }
 
-function SortableIssueCard({ issue, onOpen, columnId }: { issue: Issue; onOpen: (i: Issue) => void; columnId: string }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+function SortableIssueCard({
+  issue,
+  onOpen,
+  columnId,
+}: {
+  issue: Issue;
+  onOpen: (i: Issue) => void;
+  columnId: string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: issue.id,
     data: { columnId },
   });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-30")}>
-      <IssueCard issue={issue} onOpen={onOpen} listeners={listeners} attributes={attributes} />
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(isDragging && "opacity-30")}
+    >
+      <IssueCard
+        issue={issue}
+        onOpen={onOpen}
+        listeners={listeners}
+        attributes={attributes}
+      />
     </div>
   );
 }
 
-function IssueCard({ issue, onOpen, listeners, attributes, isDragging }: {
-  issue: Issue; onOpen: (i: Issue) => void;
+function IssueCard({
+  issue,
+  onOpen,
+  listeners,
+  attributes,
+  isDragging,
+}: {
+  issue: Issue;
+  onOpen: (i: Issue) => void;
   listeners?: ReturnType<typeof useSortable>["listeners"];
   attributes?: ReturnType<typeof useSortable>["attributes"];
   isDragging?: boolean;
@@ -226,14 +303,16 @@ function IssueCard({ issue, onOpen, listeners, attributes, isDragging }: {
     <div
       className={cn(
         "rounded-lg border border-border bg-card p-3 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group",
-        isDragging && "kanban-card-dragging"
+        isDragging && "kanban-card-dragging",
       )}
       onClick={() => onOpen(issue)}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           <IssueTypeIcon type={issue.type} />
-          <span className="text-[10px] font-mono text-muted-foreground">{issue.issueKey}</span>
+          <span className="text-[10px] font-mono text-muted-foreground">
+            {issue.issueKey}
+          </span>
           {issue.severity && <SeverityBadge severity={issue.severity} />}
         </div>
         <div className="flex items-center gap-1">
@@ -251,12 +330,20 @@ function IssueCard({ issue, onOpen, listeners, attributes, isDragging }: {
         </div>
       </div>
 
-      <p className="text-sm font-medium text-foreground mb-2 line-clamp-2 leading-snug">{issue.title}</p>
+      <p className="text-sm font-medium text-foreground mb-2 line-clamp-2 leading-snug">
+        {issue.title}
+      </p>
 
       {issue.labels.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">
-          {issue.labels.slice(0, 2).map((l) => <LabelChip key={l.id} name={l.name} color={l.color} />)}
-          {issue.labels.length > 2 && <span className="text-[10px] text-muted-foreground">+{issue.labels.length - 2}</span>}
+          {issue.labels.slice(0, 2).map((l) => (
+            <LabelChip key={l.id} name={l.name} color={l.color} />
+          ))}
+          {issue.labels.length > 2 && (
+            <span className="text-[10px] text-muted-foreground">
+              +{issue.labels.length - 2}
+            </span>
+          )}
         </div>
       )}
 
@@ -264,16 +351,20 @@ function IssueCard({ issue, onOpen, listeners, attributes, isDragging }: {
         <PriorityIcon priority={issue.priority} />
         <div className="flex items-center gap-2">
           {issue.estimate && (
-            <span className="text-[10px] font-medium text-muted-foreground bg-muted rounded px-1.5 py-0.5">{issue.estimate}pt</span>
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+              {issue.estimate}pt
+            </span>
           )}
           {issue.comments.length > 0 && (
             <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <MessageSquare className="h-3 w-3" />{issue.comments.length}
+              <MessageSquare className="h-3 w-3" />
+              {issue.comments.length}
             </span>
           )}
           {issue.attachments.length > 0 && (
             <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              <Paperclip className="h-3 w-3" />{issue.attachments.length}
+              <Paperclip className="h-3 w-3" />
+              {issue.attachments.length}
             </span>
           )}
           {issue.assignees.length > 0 && (

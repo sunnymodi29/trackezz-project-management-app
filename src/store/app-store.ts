@@ -2,7 +2,12 @@
 
 import { create } from "zustand";
 import { projectPath } from "@/lib/projects/route";
-import type { Issue, Project } from "@/types";
+import type { Issue, IssueStatus, Project } from "@/types";
+
+export type OpenNewIssueOptions = {
+  dueDate?: Date;
+  status?: IssueStatus;
+};
 
 export type ProjectSwitchState = {
   active: boolean;
@@ -50,7 +55,8 @@ interface AppState {
 
   newIssueModalOpen: boolean;
   newIssueDefaultDueDate: Date | null;
-  openNewIssue: (dueDate?: Date) => void;
+  newIssueDefaultStatus: IssueStatus | null;
+  openNewIssue: (options?: Date | OpenNewIssueOptions) => void;
   closeNewIssue: () => void;
 
   newProjectModalOpen: boolean;
@@ -104,13 +110,23 @@ export const useAppStore = create<AppState>((set) => ({
 
   newIssueModalOpen: false,
   newIssueDefaultDueDate: null,
-  openNewIssue: (dueDate) =>
+  newIssueDefaultStatus: null,
+  openNewIssue: (options) => {
+    const opts =
+      options instanceof Date ? { dueDate: options } : (options ?? {});
     set({
       newIssueModalOpen: true,
-      newIssueDefaultDueDate: dueDate instanceof Date ? dueDate : null,
-    }),
+      newIssueDefaultDueDate:
+        opts.dueDate instanceof Date ? opts.dueDate : null,
+      newIssueDefaultStatus: opts.status ?? null,
+    });
+  },
   closeNewIssue: () =>
-    set({ newIssueModalOpen: false, newIssueDefaultDueDate: null }),
+    set({
+      newIssueModalOpen: false,
+      newIssueDefaultDueDate: null,
+      newIssueDefaultStatus: null,
+    }),
 
   newProjectModalOpen: false,
   openNewProject: () => set({ newProjectModalOpen: true }),

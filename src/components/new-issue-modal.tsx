@@ -17,7 +17,13 @@ import {
   Paperclip,
   AlertCircle,
 } from "lucide-react";
-import { Button, Textarea, Input, CustomSelect } from "@/components/ui";
+import {
+  Button,
+  Textarea,
+  Input,
+  CustomSelect,
+  DatePicker,
+} from "@/components/ui";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { normalizeRichTextForSave } from "@/lib/rich-text";
 import { cn } from "@/lib/utils";
@@ -25,16 +31,9 @@ import {
   previewNextIssueKey,
   parseIssueNumberFromKey,
 } from "@/lib/issues/issue-key";
-import { dateFromKey } from "@/lib/issues/dates";
+import { dateFromKey, toDateKey } from "@/lib/issues/dates";
 import { workflowStatusSelectOptions } from "@/lib/projects/workflow-status";
 import type { IssueType, Priority, IssueStatus } from "@/types";
-
-function formatDateInput(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 const TYPE_OPTIONS: {
   value: IssueType;
@@ -88,6 +87,7 @@ export function NewIssueModal() {
     currentProject,
     setCurrentProject,
     newIssueDefaultDueDate,
+    newIssueDefaultStatus,
   } = useAppStore();
   const router = useRouter();
   const {
@@ -120,11 +120,23 @@ export function NewIssueModal() {
   useEffect(() => {
     if (newIssueModalOpen) {
       setDueDate(
-        newIssueDefaultDueDate ? formatDateInput(newIssueDefaultDueDate) : "",
+        newIssueDefaultDueDate ? toDateKey(newIssueDefaultDueDate) : "",
       );
+      const statuses = getWorkflowStatuses(currentProject.id);
+      const defaultStatus =
+        statuses.find((s) => s.key === "todo")?.key ??
+        statuses[0]?.key ??
+        "todo";
+      setStatus(newIssueDefaultStatus ?? defaultStatus);
       setTimeout(() => titleRef.current?.focus(), 50);
     }
-  }, [newIssueModalOpen, newIssueDefaultDueDate]);
+  }, [
+    newIssueModalOpen,
+    newIssueDefaultDueDate,
+    newIssueDefaultStatus,
+    currentProject.id,
+    getWorkflowStatuses,
+  ]);
 
   useEffect(() => {
     setShowBugFields(type === "bug");
@@ -253,7 +265,7 @@ export function NewIssueModal() {
           </div>
 
           {/* Meta row */}
-          <div className="gap-3 flex flex-col">
+          <div className="gap-3 flex flex-col max-w-40 min-w-40">
             <MetaField label="Assignees">
               <CustomSelect
                 multiple
@@ -322,11 +334,11 @@ export function NewIssueModal() {
               />
             </MetaField>
             <MetaField label="Due date">
-              <input
-                type="date"
+              <DatePicker
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-transparent text-xs text-foreground outline-none"
+                onChange={setDueDate}
+                placeholder="No due date"
+                triggerClassName="h-6 border-0 bg-transparent px-1 shadow-none hover:bg-accent/30"
               />
             </MetaField>
             {/* <MetaField label="Project">
