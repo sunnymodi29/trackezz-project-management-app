@@ -8,6 +8,7 @@ import {
   type UpdateIssueInput,
 } from "@/lib/actions/issues";
 import { isQuickIssuePatch } from "@/lib/issues/quick-patch";
+import { resolveAssigneesFromIds, getProjectUsers } from "@/lib/issues/assignee-select";
 import { useDataStore } from "@/store/data-store";
 import type { Issue } from "@/types";
 
@@ -17,13 +18,26 @@ function applyOptimisticPatch(existing: Issue, input: UpdateIssueInput): Issue {
   if (input.description !== undefined) next.description = input.description;
   if (input.status !== undefined) next.status = input.status;
   if (input.priority !== undefined) next.priority = input.priority;
-  if (input.assigneeIds !== undefined) next.assigneeIds = input.assigneeIds;
+  if (input.assigneeIds !== undefined) {
+    next.assigneeIds = input.assigneeIds;
+    const users = getProjectUsers(
+      useDataStore.getState().projectMembers,
+      existing.projectId,
+    );
+    next.assignees = resolveAssigneesFromIds(users, input.assigneeIds);
+  }
   if (input.dueDate !== undefined) {
     next.dueDate = input.dueDate ?? undefined;
   }
   if (input.sprintId !== undefined) {
     next.sprintId = input.sprintId ?? undefined;
-    if (input.sprintId === null) next.sprint = undefined;
+    if (!input.sprintId) {
+      next.sprint = undefined;
+    } else {
+      next.sprint = useDataStore
+        .getState()
+        .sprints.find((sprint) => sprint.id === input.sprintId);
+    }
   }
   return next;
 }
@@ -31,7 +45,6 @@ function applyOptimisticPatch(existing: Issue, input: UpdateIssueInput): Issue {
 export function usePersistIssue() {
   const router = useRouter();
   const upsertIssue = useDataStore((s) => s.upsertIssue);
-  const patchIssue = useDataStore((s) => s.patchIssue);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,8 +62,20 @@ export function usePersistIssue() {
       try {
         if (isQuickIssuePatch(input)) {
           const patch = await patchIssueFields(issueId, input);
-          patchIssue(issueId, patch);
-          return { ...existing, ...patch };
+          const merged: Issue = {
+            ...optimistic,
+            ...patch,
+            dueDate:
+              patch.dueDate !== undefined
+                ? (patch.dueDate ?? undefined)
+                : optimistic.dueDate,
+            sprintId:
+              patch.sprintId !== undefined
+                ? (patch.sprintId ?? undefined)
+                : optimistic.sprintId,
+          };
+          upsertIssue(merged);
+          return merged;
         }
 
         const updated = await updateIssue(issueId, input);
@@ -67,7 +92,7 @@ export function usePersistIssue() {
         setSaving(false);
       }
     },
-    [router, upsertIssue, patchIssue],
+    [router, upsertIssue],
   );
 
   return { persist, saving, error };

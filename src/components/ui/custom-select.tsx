@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, ChevronDown, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Check, ChevronDown } from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 export interface CustomSelectOption {
@@ -10,6 +12,8 @@ export interface CustomSelectOption {
   label: string;
   icon?: React.ReactNode;
   avatarUrl?: string;
+  /** Render a user avatar (photo or initials) beside the label. */
+  showAvatar?: boolean;
 }
 
 interface CustomSelectProps {
@@ -31,6 +35,21 @@ interface CustomSelectProps {
   ) => React.ReactNode;
 }
 
+const MENU_GAP = 4;
+const MENU_MAX_HEIGHT = 220;
+
+function renderOptionAvatar(option: CustomSelectOption, className?: string) {
+  if (!option.showAvatar) return null;
+  return (
+    <Avatar
+      src={option.avatarUrl}
+      name={option.label}
+      size="xs"
+      className={cn("h-4 w-4 text-[8px] shrink-0 ring-0", className)}
+    />
+  );
+}
+
 export function CustomSelect({
   options,
   value,
@@ -45,53 +64,82 @@ export function CustomSelect({
   renderOption,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [openUpward, setOpenUpward] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
 
-  // Parse currently selected option(s)
   const selectedOptions = React.useMemo(() => {
     if (multiple) {
       const vals = Array.isArray(value) ? value : [];
       return options.filter((o) => vals.includes(o.value));
-    } else {
-      const val = typeof value === "string" ? value : "";
-      return options.find((o) => o.value === val) || null;
     }
+    const val = typeof value === "string" ? value : "";
+    return options.find((o) => o.value === val) || null;
   }, [options, value, multiple]);
 
-  // Click outside listener
+  const updateMenuPosition = React.useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUp = spaceBelow < MENU_MAX_HEIGHT && spaceAbove > spaceBelow;
+
+    if (openUp) {
+      setMenuStyle({
+        position: "fixed",
+        left: rect.left,
+        width: Math.max(rect.width, 200),
+        maxWidth: 280,
+        top: "auto",
+        bottom: window.innerHeight - rect.top + MENU_GAP,
+        zIndex: 999,
+      });
+      return;
+    }
+
+    setMenuStyle({
+      position: "fixed",
+      left: rect.left,
+      width: Math.max(rect.width, 200),
+      maxWidth: 280,
+      top: rect.bottom + MENU_GAP,
+      bottom: "auto",
+      zIndex: 999,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    updateMenuPosition();
+    const onReposition = () => updateMenuPosition();
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+    return () => {
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [isOpen, updateMenuPosition]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
       if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        containerRef.current?.contains(target) ||
+        optionsRef.current?.contains(target)
       ) {
-        setIsOpen(false);
+        return;
       }
+      setIsOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Viewport space check for placement (upward vs downward)
   useEffect(() => {
-    if (isOpen && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      // If less than 250px space below, and more space above, open upward
-      if (spaceBelow < 250 && spaceAbove > spaceBelow) {
-        setOpenUpward(true);
-      } else {
-        setOpenUpward(false);
-      }
-      setHighlightedIndex(-1);
-    }
+    if (isOpen) setHighlightedIndex(-1);
   }, [isOpen]);
 
-  // Handle select toggle
   const handleSelectOption = (optionValue: string) => {
     if (multiple) {
       const currentVals = Array.isArray(value) ? value : [];
@@ -105,7 +153,6 @@ export function CustomSelect({
     }
   };
 
-  // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
 
@@ -154,19 +201,15 @@ export function CustomSelect({
     }
   };
 
-  // Sync scroll on keyboard highlight
   useEffect(() => {
     if (isOpen && highlightedIndex >= 0 && optionsRef.current) {
       const highlightedEl = optionsRef.current.children[
         highlightedIndex
       ] as HTMLElement;
-      if (highlightedEl) {
-        highlightedEl.scrollIntoView({ block: "nearest" });
-      }
+      highlightedEl?.scrollIntoView({ block: "nearest" });
     }
   }, [highlightedIndex, isOpen]);
 
-  // Render selected trigger text/icon
   const defaultTriggerContent = () => {
     if (multiple) {
       const selectedList = selectedOptions as CustomSelectOption[];
@@ -181,8 +224,10 @@ export function CustomSelect({
               className="flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary rounded-sm px-1.5 py-0.5 text-[10px] font-medium"
             >
               {o.icon}
-              {o.avatarUrl && (
+              {renderOptionAvatar(o)}
+              {!o.showAvatar && o.avatarUrl && (
                 <img
+                  key={`${o.value}-${o.avatarUrl}`}
                   src={o.avatarUrl}
                   alt={o.label}
                   className="h-3.5 w-3.5 rounded-full object-cover"
@@ -212,8 +257,10 @@ export function CustomSelect({
     return (
       <div className="flex items-center gap-2 text-xs text-foreground font-medium truncate">
         {selectedSingle.icon}
-        {selectedSingle.avatarUrl && (
+        {renderOptionAvatar(selectedSingle)}
+        {!selectedSingle.showAvatar && selectedSingle.avatarUrl && (
           <img
+            key={`${selectedSingle.value}-${selectedSingle.avatarUrl}`}
             src={selectedSingle.avatarUrl}
             alt={selectedSingle.label}
             className="h-4 w-4 rounded-full object-cover"
@@ -223,6 +270,69 @@ export function CustomSelect({
       </div>
     );
   };
+
+  const optionsMenu = isOpen ? (
+    <div
+      ref={optionsRef}
+      style={menuStyle}
+      className={cn(
+        "custom-select-options max-h-[220px] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl p-1 animate-scale-in focus:outline-none scrollbar",
+        optionsClassName,
+      )}
+    >
+      {options.length === 0 ? (
+        <div className="text-center text-xs text-muted-foreground py-3">
+          No options available
+        </div>
+      ) : (
+        options.map((option, index) => {
+          const isSelected = multiple
+            ? (value as string[]).includes(option.value)
+            : value === option.value;
+          const isHighlighted = highlightedIndex === index;
+
+          return (
+            <div
+              key={option.value}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSelectOption(option.value);
+              }}
+              className={cn(
+                "flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors cursor-pointer select-none gap-2 mb-0.5",
+                isHighlighted
+                  ? "bg-accent/80 text-foreground"
+                  : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+                isSelected &&
+                  "bg-primary/10 text-primary font-medium hover:bg-primary/15",
+              )}
+            >
+              {renderOption ? (
+                renderOption(option, isSelected)
+              ) : (
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {option.icon}
+                  {renderOptionAvatar(option)}
+                  {!option.showAvatar && option.avatarUrl && (
+                    <img
+                      key={`${option.value}-${option.avatarUrl}`}
+                      src={option.avatarUrl}
+                      alt={option.label}
+                      className="h-4 w-4 rounded-full object-cover shrink-0"
+                    />
+                  )}
+                  <span className="truncate">{option.label}</span>
+                </div>
+              )}
+              {isSelected && (
+                <Check className="h-3 w-3 text-primary shrink-0" />
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  ) : null;
 
   return (
     <div
@@ -258,66 +368,9 @@ export function CustomSelect({
         </button>
       )}
 
-      {isOpen && (
-        <div
-          ref={optionsRef}
-          className={cn(
-            "custom-select-options absolute z-50 min-w-full max-w-[280px] max-h-[220px] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl p-1 animate-scale-in focus:outline-none scrollbar",
-            openUpward ? "bottom-full mb-1" : "top-full mt-1",
-            optionsClassName,
-          )}
-        >
-          {options.length === 0 ? (
-            <div className="text-center text-xs text-muted-foreground py-3">
-              No options available
-            </div>
-          ) : (
-            options.map((option, index) => {
-              const isSelected = multiple
-                ? (value as string[]).includes(option.value)
-                : value === option.value;
-              const isHighlighted = highlightedIndex === index;
-
-              return (
-                <div
-                  key={option.value}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectOption(option.value);
-                  }}
-                  className={cn(
-                    "flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors cursor-pointer select-none gap-2 mb-0.5",
-                    isHighlighted
-                      ? "bg-accent/80 text-foreground"
-                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
-                    isSelected &&
-                      "bg-primary/10 text-primary font-medium hover:bg-primary/15",
-                  )}
-                >
-                  {renderOption ? (
-                    renderOption(option, isSelected)
-                  ) : (
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      {option.icon}
-                      {option.avatarUrl && (
-                        <img
-                          src={option.avatarUrl}
-                          alt={option.label}
-                          className="h-4 w-4 rounded-full object-cover shrink-0"
-                        />
-                      )}
-                      <span className="truncate">{option.label}</span>
-                    </div>
-                  )}
-                  {isSelected && (
-                    <Check className="h-3 w-3 text-primary shrink-0" />
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
+      {typeof document !== "undefined" && optionsMenu
+        ? createPortal(optionsMenu, document.body)
+        : null}
     </div>
   );
 }

@@ -23,7 +23,9 @@ import {
   Input,
   CustomSelect,
   DatePicker,
+  Avatar,
 } from "@/components/ui";
+import { useProjectAssigneeSelect } from "@/hooks/use-project-assignee-select";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { normalizeRichTextForSave } from "@/lib/rich-text";
 import { cn } from "@/lib/utils";
@@ -93,13 +95,12 @@ export function NewIssueModal() {
   const {
     projects,
     currentUser,
-    getProjectMembers,
     getWorkflowStatuses,
     upsertIssue,
     patchProject,
   } = useDataStore();
-  const statusOptions = workflowStatusSelectOptions(
-    getWorkflowStatuses(currentProject.id),
+  const { assigneeOptions, getSelectedAssignees } = useProjectAssigneeSelect(
+    currentProject.id,
   );
   const [submitting, setSubmitting] = useState(false);
   const [type, setType] = useState<IssueType>("task");
@@ -109,6 +110,10 @@ export function NewIssueModal() {
   const [status, setStatus] = useState<IssueStatus>("todo");
   const [estimate, setEstimate] = useState("");
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const selectedAssignees = getSelectedAssignees(assigneeIds);
+  const statusOptions = workflowStatusSelectOptions(
+    getWorkflowStatuses(currentProject.id),
+  );
   const [showBugFields, setShowBugFields] = useState(false);
   const [reproSteps, setReproSteps] = useState("");
   const [expected, setExpected] = useState("");
@@ -270,44 +275,33 @@ export function NewIssueModal() {
               <MetaField label="Assignees">
                 <CustomSelect
                   multiple
-                  options={getProjectMembers(currentProject.id).map((m) => ({
-                    value: m.user.id,
-                    label: m.user.name,
-                    avatarUrl: m.user.avatarUrl,
-                  }))}
+                  options={assigneeOptions}
                   value={assigneeIds}
                   onChange={setAssigneeIds}
                   placeholder="Unassigned"
-                  renderTrigger={(selected) => {
-                    const selectedList = Array.isArray(selected)
-                      ? selected
-                      : [];
-                    return (
-                      <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto w-full bg-transparent text-xs text-foreground outline-none cursor-pointer p-1 rounded hover:bg-accent/50 min-h-[24px]">
-                        {selectedList.length === 0 ? (
-                          <span className="text-muted-foreground italic text-[10px]">
-                            Unassigned
-                          </span>
-                        ) : (
-                          selectedList.map((o) => (
-                            <div
-                              key={o.value}
-                              className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm flex items-center gap-1.5 text-[10px]"
-                            >
-                              {o.avatarUrl && (
-                                <img
-                                  src={o.avatarUrl}
-                                  alt={o.label}
-                                  className="h-3.5 w-3.5 rounded-full object-cover"
-                                />
-                              )}
-                              <span>{o.label.split(" ")[0]}</span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    );
-                  }}
+                  renderTrigger={() => (
+                    <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto w-full bg-transparent text-xs text-foreground outline-none cursor-pointer p-1 rounded hover:bg-accent/50 min-h-[24px]">
+                      {selectedAssignees.length === 0 ? (
+                        <span className="text-muted-foreground italic text-[10px]">
+                          Unassigned
+                        </span>
+                      ) : (
+                        selectedAssignees.map((user) => (
+                          <div
+                            key={user.id}
+                            className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm flex items-center gap-1.5 text-[10px]"
+                          >
+                            <Avatar
+                              src={user.avatarUrl}
+                              name={user.name}
+                              size="xs"
+                            />
+                            <span>{user.name.split(" ")[0]}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 />
               </MetaField>
               <MetaField label="Status">

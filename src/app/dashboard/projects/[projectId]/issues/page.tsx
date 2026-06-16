@@ -25,10 +25,10 @@ import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/utils";
 import type { IssueType, IssueStatus, Priority } from "@/types";
 import {
-  buildAssigneeFilterOptions,
   issueMatchesAssigneeFilter,
   type AssigneeFilterValue,
 } from "@/lib/issues/filters";
+import { useProjectAssigneeSelect } from "@/hooks/use-project-assignee-select";
 import { Search, Plus, ChevronDown, MoreHorizontal } from "lucide-react";
 import IssueDrawer from "@/components/issue-drawer";
 import type { Issue } from "@/types";
@@ -49,13 +49,13 @@ function IssuesPageContent() {
   const {
     projects,
     getIssuesByProject,
-    getProjectMembers,
     getWorkflowStatuses,
   } = useDataStore();
   const { persist } = usePersistIssue();
 
   const routeParam = params.projectId as string;
   const project = resolveProjectFromParam(projects, routeParam) ?? projects[0];
+  const { assigneeFilterOptions } = useProjectAssigneeSelect(project?.id);
   const projectKey = project?.key ?? "";
   const projectIssues = getIssuesByProject(project?.id ?? "");
   const workflowStatuses = project ? getWorkflowStatuses(project.id) : [];
@@ -73,14 +73,6 @@ function IssuesPageContent() {
     useState<AssigneeFilterValue>("all");
   const [sortBy, setSortBy] = useState<"updated" | "created" | "priority">(
     "updated",
-  );
-
-  const assigneeFilterOptions = useMemo(
-    () =>
-      buildAssigneeFilterOptions(
-        project ? getProjectMembers(project.id).map((m) => m.user) : [],
-      ),
-    [project, getProjectMembers],
   );
 
   useEffect(() => {

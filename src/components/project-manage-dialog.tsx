@@ -489,6 +489,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                           value: wm.userId,
                           label: wm.user.name,
                           avatarUrl: wm.user.avatarUrl,
+                          showAvatar: true,
                         }))}
                         value={addUserId}
                         onChange={setAddUserId}

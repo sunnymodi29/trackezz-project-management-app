@@ -67,7 +67,7 @@ export function Topbar() {
   };
 
   return (
-    <header className="sticky top-0 right-0 left-0 z-30 h-14 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 gap-3 transition-all duration-200">
+    <header className="sticky top-0 right-0 left-0 z-30 h-14 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 gap-3 transition-all duration-200 z-[9999]">
       {/* Left */}
       <div className="flex items-center gap-3">
         <button

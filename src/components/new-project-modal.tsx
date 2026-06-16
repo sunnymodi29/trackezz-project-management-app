@@ -263,6 +263,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                     value: m.userId,
                     label: m.user.name,
                     avatarUrl: m.user.avatarUrl,
+                    showAvatar: true,
                   }))}
                   value={addUserId}
                   onChange={setAddUserId}

@@ -44,17 +44,30 @@ export interface UpdateIssueInput {
   sprintId?: string | null;
 }
 
-/** Partial issue fields returned by fast list/board updates. */
+/** Partial issue fields returned by fast list/board/detail field updates. */
 export interface IssueQuickPatch {
   id: string;
   status?: IssueStatus;
   priority?: Priority;
+  assigneeIds?: string[];
+  dueDate?: Date | null;
+  sprintId?: string | null;
   updatedAt: Date;
 }
 
 export interface IssueQuickPatchInput {
   status?: IssueStatus;
   priority?: Priority;
+  assigneeIds?: string[];
+  dueDate?: Date | null;
+  sprintId?: string | null;
+}
+
+function sameUserIdSet(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  const left = [...a].sort();
+  const right = [...b].sort();
+  return left.every((id, index) => id === right[index]);
 }
 
 async function revalidateIssueViews(
@@ -392,6 +405,11 @@ async function scheduleQuickPatchSideEffects(params: {
   newStatus?: IssueStatus;
   newPriority?: Priority;
   statusLabel?: string;
+  assigneesChanged?: boolean;
+  newlyAssigned?: string[];
+  dueDateChanged?: boolean;
+  newDueDate?: Date | null;
+  sprintChanged?: boolean;
 }) {
   after(async () => {
     const changes: string[] = [];
@@ -400,6 +418,19 @@ async function scheduleQuickPatchSideEffects(params: {
     }
     if (params.newPriority !== undefined) {
       changes.push(`priority → ${params.newPriority}`);
+    }
+    if (params.assigneesChanged) {
+      changes.push("assignees");
+    }
+    if (params.dueDateChanged) {
+      changes.push(
+        params.newDueDate
+          ? `due date → ${params.newDueDate.toLocaleDateString()}`
+          : "due date cleared",
+      );
+    }
+    if (params.sprintChanged) {
+      changes.push("sprint");
     }
     if (changes.length === 0) return;
 
@@ -411,6 +442,17 @@ async function scheduleQuickPatchSideEffects(params: {
       "updated issue",
       `${params.issueKey}: ${changes.join(", ")}`,
     );
+
+    if (params.newlyAssigned && params.newlyAssigned.length > 0) {
+      await notifyIssueAssigned({
+        issueId: params.issueId,
+        issueKey: params.issueKey,
+        issueTitle: params.issueTitle,
+        assigneeIds: params.newlyAssigned,
+        actorId: params.userId,
+        organizationSlug: params.orgSlug,
+      });
+    }
 
     if (
       params.newStatus !== undefined &&
@@ -444,6 +486,8 @@ export async function patchIssueFields(
       title: true,
       status: true,
       priority: true,
+      dueDate: true,
+      sprintId: true,
       reporterId: true,
       projectId: true,
       assignees: { select: { userId: true } },
@@ -472,39 +516,93 @@ export async function patchIssueFields(
     throw new Error("FORBIDDEN: Cannot update issues in this project");
   }
 
-  const data: { status?: string; priority?: Priority } = {};
+  const priorAssigneeIds = existing.assignees.map((a) => a.userId);
+  const issueData: {
+    status?: string;
+    priority?: Priority;
+    dueDate?: Date | null;
+    sprintId?: string | null;
+  } = {};
   let statusLabel: string | undefined;
+  let assigneesChanged = false;
+  let newlyAssigned: string[] = [];
+  let dueDateChanged = false;
+  let sprintChanged = false;
 
-  if (input.status !== undefined) {
-    if (input.status === existing.status) {
-      return {
-        id: issueId,
-        status: input.status,
-        updatedAt: new Date(),
-      };
-    }
+  if (input.status !== undefined && input.status !== existing.status) {
     const row = await assertValidProjectStatus(existing.projectId, input.status);
-    data.status = input.status;
+    issueData.status = input.status;
     statusLabel = row.label;
   }
 
   if (input.priority !== undefined && input.priority !== existing.priority) {
-    data.priority = input.priority;
+    issueData.priority = input.priority;
   }
 
-  if (Object.keys(data).length === 0) {
+  if (input.dueDate !== undefined) {
+    const nextDue = input.dueDate;
+    const prevDue = existing.dueDate;
+    const unchanged =
+      (nextDue === null && !prevDue) ||
+      (nextDue !== null &&
+        prevDue !== null &&
+        nextDue.getTime() === prevDue.getTime());
+    if (!unchanged) {
+      issueData.dueDate = input.dueDate;
+      dueDateChanged = true;
+    }
+  }
+
+  if (input.sprintId !== undefined && input.sprintId !== existing.sprintId) {
+    issueData.sprintId = input.sprintId;
+    sprintChanged = true;
+  }
+
+  if (
+    input.assigneeIds !== undefined &&
+    !sameUserIdSet(input.assigneeIds, priorAssigneeIds)
+  ) {
+    assigneesChanged = true;
+    newlyAssigned = input.assigneeIds.filter(
+      (id) => !priorAssigneeIds.includes(id),
+    );
+    await prisma.issueAssignee.deleteMany({ where: { issueId } });
+    if (input.assigneeIds.length > 0) {
+      await prisma.issueAssignee.createMany({
+        data: input.assigneeIds.map((userId) => ({ issueId, userId })),
+      });
+    }
+  }
+
+  const hasChanges =
+    Object.keys(issueData).length > 0 || assigneesChanged;
+
+  if (!hasChanges) {
     return {
       id: issueId,
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
+      ...(input.assigneeIds !== undefined ? { assigneeIds: input.assigneeIds } : {}),
+      ...(input.dueDate !== undefined ? { dueDate: input.dueDate ?? null } : {}),
+      ...(input.sprintId !== undefined ? { sprintId: input.sprintId ?? null } : {}),
       updatedAt: new Date(),
     };
   }
 
   const updated = await prisma.issue.update({
     where: { id: issueId },
-    data,
-    select: { id: true, status: true, priority: true, updatedAt: true },
+    data: {
+      ...issueData,
+      updatedAt: new Date(),
+    },
+    select: {
+      id: true,
+      status: true,
+      priority: true,
+      dueDate: true,
+      sprintId: true,
+      updatedAt: true,
+    },
   });
 
   await scheduleQuickPatchSideEffects({
@@ -516,17 +614,33 @@ export async function patchIssueFields(
     organizationId: existing.project.organizationId,
     orgSlug: org.slug,
     priorStatus: existing.status,
-    priorAssigneeIds: existing.assignees.map((a) => a.userId),
+    priorAssigneeIds,
     reporterId: existing.reporterId,
-    newStatus: data.status,
-    newPriority: data.priority,
+    newStatus: issueData.status,
+    newPriority: issueData.priority,
     statusLabel,
+    assigneesChanged,
+    newlyAssigned,
+    dueDateChanged,
+    newDueDate: input.dueDate,
+    sprintChanged,
   });
 
   return {
     id: updated.id,
-    ...(data.status !== undefined ? { status: updated.status } : {}),
-    ...(data.priority !== undefined ? { priority: updated.priority } : {}),
+    ...(issueData.status !== undefined ? { status: updated.status } : {}),
+    ...(issueData.priority !== undefined ? { priority: updated.priority } : {}),
+    ...(input.assigneeIds !== undefined ? { assigneeIds: input.assigneeIds } : {}),
+    ...(issueData.dueDate !== undefined
+      ? { dueDate: updated.dueDate }
+      : input.dueDate !== undefined
+        ? { dueDate: input.dueDate ?? null }
+        : {}),
+    ...(issueData.sprintId !== undefined
+      ? { sprintId: updated.sprintId }
+      : input.sprintId !== undefined
+        ? { sprintId: input.sprintId ?? null }
+        : {}),
     updatedAt: updated.updatedAt,
   };
 }

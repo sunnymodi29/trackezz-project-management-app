@@ -6,6 +6,7 @@ import { refreshSprintCounts } from "@/lib/sprints/counts";
 import { sortWorkflowStatuses } from "@/lib/projects/workflow-status";
 import type {
   ActivityLog,
+  Comment,
   Issue,
   Notification,
   Organization,
@@ -15,6 +16,89 @@ import type {
   User,
   WorkflowStatus,
 } from "@/types";
+
+type UserProfilePatch = Partial<Pick<User, "name" | "avatarUrl">>;
+
+function syncUserById(user: User, userId: string, patch: UserProfilePatch): User {
+  return user.id === userId ? { ...user, ...patch } : user;
+}
+
+function syncCommentUsers(
+  comment: Comment,
+  userId: string,
+  patch: UserProfilePatch,
+): Comment {
+  const sync = (user: User) => syncUserById(user, userId, patch);
+  return {
+    ...comment,
+    author: sync(comment.author),
+    reactions: comment.reactions.map((reaction) => ({
+      ...reaction,
+      user: sync(reaction.user),
+    })),
+    replies: comment.replies?.map((reply) =>
+      syncCommentUsers(reply, userId, patch),
+    ),
+  };
+}
+
+function syncIssueUsers(
+  issue: Issue,
+  userId: string,
+  patch: UserProfilePatch,
+): Issue {
+  const sync = (user: User) => syncUserById(user, userId, patch);
+  return {
+    ...issue,
+    reporter: issue.reporter ? sync(issue.reporter) : issue.reporter,
+    assignees: issue.assignees.map(sync),
+    comments: issue.comments.map((comment) =>
+      syncCommentUsers(comment, userId, patch),
+    ),
+    attachments: issue.attachments.map((attachment) => ({
+      ...attachment,
+      uploadedBy: sync(attachment.uploadedBy),
+    })),
+  };
+}
+
+function syncBootstrapUsers(
+  state: BootstrapData,
+  userId: string,
+  patch: UserProfilePatch,
+): Partial<BootstrapData> {
+  const sync = (user: User) => syncUserById(user, userId, patch);
+  return {
+    organizationMembers: state.organizationMembers.map((member) =>
+      member.userId === userId
+        ? { ...member, user: sync(member.user) }
+        : member,
+    ),
+    projectMembers: state.projectMembers.map((member) =>
+      member.userId === userId ? { ...member, user: sync(member.user) } : member,
+    ),
+    issues: state.issues.map((issue) => syncIssueUsers(issue, userId, patch)),
+    activityLogs: state.activityLogs.map((log) => ({
+      ...log,
+      user: sync(log.user),
+    })),
+    notifications: state.notifications.map((notification) => ({
+      ...notification,
+      actor: sync(notification.actor),
+      issue: notification.issue
+        ? syncIssueUsers(notification.issue, userId, patch)
+        : notification.issue,
+    })),
+    projects: state.projects.map((project) => ({
+      ...project,
+      lead: project.lead ? sync(project.lead) : project.lead,
+    })),
+    invitations: state.invitations.map((invitation) => ({
+      ...invitation,
+      invitedBy: sync(invitation.invitedBy),
+    })),
+  };
+}
 
 interface DataState extends BootstrapData {
   hydrated: boolean;
@@ -191,16 +275,10 @@ export const useDataStore = create<DataState>((set, get) => ({
   patchCurrentUser: (patch) =>
     set((state) => {
       const userId = state.currentUser.id;
-      const syncUser = (u: User) =>
-        u.id === userId ? { ...u, ...patch } : u;
+      if (!userId) return {};
       return {
         currentUser: { ...state.currentUser, ...patch },
-        organizationMembers: state.organizationMembers.map((m) =>
-          m.userId === userId ? { ...m, user: syncUser(m.user) } : m
-        ),
-        projectMembers: state.projectMembers.map((m) =>
-          m.userId === userId ? { ...m, user: syncUser(m.user) } : m
-        ),
+        ...syncBootstrapUsers(state, userId, patch),
       };
     }),
 

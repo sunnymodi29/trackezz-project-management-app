@@ -19,6 +19,7 @@ export function buildAssigneeFilterOptions(
       value: u.id,
       label: u.name,
       avatarUrl: u.avatarUrl,
+      showAvatar: true as const,
     })),
   ];
 }

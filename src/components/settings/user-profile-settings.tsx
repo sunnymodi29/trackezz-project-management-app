@@ -107,7 +107,6 @@ export function UserProfileSettings() {
     setAvatarUrl(url);
     patchCurrentUser({ avatarUrl: url });
     await updateSession({ image: url ?? null });
-    router.refresh();
   };
 
   const handleAvatarFile = async (file: File | null) => {
