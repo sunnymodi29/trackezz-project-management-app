@@ -151,7 +151,8 @@ export function RichTextEditor({
     <div
       className={cn(
         "rich-text-editor",
-        !borderless && "rounded-md border border-dashed border-border bg-muted/20",
+        !borderless &&
+          "rounded-md border border-dashed border-border bg-muted/20 h-max",
         compact && "rich-text-editor--compact",
         className,
       )}
@@ -232,7 +233,10 @@ export function RichTextEditor({
       )}
       <EditorContent
         editor={editor}
-        className={cn("text-sm", compact ? "px-2 py-1.5" : "px-3 py-2")}
+        className={cn(
+          "text-sm overflow-y-auto max-h-[28vh]",
+          compact ? "px-2 py-1.5" : "px-3 py-2",
+        )}
       />
     </div>
   );

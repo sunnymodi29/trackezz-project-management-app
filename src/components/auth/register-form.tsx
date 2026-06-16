@@ -147,21 +147,19 @@ export function RegisterForm() {
           </Button>
         </form>
 
-        {!inviteToken && (
-          <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link
-              href={
-                inviteToken
-                  ? `/login?email=${encodeURIComponent(prefilledEmail || email)}&callbackUrl=${encodeURIComponent(`/invite/${inviteToken}/join`)}`
-                  : "/login"
-              }
-              className="text-primary hover:underline font-medium"
-            >
-              Sign in
-            </Link>
-          </p>
-        )}
+        <p className="text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link
+            href={
+              inviteToken
+                ? `/login?email=${encodeURIComponent(prefilledEmail || email)}&callbackUrl=${encodeURIComponent(`/invite/${inviteToken}/join`)}`
+                : "/login"
+            }
+            className="text-primary hover:underline font-medium"
+          >
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );

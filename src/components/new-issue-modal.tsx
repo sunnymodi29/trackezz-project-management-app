@@ -209,7 +209,7 @@ export function NewIssueModal() {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={closeNewIssue}
       />
-      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col animate-scale-in rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-3xl max-h-[57vh] flex flex-col animate-scale-in rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-3">
@@ -247,108 +247,112 @@ export function NewIssueModal() {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 flex gap-8">
-          <div className="space-y-2 w-4/5">
-            <input
-              ref={titleRef}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Issue title..."
-              className="w-full bg-transparent text-lg font-semibold text-foreground placeholder:text-muted-foreground outline-none border-b border-border pb-1.5"
-            />
-            <RichTextEditor
-              value={description}
-              onChange={setDesc}
-              placeholder="Add a description..."
-              minHeight="120px"
-            />
-          </div>
-
-          {/* Meta row */}
-          <div className="gap-3 flex flex-col max-w-40 min-w-40">
-            <MetaField label="Assignees">
-              <CustomSelect
-                multiple
-                options={getProjectMembers(currentProject.id).map((m) => ({
-                  value: m.user.id,
-                  label: m.user.name,
-                  avatarUrl: m.user.avatarUrl,
-                }))}
-                value={assigneeIds}
-                onChange={setAssigneeIds}
-                placeholder="Unassigned"
-                renderTrigger={(selected) => {
-                  const selectedList = Array.isArray(selected) ? selected : [];
-                  return (
-                    <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto w-full bg-transparent text-xs text-foreground outline-none cursor-pointer p-1 rounded hover:bg-accent/50 min-h-[24px]">
-                      {selectedList.length === 0 ? (
-                        <span className="text-muted-foreground italic text-[10px]">
-                          Unassigned
-                        </span>
-                      ) : (
-                        selectedList.map((o) => (
-                          <div
-                            key={o.value}
-                            className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm flex items-center gap-1.5 text-[10px]"
-                          >
-                            {o.avatarUrl && (
-                              <img
-                                src={o.avatarUrl}
-                                alt={o.label}
-                                className="h-3.5 w-3.5 rounded-full object-cover"
-                              />
-                            )}
-                            <span>{o.label.split(" ")[0]}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  );
-                }}
-              />
-            </MetaField>
-            <MetaField label="Status">
-              <CustomSelect
-                options={statusOptions}
-                value={status}
-                onChange={(val) => setStatus(val as IssueStatus)}
-                triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
-              />
-            </MetaField>
-            <MetaField label="Priority">
-              <CustomSelect
-                options={PRIORITY_OPTIONS}
-                value={priority}
-                onChange={(val) => setPriority(val as Priority)}
-                triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
-              />
-            </MetaField>
-            <MetaField label="Estimate (pts)">
+        <div className="overflow-y-auto p-5 space-y-4">
+          <div className="flex flex-1 gap-8">
+            <div className="space-y-2 w-4/5">
               <input
-                value={estimate}
-                onChange={(e) => setEstimate(e.target.value)}
-                type="number"
-                min="0"
-                placeholder="0"
-                className="w-full bg-transparent text-xs text-foreground outline-none"
+                ref={titleRef}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Issue title..."
+                className="w-full bg-transparent text-lg font-semibold text-foreground placeholder:text-muted-foreground outline-none border-b border-border pb-1.5"
               />
-            </MetaField>
-            <MetaField label="Due date">
-              <DatePicker
-                value={dueDate}
-                onChange={setDueDate}
-                placeholder="No due date"
-                triggerClassName="h-6 border-0 bg-transparent px-1 shadow-none hover:bg-accent/30"
+              <RichTextEditor
+                value={description}
+                onChange={setDesc}
+                placeholder="Add a description..."
+                minHeight="236px"
               />
-            </MetaField>
-            {/* <MetaField label="Project">
+            </div>
+
+            {/* Meta row */}
+            <div className="gap-3 flex flex-col max-w-40 min-w-40">
+              <MetaField label="Assignees">
+                <CustomSelect
+                  multiple
+                  options={getProjectMembers(currentProject.id).map((m) => ({
+                    value: m.user.id,
+                    label: m.user.name,
+                    avatarUrl: m.user.avatarUrl,
+                  }))}
+                  value={assigneeIds}
+                  onChange={setAssigneeIds}
+                  placeholder="Unassigned"
+                  renderTrigger={(selected) => {
+                    const selectedList = Array.isArray(selected)
+                      ? selected
+                      : [];
+                    return (
+                      <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto w-full bg-transparent text-xs text-foreground outline-none cursor-pointer p-1 rounded hover:bg-accent/50 min-h-[24px]">
+                        {selectedList.length === 0 ? (
+                          <span className="text-muted-foreground italic text-[10px]">
+                            Unassigned
+                          </span>
+                        ) : (
+                          selectedList.map((o) => (
+                            <div
+                              key={o.value}
+                              className="bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm flex items-center gap-1.5 text-[10px]"
+                            >
+                              {o.avatarUrl && (
+                                <img
+                                  src={o.avatarUrl}
+                                  alt={o.label}
+                                  className="h-3.5 w-3.5 rounded-full object-cover"
+                                />
+                              )}
+                              <span>{o.label.split(" ")[0]}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+              </MetaField>
+              <MetaField label="Status">
+                <CustomSelect
+                  options={statusOptions}
+                  value={status}
+                  onChange={(val) => setStatus(val as IssueStatus)}
+                  triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
+                />
+              </MetaField>
+              <MetaField label="Priority">
+                <CustomSelect
+                  options={PRIORITY_OPTIONS}
+                  value={priority}
+                  onChange={(val) => setPriority(val as Priority)}
+                  triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
+                />
+              </MetaField>
+              <MetaField label="Estimate (pts)">
+                <input
+                  value={estimate}
+                  onChange={(e) => setEstimate(e.target.value)}
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  className="w-full bg-transparent text-xs text-foreground outline-none"
+                />
+              </MetaField>
+              <MetaField label="Due date">
+                <DatePicker
+                  value={dueDate}
+                  onChange={setDueDate}
+                  placeholder="No due date"
+                  triggerClassName="h-6 border-0 bg-transparent px-1 shadow-none hover:bg-accent/30"
+                />
+              </MetaField>
+              {/* <MetaField label="Project">
               <span className="text-xs text-foreground">{currentProject.name}</span>
             </MetaField> */}
+            </div>
           </div>
 
           {/* Bug-specific fields */}
           {showBugFields && (
-            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4 space-y-3">
+            <div className="rounded-lg border !border-red-500/20 bg-red-500/5 p-4 space-y-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-red-400 uppercase tracking-wider">
                 <AlertCircle className="h-3.5 w-3.5" /> Bug Report Fields
               </div>
@@ -361,7 +365,7 @@ export function NewIssueModal() {
                     value={env}
                     onChange={(e) => setEnv(e.target.value)}
                     placeholder="e.g. Production, Chrome 121, macOS 14"
-                    className="h-8 text-xs"
+                    className="h-8 text-xs !border-white/20 focus-visible:ring-white/50"
                   />
                 </div>
                 <div>
@@ -372,7 +376,7 @@ export function NewIssueModal() {
                     value={reproSteps}
                     onChange={(e) => setReproSteps(e.target.value)}
                     placeholder="1. Go to...\n2. Click...\n3. See error"
-                    className="min-h-[80px] text-xs"
+                    className="min-h-[80px] text-xs !border-white/20 focus-visible:ring-white/50"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -384,7 +388,7 @@ export function NewIssueModal() {
                       value={expected}
                       onChange={(e) => setExpected(e.target.value)}
                       placeholder="What should happen?"
-                      className="min-h-[60px] text-xs"
+                      className="min-h-[60px] text-xs !border-white/20 focus-visible:ring-white/50"
                     />
                   </div>
                   <div>
@@ -395,7 +399,7 @@ export function NewIssueModal() {
                       value={actual}
                       onChange={(e) => setActual(e.target.value)}
                       placeholder="What actually happened?"
-                      className="min-h-[60px] text-xs"
+                      className="min-h-[60px] text-xs !border-white/20 focus-visible:ring-white/50"
                     />
                   </div>
                 </div>
