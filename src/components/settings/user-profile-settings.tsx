@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { signOutWithLoader } from "@/lib/auth/sign-out-client";
 import { User, Lock, Trash2 } from "lucide-react";
 import {
   Card,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui";
 import { useDataStore } from "@/store/data-store";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { clearWorkspaceCookies } from "@/lib/actions/org";
 import {
   updateUserProfile,
   changePassword,
@@ -153,8 +153,7 @@ export function UserProfileSettings() {
         password: deletePassword || undefined,
       });
       setDeleteDialogOpen(false);
-      await clearWorkspaceCookies();
-      await signOut({ callbackUrl: "/login" });
+      await signOutWithLoader("/login");
     } catch (e) {
       setDeleteError(
         e instanceof Error ? e.message : "Failed to delete account"

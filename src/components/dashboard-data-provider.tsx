@@ -14,17 +14,28 @@ export function DashboardDataProvider({
   children: React.ReactNode;
 }) {
   const hydrate = useDataStore((s) => s.hydrate);
+  const markRouteBootstrapReady = useAppStore((s) => s.markRouteBootstrapReady);
   const { projects } = data;
 
   useEffect(() => {
     hydrate(data);
-    if (!data.hasWorkspace || projects.length === 0) return;
-    const app = useAppStore.getState();
-    const valid = projects.some((p) => p.id === app.currentProject.id);
-    if (!valid && projects[0]) {
-      app.setCurrentProject(projects[0]);
+
+    if (data.hasWorkspace && projects.length > 0) {
+      const app = useAppStore.getState();
+      const valid = projects.some((p) => p.id === app.currentProject.id);
+      if (!valid && projects[0]) {
+        app.setCurrentProject(projects[0]);
+      }
     }
-  }, [data, hydrate, projects]);
+
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        markRouteBootstrapReady();
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [data, hydrate, markRouteBootstrapReady, projects]);
 
   return (
     <>

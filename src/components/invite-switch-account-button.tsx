@@ -1,8 +1,7 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOutWithLoader } from "@/lib/auth/sign-out-client";
 import { Button } from "@/components/ui";
-import { clearWorkspaceCookies } from "@/lib/actions/org";
 
 export function InviteSwitchAccountButton({
   inviteEmail,
@@ -16,10 +15,8 @@ export function InviteSwitchAccountButton({
   className?: string;
 }) {
   const handleClick = async () => {
-    await clearWorkspaceCookies();
-    await signOut({
-      callbackUrl: `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`,
-    });
+    const callbackUrl = `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`;
+    await signOutWithLoader(callbackUrl);
   };
 
   return (

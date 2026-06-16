@@ -1,10 +1,9 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOutWithLoader } from "@/lib/auth/sign-out-client";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui";
 import { UserProfileSettings } from "@/components/settings/user-profile-settings";
-import { clearWorkspaceCookies } from "@/lib/actions/org";
 
 export function NoWorkspaceShell() {
   return (
@@ -18,11 +17,7 @@ export function NoWorkspaceShell() {
           variant="ghost"
           size="sm"
           className="text-muted-foreground"
-          onClick={() =>
-            void clearWorkspaceCookies().then(() =>
-              signOut({ callbackUrl: "/login" }),
-            )
-          }
+          onClick={() => void signOutWithLoader("/login")}
         >
           <LogOut className="h-4 w-4 mr-2" />
           Sign out

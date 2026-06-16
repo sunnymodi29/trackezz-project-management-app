@@ -3,12 +3,12 @@
 import { startTransition, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOutWithLoader } from "@/lib/auth/sign-out-client";
 import { projectPath } from "@/lib/projects/route";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { Avatar, Skeleton, Tooltip } from "@/components/ui";
-import { clearWorkspaceCookies, setActiveProject } from "@/lib/actions/org";
+import { setActiveProject } from "@/lib/actions/org";
 import { cn } from "@/lib/utils";
 import { canManageProject } from "@/lib/permissions/client";
 import type { Project } from "@/types";
@@ -113,8 +113,7 @@ export function Sidebar() {
   );
 
   const handleSignOut = useCallback(async () => {
-    await clearWorkspaceCookies();
-    await signOut({ callbackUrl: "/login" });
+    await signOutWithLoader("/login");
   }, []);
 
   const switchProject = useCallback(

@@ -20,6 +20,14 @@ export type RouteTransitionState = {
   active: boolean;
   targetPath: string | null;
   startedAt: number;
+  /** Full viewport overlay (e.g. landing → dashboard). */
+  fullScreen: boolean;
+  /** False until dashboard bootstrap hydrates for this navigation. */
+  bootstrapReady: boolean;
+};
+
+export type BeginRouteTransitionOptions = {
+  fullScreen?: boolean;
 };
 
 const emptyProject: Project = {
@@ -74,7 +82,11 @@ interface AppState {
   endProjectSwitch: () => void;
 
   routeTransition: RouteTransitionState;
-  beginRouteTransition: (targetPath: string) => void;
+  beginRouteTransition: (
+    targetPath: string,
+    options?: BeginRouteTransitionOptions,
+  ) => void;
+  markRouteBootstrapReady: () => void;
   endRouteTransition: () => void;
 }
 
@@ -89,6 +101,8 @@ const idleRouteTransition: RouteTransitionState = {
   active: false,
   targetPath: null,
   startedAt: 0,
+  fullScreen: false,
+  bootstrapReady: true,
 };
 
 export const useAppStore = create<AppState>((set) => ({
@@ -151,13 +165,28 @@ export const useAppStore = create<AppState>((set) => ({
   endProjectSwitch: () => set({ projectSwitch: idleProjectSwitch }),
 
   routeTransition: idleRouteTransition,
-  beginRouteTransition: (targetPath) =>
+  beginRouteTransition: (targetPath, options) => {
+    const fullScreen = options?.fullScreen ?? false;
+    const targetingDashboard = targetPath.startsWith("/dashboard");
     set({
       routeTransition: {
         active: true,
         targetPath,
         startedAt: Date.now(),
+        fullScreen,
+        bootstrapReady: !targetingDashboard || !fullScreen,
       },
+    });
+  },
+  markRouteBootstrapReady: () =>
+    set((state) => {
+      if (!state.routeTransition.active) return state;
+      return {
+        routeTransition: {
+          ...state.routeTransition,
+          bootstrapReady: true,
+        },
+      };
     }),
   endRouteTransition: () => set({ routeTransition: idleRouteTransition }),
 }));

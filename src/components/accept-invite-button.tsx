@@ -3,9 +3,8 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui";
-import { clearWorkspaceCookies } from "@/lib/actions/org";
+import { signOutWithLoader } from "@/lib/auth/sign-out-client";
 import {
   acceptInvitationAction,
   type AcceptInviteState,
@@ -36,10 +35,8 @@ export function AcceptInviteButton({
     state?.error?.toLowerCase().includes("invited email") ?? false;
 
   const handleSwitchAccount = async () => {
-    await clearWorkspaceCookies();
-    await signOut({
-      callbackUrl: `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`,
-    });
+    const callbackUrl = `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`;
+    await signOutWithLoader(callbackUrl);
   };
 
   return (

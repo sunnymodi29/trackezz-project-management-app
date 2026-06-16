@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Zap, Mail, Lock, Loader2 } from "lucide-react";
 import { Button, Input } from "@/components/ui";
+import { navigateAfterAuth } from "@/lib/auth/auth-navigation-client";
 
 export function LoginForm() {
   const router = useRouter();
@@ -28,14 +29,13 @@ export function LoginForm() {
       redirect: false,
     });
 
-    setLoading(false);
     if (result?.error) {
+      setLoading(false);
       setError("Invalid email or password.");
       return;
     }
 
-    router.push(callbackUrl);
-    router.refresh();
+    navigateAfterAuth(router, callbackUrl);
   };
 
   return (

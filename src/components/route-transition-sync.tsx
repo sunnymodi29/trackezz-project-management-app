@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { routeTransitionReached } from "@/lib/route-transition";
 import { useAppStore } from "@/store/app-store";
 
-const MIN_VISIBLE_MS = 280;
+const MIN_VISIBLE_MS = 400;
 const MAX_VISIBLE_MS = 12_000;
 
 export function RouteTransitionSync() {
@@ -21,6 +21,8 @@ export function RouteTransitionSync() {
     if (!routeTransition.active || !routeTransition.targetPath) return;
 
     if (!routeTransitionReached(pathname, routeTransition.targetPath)) return;
+
+    if (!routeTransition.bootstrapReady) return;
 
     const elapsed = Date.now() - routeTransition.startedAt;
     const delay = Math.max(0, MIN_VISIBLE_MS - elapsed);
@@ -43,6 +45,7 @@ export function RouteTransitionSync() {
     routeTransition.active,
     routeTransition.targetPath,
     routeTransition.startedAt,
+    routeTransition.bootstrapReady,
     endRouteTransition,
   ]);
 

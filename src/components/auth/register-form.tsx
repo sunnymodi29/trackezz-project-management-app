@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Zap, Mail, Lock, User, Loader2 } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { registerUser } from "@/lib/actions/auth";
+import { navigateAfterAuth } from "@/lib/auth/auth-navigation-client";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -48,11 +49,9 @@ export function RegisterForm() {
       router.push("/login");
       return;
     }
-    if (inviteToken) {
-      router.push(`/invite/${inviteToken}/join`);
-    } else {
-      router.push("/dashboard");
-    }
+
+    const target = inviteToken ? `/invite/${inviteToken}/join` : "/dashboard";
+    navigateAfterAuth(router, target);
   };
 
   return (
@@ -63,7 +62,9 @@ export function RegisterForm() {
             <Zap className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold">
-            {inviteToken ? "Create your account to join" : "Create your account"}
+            {inviteToken
+              ? "Create your account to join"
+              : "Create your account"}
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             {inviteToken
@@ -146,19 +147,21 @@ export function RegisterForm() {
           </Button>
         </form>
 
-        {inviteToken && <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link
-            href={
-              inviteToken
-                ? `/login?email=${encodeURIComponent(prefilledEmail || email)}&callbackUrl=${encodeURIComponent(`/invite/${inviteToken}/join`)}`
-                : "/login"
-            }
-            className="text-primary hover:underline font-medium"
-          >
-            Sign in
-          </Link>
-        </p>}
+        {!inviteToken && (
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link
+              href={
+                inviteToken
+                  ? `/login?email=${encodeURIComponent(prefilledEmail || email)}&callbackUrl=${encodeURIComponent(`/invite/${inviteToken}/join`)}`
+                  : "/login"
+              }
+              className="text-primary hover:underline font-medium"
+            >
+              Sign in
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );

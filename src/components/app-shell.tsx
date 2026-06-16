@@ -8,8 +8,6 @@ import { NewProjectModal } from "@/components/new-project-modal";
 import { ProjectRouteSync } from "@/components/project-route-sync";
 import { ProjectSwitchSync } from "@/components/project-switch-sync";
 import { ProjectSwitchOverlay } from "@/components/project-switch-overlay";
-import { RouteTransitionSync } from "@/components/route-transition-sync";
-import { RouteTransitionLoader } from "@/components/route-transition-loader";
 import { useAppStore } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +18,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background flex w-full">
       <ProjectRouteSync />
       <ProjectSwitchSync />
-      <RouteTransitionSync />
       <Sidebar />
 
       {/* Main Content */}
@@ -34,7 +31,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="relative min-h-[calc(100vh-56px)]">{children}</div>
       </main>
 
-      <RouteTransitionLoader />
       <ProjectSwitchOverlay />
 
       {/* Global modals */}
