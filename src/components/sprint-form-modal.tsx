@@ -92,7 +92,7 @@ export function SprintFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={loading ? undefined : onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={loading ? undefined : onClose} />
       <form
         onSubmit={(e) => void handleSubmit(e)}
         className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl animate-fade-in"
