@@ -24,10 +24,12 @@ import {
   MoreHorizontal,
   Target,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import IssueDrawer from "@/components/issue-drawer";
 import type { Issue } from "@/types";
+import { buildIssueTree } from "@/lib/issues/tree";
+import { IssueTreeList } from "@/components/issue-tree-list";
 
 export default function BacklogPage() {
   const params = useParams();
@@ -51,13 +53,29 @@ export default function BacklogPage() {
   const projectDbId = project?.id ?? "";
   const projectIssues = getIssuesByProject(projectDbId);
 
-  const backlogIssues = projectIssues.filter((i) => !i.sprintId);
   const projectSprints = sprints
     .filter((s) => s.projectId === projectDbId)
     .sort((a, b) => {
       const order = { active: 0, planning: 1, completed: 2 };
       return order[a.status] - order[b.status] || b.startDate.getTime() - a.startDate.getTime();
     });
+
+  const backlogIssues = projectIssues.filter((i) => !i.sprintId);
+  const backlogTree = useMemo(
+    () => buildIssueTree(backlogIssues),
+    [backlogIssues],
+  );
+
+  const sprintIssueTrees = useMemo(
+    () =>
+      projectSprints.map((sprint) => ({
+        sprint,
+        tree: buildIssueTree(
+          projectIssues.filter((i) => i.sprintId === sprint.id),
+        ),
+      })),
+    [projectSprints, projectIssues],
+  );
   const projectEpics = epics.filter((e) => e.projectId === projectDbId);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [sprintModalOpen, setSprintModalOpen] = useState(false);
@@ -212,20 +230,30 @@ export default function BacklogPage() {
                 </div>
               </div>
               <div className="space-y-1 ml-6 border-l-2 border-border/50 pl-4">
-                {projectIssues
-                  .filter((i) => i.sprintId === sprint.id)
-                  .map((issue) => (
-                    <BacklogRow
-                      key={issue.id}
-                      issue={issue}
-                      onSelect={(i) => setSelectedIssueId(i.id)}
+                {(() => {
+                  const st = sprintIssueTrees.find((x) => x.sprint.id === sprint.id);
+                  const tree = st?.tree ?? [];
+                  if (tree.length === 0) {
+                    return (
+                      <p className="text-xs text-muted-foreground py-2 italic">
+                        No issues — open sprint to add from backlog.
+                      </p>
+                    );
+                  }
+                  return (
+                    <IssueTreeList
+                      tree={tree}
+                      renderRow={({ node, depth, expandControl }) => (
+                        <BacklogTreeRow
+                          issue={node.issue}
+                          depth={depth}
+                          expandControl={expandControl}
+                          onSelect={(i) => setSelectedIssueId(i.id)}
+                        />
+                      )}
                     />
-                  ))}
-                {projectIssues.filter((i) => i.sprintId === sprint.id).length === 0 && (
-                  <p className="text-xs text-muted-foreground py-2 italic">
-                    No issues — open sprint to add from backlog.
-                  </p>
-                )}
+                  );
+                })()}
               </div>
             </div>
           ))}
@@ -238,14 +266,19 @@ export default function BacklogPage() {
               <span className="text-xs text-muted-foreground">{backlogIssues.length} issues</span>
             </div>
             <div className="space-y-1">
-              {backlogIssues.map((issue) => (
-                <BacklogRow
-                  key={issue.id}
-                  issue={issue}
-                  onSelect={(i) => setSelectedIssueId(i.id)}
+              {backlogTree.length > 0 ? (
+                <IssueTreeList
+                  tree={backlogTree}
+                  renderRow={({ node, depth, expandControl }) => (
+                    <BacklogTreeRow
+                      issue={node.issue}
+                      depth={depth}
+                      expandControl={expandControl}
+                      onSelect={(i) => setSelectedIssueId(i.id)}
+                    />
+                  )}
                 />
-              ))}
-              {backlogIssues.length === 0 && (
+              ) : (
                 <div className="py-8 text-center border-2 border-dashed border-border rounded-xl text-xs text-muted-foreground">
                   Backlog is empty. Move issues here to store them for future sprints.
                 </div>
@@ -318,7 +351,11 @@ export default function BacklogPage() {
       </div>
 
       {selectedIssueId && (
-        <IssueDrawer issueId={selectedIssueId} onClose={() => setSelectedIssueId(null)} />
+        <IssueDrawer
+          issueId={selectedIssueId}
+          onClose={() => setSelectedIssueId(null)}
+          onNavigateIssue={setSelectedIssueId}
+        />
       )}
 
       <SprintFormModal
@@ -341,24 +378,30 @@ export default function BacklogPage() {
   );
 }
 
-function BacklogRow({
+function BacklogTreeRow({
   issue,
+  depth,
+  expandControl,
   onSelect,
 }: {
   issue: Issue;
+  depth: number;
+  expandControl: ReactNode;
   onSelect: (issue: Issue) => void;
 }) {
   return (
     <div
       onClick={() => onSelect(issue)}
-      className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/50 cursor-pointer border border-transparent hover:border-border transition-all"
+      className="group flex items-center gap-2 pr-3 py-2 rounded-lg hover:bg-accent/50 cursor-pointer border border-transparent hover:border-border transition-all"
+      style={{ paddingLeft: `calc(0.75rem + ${depth * 16}px)` }}
     >
       <div
-        className="opacity-0 group-hover:opacity-100 cursor-grab text-muted-foreground transition-opacity"
+        className="opacity-0 group-hover:opacity-100 cursor-grab text-muted-foreground transition-opacity shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
         <GripVertical className="h-3.5 w-3.5" />
       </div>
+      <div className="flex items-center gap-1 shrink-0">{expandControl}</div>
       <div className="shrink-0">
         <IssueTypeIcon type={issue.type} />
       </div>

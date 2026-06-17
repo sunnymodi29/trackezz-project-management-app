@@ -29,10 +29,17 @@ import {
   type AssigneeFilterValue,
 } from "@/lib/issues/filters";
 import { useProjectAssigneeSelect } from "@/hooks/use-project-assignee-select";
-import { Search, Plus, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Search, Plus, ChevronDown } from "lucide-react";
 import IssueDrawer from "@/components/issue-drawer";
 import type { Issue } from "@/types";
 import Link from "next/link";
+import {
+  buildIssueTreeForStatusColumn,
+  expandIssuesWithAncestors,
+  flattenIssueTree,
+  type IssueTreeNode,
+} from "@/lib/issues/tree";
+import { IssueTreeList } from "@/components/issue-tree-list";
 
 export default function IssuesPage() {
   return (
@@ -46,11 +53,7 @@ function IssuesPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { openNewIssue } = useAppStore();
-  const {
-    projects,
-    getIssuesByProject,
-    getWorkflowStatuses,
-  } = useDataStore();
+  const { projects, getIssuesByProject, getWorkflowStatuses } = useDataStore();
   const { persist } = usePersistIssue();
 
   const routeParam = params.projectId as string;
@@ -84,59 +87,67 @@ function IssuesPageContent() {
     if (match) setSelectedIssueId(match.id);
   }, [searchParams, projectIssues]);
 
-  const filtered = useMemo(
-    () =>
-      projectIssues
-        .filter((i) => {
-          if (
-            search &&
-            !i.title.toLowerCase().includes(search.toLowerCase()) &&
-            !i.issueKey.toLowerCase().includes(search.toLowerCase())
-          )
-            return false;
-          if (typeFilter !== "all" && i.type !== typeFilter) return false;
-          if (statusFilter !== "all" && i.status !== statusFilter) return false;
-          if (priorityFilter !== "all" && i.priority !== priorityFilter)
-            return false;
-          if (!issueMatchesAssigneeFilter(i, assigneeFilter)) return false;
-          return true;
-        })
-        .sort((a, b) => {
-          if (sortBy === "priority") {
-            const order = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
-            return (order[a.priority] ?? 5) - (order[b.priority] ?? 5);
-          }
-          if (sortBy === "created")
-            return b.createdAt.getTime() - a.createdAt.getTime();
-          return b.updatedAt.getTime() - a.updatedAt.getTime();
-        }),
-    [
-      projectIssues,
-      search,
-      typeFilter,
-      statusFilter,
-      priorityFilter,
-      assigneeFilter,
-      sortBy,
-    ],
-  );
+  const hasActiveFilters =
+    Boolean(search.trim()) ||
+    typeFilter !== "all" ||
+    statusFilter !== "all" ||
+    priorityFilter !== "all" ||
+    assigneeFilter !== "all";
+
+  const filtered = useMemo(() => {
+    const matched = projectIssues.filter((i) => {
+      if (
+        search &&
+        !i.title.toLowerCase().includes(search.toLowerCase()) &&
+        !i.issueKey.toLowerCase().includes(search.toLowerCase())
+      )
+        return false;
+      if (typeFilter !== "all" && i.type !== typeFilter) return false;
+      if (statusFilter !== "all" && i.status !== statusFilter) return false;
+      if (priorityFilter !== "all" && i.priority !== priorityFilter)
+        return false;
+      if (!issueMatchesAssigneeFilter(i, assigneeFilter)) return false;
+      return true;
+    });
+
+    const withContext = hasActiveFilters
+      ? expandIssuesWithAncestors(
+          projectIssues,
+          new Set(matched.map((i) => i.id)),
+        )
+      : matched;
+
+    return [...withContext].sort((a, b) => {
+      if (sortBy === "priority") {
+        const order = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+        return (order[a.priority] ?? 5) - (order[b.priority] ?? 5);
+      }
+      if (sortBy === "created")
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      return b.updatedAt.getTime() - a.updatedAt.getTime();
+    });
+  }, [
+    projectIssues,
+    search,
+    typeFilter,
+    statusFilter,
+    priorityFilter,
+    assigneeFilter,
+    sortBy,
+    hasActiveFilters,
+  ]);
 
   const grouped = useMemo(() => {
-    const map = filtered.reduce<Record<string, Issue[]>>((acc, issue) => {
-      const key = issue.status;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(issue);
-      return acc;
-    }, {});
+    const extraStatuses = [...new Set(filtered.map((i) => i.status))].filter(
+      (k) => !statusOptions.some((o) => o.value === k),
+    );
     const orderedKeys = [
       ...statusOptions.map((o) => o.value),
-      ...Object.keys(map).filter(
-        (k) => !statusOptions.some((o) => o.value === k),
-      ),
+      ...extraStatuses,
     ];
     return orderedKeys
-      .filter((k) => map[k]?.length)
-      .map((k) => [k, map[k]!] as const);
+      .map((k) => [k, buildIssueTreeForStatusColumn(filtered, k)] as const)
+      .filter(([, tree]) => tree.length > 0);
   }, [filtered, statusOptions]);
 
   const handleIssueFieldChange = async (
@@ -250,12 +261,12 @@ function IssuesPageContent() {
             <div className="w-20 hidden xl:block">Updated</div>
           </div>
 
-          {grouped.map(([status, issues]) => (
+          {grouped.map(([status, tree]) => (
             <IssueGroup
               key={status}
               projectId={project?.id ?? ""}
               status={status}
-              issues={issues}
+              tree={tree}
               statusOptions={statusOptions}
               projectKey={projectKey}
               onSelect={setSelectedIssueId}
@@ -316,7 +327,7 @@ function FilterSelect({
 function IssueGroup({
   projectId,
   status,
-  issues,
+  tree,
   statusOptions,
   projectKey,
   onSelect,
@@ -325,7 +336,7 @@ function IssueGroup({
 }: {
   projectId: string;
   status: string;
-  issues: Issue[];
+  tree: IssueTreeNode[];
   statusOptions: { value: string; label: string }[];
   projectKey: string;
   onSelect: (id: string) => void;
@@ -336,6 +347,10 @@ function IssueGroup({
   ) => Promise<void>;
 }) {
   const [open, setOpen] = useState(true);
+  const rowCount = useMemo(
+    () => flattenIssueTree(tree, new Set()).length,
+    [tree],
+  );
   return (
     <div>
       <button
@@ -349,104 +364,127 @@ function IssueGroup({
           )}
         />
         <ProjectStatusBadge projectId={projectId} status={status} />
-        <span className="text-xs text-muted-foreground">{issues.length}</span>
+        <span className="text-xs text-muted-foreground">{rowCount}</span>
       </button>
 
-      {open &&
-        issues.map((issue) => (
-          <div
-            key={issue.id}
-            onClick={() => onSelect(issue.id)}
-            className={cn(
-              "group flex items-center gap-2 px-6 py-2.5 hover:bg-accent/50 cursor-pointer border-b border-border/50 transition-colors",
-              selectedId === issue.id &&
-                "bg-primary/5 border-l-2 border-l-primary",
-            )}
-          >
-            <div className="w-6 flex justify-center shrink-0">
-              <IssueTypeIcon type={issue.type} />
-            </div>
-            <div className="w-20 shrink-0">
-              <Link
-                href={issuePath(projectKey, issue.id)}
-                onClick={(e) => e.stopPropagation()}
+      {open && (
+        <IssueTreeList
+          tree={tree}
+          renderRow={({ node, depth, expandControl }) => {
+            const issue = node.issue;
+            return (
+              <div
+                onClick={() => onSelect(issue.id)}
+                className={cn(
+                  "group flex items-center gap-2 px-6 py-2.5 hover:bg-accent/50 cursor-pointer border-b border-border/50 transition-colors",
+                  selectedId === issue.id &&
+                    "bg-primary/5 border-l-2 border-l-primary",
+                )}
               >
-                <span className="text-[11px] font-mono text-muted-foreground group-hover:text-primary hover:underline transition-colors">
-                  {issue.issueKey}
-                </span>
-              </Link>
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium text-foreground hover:text-primary transition-colors line-clamp-1">
-                {issue.title}
-              </span>
-              {issue.labels.length > 0 && (
-                <div className="flex gap-1 mt-0.5">
-                  {issue.labels.slice(0, 2).map((l) => (
-                    <LabelChip key={l.id} name={l.name} color={l.color} />
-                  ))}
+                <div className="w-6 flex justify-center shrink-0">
+                  <IssueTypeIcon type={issue.type} />
                 </div>
-              )}
-            </div>
-            <div
-              className="w-28 hidden md:block shrink-0 relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <CustomSelect
-                options={statusOptions}
-                value={issue.status}
-                onChange={(val) =>
-                  void onFieldChange(issue, { status: val as IssueStatus })
-                }
-                renderTrigger={() => (
-                  <ProjectStatusBadge
-                    projectId={projectId}
-                    status={issue.status}
-                    className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all"
+                <div className="w-20 shrink-0">
+                  <Link
+                    href={issuePath(projectKey, issue.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-[11px] font-mono text-muted-foreground group-hover:text-primary hover:underline transition-colors">
+                      {issue.issueKey}
+                    </span>
+                  </Link>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="flex items-center gap-1.5 min-w-0"
+                    style={{ paddingLeft: `${depth * 16}px` }}
+                  >
+                    <div
+                      className="shrink-0 flex items-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {expandControl}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm font-medium text-foreground hover:text-primary transition-colors line-clamp-1">
+                        {issue.title}
+                      </span>
+                      {issue.labels.length > 0 && (
+                        <div className="flex gap-1 mt-0.5">
+                          {issue.labels.slice(0, 2).map((l) => (
+                            <LabelChip
+                              key={l.id}
+                              name={l.name}
+                              color={l.color}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className="w-28 hidden md:block shrink-0 relative"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <CustomSelect
+                    options={statusOptions}
+                    value={issue.status}
+                    onChange={(val) =>
+                      void onFieldChange(issue, { status: val as IssueStatus })
+                    }
+                    renderTrigger={() => (
+                      <ProjectStatusBadge
+                        projectId={projectId}
+                        status={issue.status}
+                        className="cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all"
+                      />
+                    )}
                   />
-                )}
-              />
-            </div>
-            <div
-              className="w-24 hidden lg:block shrink-0 relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <CustomSelect
-                options={[
-                  { value: "urgent", label: "Urgent" },
-                  { value: "high", label: "High" },
-                  { value: "medium", label: "Medium" },
-                  { value: "low", label: "Low" },
-                  { value: "none", label: "No Priority" },
-                ]}
-                value={issue.priority}
-                onChange={(val) =>
-                  void onFieldChange(issue, { priority: val as Priority })
-                }
-                renderTrigger={() => (
-                  <PriorityBadge
-                    priority={issue.priority}
-                    className="p-1 rounded cursor-pointer hover:bg-accent/50 transition-all"
+                </div>
+                <div
+                  className="w-24 hidden lg:block shrink-0 relative"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <CustomSelect
+                    options={[
+                      { value: "urgent", label: "Urgent" },
+                      { value: "high", label: "High" },
+                      { value: "medium", label: "Medium" },
+                      { value: "low", label: "Low" },
+                      { value: "none", label: "No Priority" },
+                    ]}
+                    value={issue.priority}
+                    onChange={(val) =>
+                      void onFieldChange(issue, { priority: val as Priority })
+                    }
+                    renderTrigger={() => (
+                      <PriorityBadge
+                        priority={issue.priority}
+                        className="p-1 rounded cursor-pointer hover:bg-accent/50 transition-all"
+                      />
+                    )}
                   />
-                )}
-              />
-            </div>
-            <div className="w-24 hidden xl:flex items-center gap-1.5 shrink-0">
-              {issue.assignees.length > 0 ? (
-                <AvatarGroup users={issue.assignees} max={2} />
-              ) : (
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  Unassigned
-                </span>
-              )}
-            </div>
-            <div className="w-20 hidden xl:block shrink-0">
-              <span className="text-xs text-muted-foreground">
-                {formatRelativeTime(issue.updatedAt)}
-              </span>
-            </div>
-          </div>
-        ))}
+                </div>
+                <div className="w-24 hidden xl:flex items-center gap-1.5 shrink-0">
+                  {issue.assignees.length > 0 ? (
+                    <AvatarGroup users={issue.assignees} max={2} />
+                  ) : (
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      Unassigned
+                    </span>
+                  )}
+                </div>
+                <div className="w-20 hidden xl:block shrink-0">
+                  <span className="text-xs text-muted-foreground">
+                    {formatRelativeTime(issue.updatedAt)}
+                  </span>
+                </div>
+              </div>
+            );
+          }}
+        />
+      )}
     </div>
   );
 }

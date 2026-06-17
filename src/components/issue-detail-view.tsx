@@ -54,7 +54,11 @@ import {
   MessageSquare,
   History,
   Filter,
+  GitBranch,
 } from "lucide-react";
+import { buildSubtreeFromRoot, getDescendantIds } from "@/lib/issues/tree";
+import { IssueTreeList } from "@/components/issue-tree-list";
+import { useAppStore } from "@/store/app-store";
 import {
   issueMatchesAssigneeFilter,
   type AssigneeFilterValue,
@@ -106,6 +110,7 @@ function IssueDetailViewInner({
   const upsertIssue = useDataStore((s) => s.upsertIssue);
   const removeIssue = useDataStore((s) => s.removeIssue);
   const { persist, saving, error } = usePersistIssue();
+  const openNewIssue = useAppStore((s) => s.openNewIssue);
   const [linkCopied, setLinkCopied] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -151,6 +156,30 @@ function IssueDetailViewInner({
         : [],
     [projectIssues, issue, assigneeFilter],
   );
+
+  const parentIssue = useMemo(() => {
+    if (!issue?.parentId) return undefined;
+    return issues.find((i) => i.id === issue.parentId);
+  }, [issues, issue?.parentId]);
+
+  const subIssueTreeRoots = useMemo(() => {
+    if (!issue) return [];
+    const root = buildSubtreeFromRoot(projectIssues, issue.id)[0];
+    return root?.children ?? [];
+  }, [projectIssues, issue?.id]);
+
+  const parentFieldOptions = useMemo(() => {
+    if (!issue) return [];
+    const subtree = buildSubtreeFromRoot(projectIssues, issue.id)[0];
+    const blocked = new Set(subtree ? getDescendantIds(subtree) : []);
+    return projectIssues
+      .filter((i) => !blocked.has(i.id))
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .map((i) => ({
+        value: i.id,
+        label: `${i.issueKey} — ${i.title}`,
+      }));
+  }, [projectIssues, issue?.id]);
 
   useEffect(() => {
     if (!issue) return;
@@ -486,6 +515,38 @@ function IssueDetailViewInner({
             </div>
           )}
 
+          {parentIssue && (
+            <div className="px-5 py-3 border-b border-border bg-muted/10">
+              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                <GitBranch className="h-3 w-3" /> Parent
+              </div>
+              {variant === "drawer" && onNavigateIssue ? (
+                <button
+                  type="button"
+                  onClick={() => onNavigateIssue(parentIssue.id)}
+                  className="text-left text-sm text-foreground hover:text-primary transition-colors w-full min-w-0"
+                >
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {parentIssue.issueKey}
+                  </span>
+                  <span className="mx-1.5 text-muted-foreground">·</span>
+                  <span className="line-clamp-2">{parentIssue.title}</span>
+                </button>
+              ) : (
+                <Link
+                  href={issuePath(projectKey, parentIssue.id)}
+                  className="text-sm text-foreground hover:text-primary transition-colors block"
+                >
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {parentIssue.issueKey}
+                  </span>
+                  <span className="mx-1.5 text-muted-foreground">·</span>
+                  <span className="line-clamp-2">{parentIssue.title}</span>
+                </Link>
+              )}
+            </div>
+          )}
+
           <div className="px-5 py-4 border-b border-border">
             <div className="grid grid-cols-2 gap-3">
               <MetaRow
@@ -578,6 +639,26 @@ function IssueDetailViewInner({
                 )}
               </MetaRow>
               <MetaRow
+                label="Parent"
+                icon={<GitBranch className="h-3.5 w-3.5" />}
+              >
+                <CustomSelect
+                  options={[
+                    { value: "", label: "No parent" },
+                    ...parentFieldOptions,
+                  ]}
+                  value={issue.parentId ?? ""}
+                  onChange={(value) => {
+                    const parentId =
+                      typeof value === "string" && value ? value : null;
+                    void handleFieldUpdate({ parentId });
+                  }}
+                  placeholder="No parent"
+                  className="w-full"
+                  triggerClassName="h-auto min-h-[24px] text-xs py-1"
+                />
+              </MetaRow>
+              <MetaRow
                 label="Estimate"
                 icon={<Clock className="h-3.5 w-3.5" />}
               >
@@ -648,6 +729,79 @@ function IssueDetailViewInner({
               </div>
             </div>
           )}
+
+          <div className="px-5 py-4 border-b border-border">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Sub-issues
+              </div>
+              <Button
+                size="sm"
+                variant="default"
+                className="h-7 text-xs shrink-0"
+                type="button"
+                onClick={() => openNewIssue({ parentId: issue.id })}
+              >
+                Add sub-issue
+              </Button>
+            </div>
+            {subIssueTreeRoots.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">
+                No sub-issues yet.
+              </p>
+            ) : (
+              <IssueTreeList
+                tree={subIssueTreeRoots}
+                renderRow={({ node, depth, expandControl }) => {
+                  const item = node.issue;
+                  return (
+                    <div
+                      className="flex items-center gap-2 py-1.5 rounded-md hover:bg-accent/60 min-w-0 pr-1"
+                      style={{ paddingLeft: `${4 + depth * 16}px` }}
+                    >
+                      {expandControl}
+                      {variant === "drawer" && onNavigateIssue ? (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateIssue(item.id)}
+                          className="flex flex-1 min-w-0 items-center gap-2 text-left"
+                        >
+                          <IssueTypeIcon type={item.type} />
+                          <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                            {item.issueKey}
+                          </span>
+                          <span className="flex-1 min-w-0 text-xs truncate">
+                            {item.title}
+                          </span>
+                          <ProjectStatusBadge
+                            projectId={issue.projectId}
+                            status={item.status}
+                          />
+                        </button>
+                      ) : (
+                        <Link
+                          href={issuePath(projectKey, item.id)}
+                          className="flex flex-1 min-w-0 items-center gap-2"
+                        >
+                          <IssueTypeIcon type={item.type} />
+                          <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                            {item.issueKey}
+                          </span>
+                          <span className="flex-1 min-w-0 text-xs truncate">
+                            {item.title}
+                          </span>
+                          <ProjectStatusBadge
+                            projectId={issue.projectId}
+                            status={item.status}
+                          />
+                        </Link>
+                      )}
+                    </div>
+                  );
+                }}
+              />
+            )}
+          </div>
 
           {projectIssues.length > 1 && (
             <div className="px-5 py-4 border-b border-border">

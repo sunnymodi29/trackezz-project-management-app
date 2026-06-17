@@ -39,6 +39,9 @@ function applyOptimisticPatch(existing: Issue, input: UpdateIssueInput): Issue {
         .sprints.find((sprint) => sprint.id === input.sprintId);
     }
   }
+  if (input.parentId !== undefined) {
+    next.parentId = input.parentId ?? undefined;
+  }
   return next;
 }
 
@@ -73,6 +76,10 @@ export function usePersistIssue() {
               patch.sprintId !== undefined
                 ? (patch.sprintId ?? undefined)
                 : optimistic.sprintId,
+            parentId:
+              patch.parentId !== undefined
+                ? (patch.parentId ?? undefined)
+                : optimistic.parentId,
           };
           upsertIssue(merged);
           return merged;

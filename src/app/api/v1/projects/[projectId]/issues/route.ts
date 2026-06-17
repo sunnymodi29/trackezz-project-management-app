@@ -16,6 +16,8 @@ const createSchema = z.object({
   priority: z.enum(["urgent", "high", "medium", "low", "none"]),
   estimate: z.number().int().positive().optional(),
   assigneeIds: z.array(z.string()).optional(),
+  parentId: z.string().nullable().optional(),
+  sprintId: z.string().nullable().optional(),
 });
 
 export async function GET(
@@ -71,6 +73,8 @@ export async function POST(
       estimate: body.estimate,
       assigneeIds: body.assigneeIds,
       reporterId: user.id!,
+      parentId: body.parentId ?? undefined,
+      sprintId: body.sprintId ?? undefined,
     });
 
     return jsonOk(issue, 201);

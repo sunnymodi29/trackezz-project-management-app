@@ -7,6 +7,8 @@ import type { Issue, IssueStatus, Project } from "@/types";
 export type OpenNewIssueOptions = {
   dueDate?: Date;
   status?: IssueStatus;
+  /** When set, the new issue is created as a child of this issue. */
+  parentId?: string | null;
 };
 
 export type ProjectSwitchState = {
@@ -64,6 +66,7 @@ interface AppState {
   newIssueModalOpen: boolean;
   newIssueDefaultDueDate: Date | null;
   newIssueDefaultStatus: IssueStatus | null;
+  newIssueDefaultParentId: string | null;
   openNewIssue: (options?: Date | OpenNewIssueOptions) => void;
   closeNewIssue: () => void;
 
@@ -125,6 +128,7 @@ export const useAppStore = create<AppState>((set) => ({
   newIssueModalOpen: false,
   newIssueDefaultDueDate: null,
   newIssueDefaultStatus: null,
+  newIssueDefaultParentId: null,
   openNewIssue: (options) => {
     const opts =
       options instanceof Date ? { dueDate: options } : (options ?? {});
@@ -133,6 +137,7 @@ export const useAppStore = create<AppState>((set) => ({
       newIssueDefaultDueDate:
         opts.dueDate instanceof Date ? opts.dueDate : null,
       newIssueDefaultStatus: opts.status ?? null,
+      newIssueDefaultParentId: opts.parentId ?? null,
     });
   },
   closeNewIssue: () =>
@@ -140,6 +145,7 @@ export const useAppStore = create<AppState>((set) => ({
       newIssueModalOpen: false,
       newIssueDefaultDueDate: null,
       newIssueDefaultStatus: null,
+      newIssueDefaultParentId: null,
     }),
 
   newProjectModalOpen: false,

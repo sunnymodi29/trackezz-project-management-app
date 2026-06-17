@@ -14,6 +14,10 @@ import {
 } from "@/lib/notifications/service";
 import { getWorkflowStatusLabel } from "@/lib/projects/workflow-status";
 import { assertValidProjectStatus } from "@/lib/projects/workflow-status.server";
+import {
+  assertParentIssueForCreate,
+  assertValidIssueParent,
+} from "@/lib/issues/parent-validation";
 import type { Issue, IssueStatus, IssueType, Priority } from "@/types";
 
 async function statusLabelFor(projectId: string, statusKey: string) {
@@ -42,6 +46,7 @@ export interface UpdateIssueInput {
   assigneeIds?: string[];
   dueDate?: Date | null;
   sprintId?: string | null;
+  parentId?: string | null;
 }
 
 /** Partial issue fields returned by fast list/board/detail field updates. */
@@ -52,6 +57,7 @@ export interface IssueQuickPatch {
   assigneeIds?: string[];
   dueDate?: Date | null;
   sprintId?: string | null;
+  parentId?: string | null;
   updatedAt: Date;
 }
 
@@ -61,6 +67,7 @@ export interface IssueQuickPatchInput {
   assigneeIds?: string[];
   dueDate?: Date | null;
   sprintId?: string | null;
+  parentId?: string | null;
 }
 
 function sameUserIdSet(a: string[], b: string[]) {
@@ -126,6 +133,10 @@ export interface CreateIssueInput {
   expectedResult?: string;
   actualResult?: string;
   environment?: string;
+  /** Sub-issue of this issue (same project). */
+  parentId?: string | null;
+  /** When creating under a parent, inherit sprint from parent if omitted. */
+  sprintId?: string | null;
 }
 
 export async function createIssue(input: CreateIssueInput) {
@@ -161,6 +172,17 @@ export async function createIssue(input: CreateIssueInput) {
 
   await assertValidProjectStatus(input.projectId, input.status);
 
+  await assertParentIssueForCreate(input.projectId, input.parentId ?? undefined);
+
+  let sprintId: string | null | undefined = input.sprintId;
+  if (input.parentId && sprintId === undefined) {
+    const parentRow = await prisma.issue.findUnique({
+      where: { id: input.parentId },
+      select: { sprintId: true },
+    });
+    sprintId = parentRow?.sprintId ?? null;
+  }
+
   const issue = await prisma.issue.create({
     data: {
       issueNumber,
@@ -172,6 +194,8 @@ export async function createIssue(input: CreateIssueInput) {
       priority: input.priority,
       reporterId: userId,
       projectId: input.projectId,
+      parentId: input.parentId ?? undefined,
+      sprintId: sprintId ?? undefined,
       estimate: input.estimate,
       dueDate: input.dueDate,
       reproductionSteps: input.reproductionSteps,
@@ -187,13 +211,24 @@ export async function createIssue(input: CreateIssueInput) {
     include: issueInclude,
   });
 
+  const parentKey = input.parentId
+    ? (
+        await prisma.issue.findUnique({
+          where: { id: input.parentId },
+          select: { issueKey: true },
+        })
+      )?.issueKey
+    : null;
+
   await logIssueActivity(
     userId,
     issue.id,
     input.projectId,
     access.organizationId,
     "created issue",
-    `${issueKey}: ${issue.title}`
+    parentKey
+      ? `${issueKey}: ${issue.title} (sub-issue of ${parentKey})`
+      : `${issueKey}: ${issue.title}`
   );
 
   if (input.assigneeIds?.length) {
@@ -226,6 +261,7 @@ export async function updateIssue(
       status: true,
       reporterId: true,
       projectId: true,
+      parentId: true,
       assignees: { select: { userId: true } },
       project: {
         select: { key: true, organizationId: true, organization: { select: { slug: true, ownerId: true } } },
@@ -264,6 +300,14 @@ export async function updateIssue(
     }
   }
 
+  if (input.parentId !== undefined) {
+    await assertValidIssueParent({
+      issueId,
+      projectId: existing.projectId,
+      parentId: input.parentId,
+    });
+  }
+
   const issue = await prisma.issue.update({
     where: { id: issueId },
     data: {
@@ -273,6 +317,7 @@ export async function updateIssue(
       ...(input.priority !== undefined && { priority: input.priority }),
       ...(input.dueDate !== undefined && { dueDate: input.dueDate }),
       ...(input.sprintId !== undefined && { sprintId: input.sprintId }),
+      ...(input.parentId !== undefined && { parentId: input.parentId }),
     },
     include: issueInclude,
   });
@@ -292,6 +337,11 @@ export async function updateIssue(
   }
   if (input.sprintId !== undefined) {
     changes.push(input.sprintId ? "moved to sprint" : "removed from sprint");
+  }
+  if (input.parentId !== undefined) {
+    changes.push(
+      input.parentId ? `parent → ${input.parentId}` : "detached from parent",
+    );
   }
 
   if (changes.length > 0) {
@@ -410,6 +460,7 @@ async function scheduleQuickPatchSideEffects(params: {
   dueDateChanged?: boolean;
   newDueDate?: Date | null;
   sprintChanged?: boolean;
+  parentChanged?: boolean;
 }) {
   after(async () => {
     const changes: string[] = [];
@@ -431,6 +482,9 @@ async function scheduleQuickPatchSideEffects(params: {
     }
     if (params.sprintChanged) {
       changes.push("sprint");
+    }
+    if (params.parentChanged) {
+      changes.push("parent");
     }
     if (changes.length === 0) return;
 
@@ -488,6 +542,7 @@ export async function patchIssueFields(
       priority: true,
       dueDate: true,
       sprintId: true,
+      parentId: true,
       reporterId: true,
       projectId: true,
       assignees: { select: { userId: true } },
@@ -522,12 +577,14 @@ export async function patchIssueFields(
     priority?: Priority;
     dueDate?: Date | null;
     sprintId?: string | null;
+    parentId?: string | null;
   } = {};
   let statusLabel: string | undefined;
   let assigneesChanged = false;
   let newlyAssigned: string[] = [];
   let dueDateChanged = false;
   let sprintChanged = false;
+  let parentChanged = false;
 
   if (input.status !== undefined && input.status !== existing.status) {
     const row = await assertValidProjectStatus(existing.projectId, input.status);
@@ -558,6 +615,22 @@ export async function patchIssueFields(
     sprintChanged = true;
   }
 
+  if (input.parentId !== undefined) {
+    const next = input.parentId;
+    const prev = existing.parentId;
+    const same =
+      (next === null && !prev) || (next !== null && prev !== null && next === prev);
+    if (!same) {
+      await assertValidIssueParent({
+        issueId,
+        projectId: existing.projectId,
+        parentId: next,
+      });
+      issueData.parentId = next;
+      parentChanged = true;
+    }
+  }
+
   if (
     input.assigneeIds !== undefined &&
     !sameUserIdSet(input.assigneeIds, priorAssigneeIds)
@@ -585,6 +658,7 @@ export async function patchIssueFields(
       ...(input.assigneeIds !== undefined ? { assigneeIds: input.assigneeIds } : {}),
       ...(input.dueDate !== undefined ? { dueDate: input.dueDate ?? null } : {}),
       ...(input.sprintId !== undefined ? { sprintId: input.sprintId ?? null } : {}),
+      ...(input.parentId !== undefined ? { parentId: input.parentId ?? null } : {}),
       updatedAt: new Date(),
     };
   }
@@ -601,6 +675,7 @@ export async function patchIssueFields(
       priority: true,
       dueDate: true,
       sprintId: true,
+      parentId: true,
       updatedAt: true,
     },
   });
@@ -624,6 +699,7 @@ export async function patchIssueFields(
     dueDateChanged,
     newDueDate: input.dueDate,
     sprintChanged,
+    parentChanged,
   });
 
   return {
@@ -640,6 +716,11 @@ export async function patchIssueFields(
       ? { sprintId: updated.sprintId }
       : input.sprintId !== undefined
         ? { sprintId: input.sprintId ?? null }
+        : {}),
+    ...(issueData.parentId !== undefined
+      ? { parentId: updated.parentId }
+      : input.parentId !== undefined
+        ? { parentId: input.parentId ?? null }
         : {}),
     updatedAt: updated.updatedAt,
   };

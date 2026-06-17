@@ -6,6 +6,7 @@ const QUICK_PATCH_KEYS = [
   "assigneeIds",
   "dueDate",
   "sprintId",
+  "parentId",
 ] as const satisfies readonly (keyof UpdateIssueInput)[];
 
 export function isQuickIssuePatch(input: UpdateIssueInput): boolean {

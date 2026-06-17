@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { createIssue } from "@/lib/actions/issues";
@@ -90,6 +90,7 @@ export function NewIssueModal() {
     setCurrentProject,
     newIssueDefaultDueDate,
     newIssueDefaultStatus,
+    newIssueDefaultParentId,
   } = useAppStore();
   const router = useRouter();
   const {
@@ -98,6 +99,7 @@ export function NewIssueModal() {
     getWorkflowStatuses,
     upsertIssue,
     patchProject,
+    issues,
   } = useDataStore();
   const { assigneeOptions, getSelectedAssignees } = useProjectAssigneeSelect(
     currentProject.id,
@@ -121,6 +123,14 @@ export function NewIssueModal() {
   const [env, setEnv] = useState("");
   const [dueDate, setDueDate] = useState("");
   const titleRef = useRef<HTMLInputElement>(null);
+
+  const parentIssueForCreate = useMemo(
+    () =>
+      newIssueDefaultParentId
+        ? issues.find((i) => i.id === newIssueDefaultParentId)
+        : undefined,
+    [issues, newIssueDefaultParentId],
+  );
 
   useEffect(() => {
     if (newIssueModalOpen) {
@@ -184,6 +194,7 @@ export function NewIssueModal() {
         actualResult: actual || undefined,
         environment: env || undefined,
         dueDate: dueDate ? dateFromKey(dueDate) : undefined,
+        parentId: newIssueDefaultParentId ?? undefined,
       });
       upsertIssue(issue);
       const issueNumber = parseIssueNumberFromKey(issue.issueKey);
@@ -250,6 +261,18 @@ export function NewIssueModal() {
             <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
+
+        {parentIssueForCreate && (
+          <div className="px-5 py-2 border-b border-border bg-muted/20 flex items-center gap-2 text-xs min-w-0">
+            <span className="text-muted-foreground shrink-0">Sub-issue of</span>
+            <span className="font-mono text-foreground shrink-0">
+              {parentIssueForCreate.issueKey}
+            </span>
+            <span className="text-foreground truncate min-w-0">
+              {parentIssueForCreate.title}
+            </span>
+          </div>
+        )}
 
         {/* Body */}
         <div className="overflow-y-auto p-5 space-y-4">
