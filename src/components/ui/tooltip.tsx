@@ -161,7 +161,7 @@ export function Tooltip({
             aria-hidden={!positioned}
             style={{ top: position.top, left: position.left }}
             className={cn(
-              "fixed z-[9999] px-2 py-1 text-xs rounded-md bg-popover border border-border text-popover-foreground whitespace-nowrap shadow-lg pointer-events-none transition-opacity duration-100",
+              "fixed z-10000 px-2 py-1 text-xs rounded-md bg-popover border border-border text-popover-foreground whitespace-nowrap shadow-lg pointer-events-none transition-opacity duration-100",
               positioned ? "opacity-100" : "opacity-0",
             )}
           >

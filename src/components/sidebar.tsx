@@ -36,6 +36,7 @@ import {
   FolderOpen,
   LogOut,
   SquareKanban,
+  ChevronsRight,
 } from "lucide-react";
 
 const MAIN_NAV = [
@@ -173,22 +174,34 @@ export function Sidebar() {
           </Link>
         )}
         {sidebarCollapsed && (
-          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center mx-auto">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
+          <Tooltip content={organization?.name || ""} side="right">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2.5 min-w-0"
+            >
+              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
+                <Zap className="h-4 w-4 text-white" />
+              </div>
+            </Link>
+          </Tooltip>
         )}
-        {/* {!sidebarCollapsed && (
+        {!sidebarCollapsed && (
           <button
             onClick={toggleSidebar}
             className="rounded-md p-1 hover:bg-accent transition-colors text-muted-foreground"
           >
             <ChevronsLeft className="h-4 w-4" />
           </button>
-        )} */}
+        )}
       </div>
 
       {/* Scroll area */}
-      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto py-3 px-2 space-y-0.5",
+          sidebarCollapsed && "items-center flex flex-col gap-1",
+        )}
+      >
         {/* Active Project Context Switcher */}
 
         {/* Quick actions */}
@@ -228,15 +241,28 @@ export function Sidebar() {
         ))}
 
         {/* Per-project nav — only when a project exists */}
-        {hasActiveProject && !sidebarCollapsed && (
-          <div className="mt-4">
-            <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-              {currentProject.name ? (
-                currentProject.name
-              ) : (
-                <Skeleton className="h-3 w-24" />
-              )}
-            </div>
+        {hasActiveProject && (
+          <div
+            className={cn(
+              sidebarCollapsed
+                ? "mt-1 flex w-full flex-col items-center gap-1"
+                : "mt-4",
+            )}
+          >
+            {sidebarCollapsed ? (
+              <div
+                className="mx-0 my-1 w-full shrink-0 border-t border-border"
+                aria-hidden
+              />
+            ) : (
+              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                {currentProject.name ? (
+                  currentProject.name
+                ) : (
+                  <Skeleton className="h-3 w-24" />
+                )}
+              </div>
+            )}
             {visibleProjectNav.map((item) => {
               const href = `${projectBase}${item.href}`;
               const active =
@@ -250,7 +276,7 @@ export function Sidebar() {
                   label={item.label}
                   icon={<item.icon className="h-4 w-4 shrink-0" />}
                   active={active}
-                  collapsed={false}
+                  collapsed={sidebarCollapsed}
                 />
               );
             })}
@@ -261,84 +287,93 @@ export function Sidebar() {
       {/* User Profile */}
       <div
         className={cn(
-          "border-t border-border p-3",
+          "border-t border-border p-3 flex gap-2.5",
           sidebarCollapsed
-            ? "flex flex-col items-center gap-2"
-            : "flex items-center gap-2.5",
+            ? "flex-col items-center gap-2"
+            : "flex-row items-center",
         )}
       >
         {sidebarCollapsed ? (
-          <>
+          <Tooltip content={currentUser.name || "Account"} side="right">
+            <span className="inline-flex">
+              <Avatar
+                src={currentUser.avatarUrl}
+                name={currentUser.name}
+                size="sm"
+              />
+            </span>
+          </Tooltip>
+        ) : (
+          <Avatar
+            src={currentUser.avatarUrl}
+            name={currentUser.name}
+            size="sm"
+          />
+        )}
+
+        {!sidebarCollapsed && (
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-medium text-foreground truncate">
+              {currentUser.name ? (
+                currentUser.name
+              ) : (
+                <Skeleton className="h-3 w-24" />
+              )}
+            </div>
+            <div className="text-[10px] text-muted-foreground truncate">
+              {currentUser.email ? (
+                currentUser.email
+              ) : (
+                <Skeleton className="h-3 w-32 mt-1" />
+              )}
+            </div>
+          </div>
+        )}
+
+        <div
+          className={cn(
+            "flex shrink-0 gap-0.5",
+            sidebarCollapsed
+              ? "flex-col items-center gap-2"
+              : "flex-row items-center",
+          )}
+        >
+          <Tooltip content="Settings" side={sidebarCollapsed ? "right" : "top"}>
+            <Link
+              href="/dashboard/settings"
+              aria-label="Settings"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <Settings
+                className={cn(sidebarCollapsed ? "h-4 w-4" : "h-3.5 w-3.5")}
+              />
+            </Link>
+          </Tooltip>
+          <Tooltip content="Sign out" side={sidebarCollapsed ? "right" : "top"}>
+            <button
+              type="button"
+              onClick={() => void handleSignOut()}
+              aria-label="Sign out"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <LogOut
+                className={cn(sidebarCollapsed ? "h-4 w-4" : "h-3.5 w-3.5")}
+              />
+            </button>
+          </Tooltip>
+          {sidebarCollapsed && (
             <Tooltip content="Expand sidebar" side="right">
               <button
                 type="button"
-                onClick={toggleSidebar}
                 aria-label="Expand sidebar"
+                onClick={toggleSidebar}
+                className="rounded-md p-1.5 text-foreground hover:text-foreground/80 bg-accent hover:bg-accent/80 transition-colors"
               >
-                <Avatar
-                  src={currentUser.avatarUrl}
-                  name={currentUser.name}
-                  size="sm"
-                />
+                <ChevronsRight className="h-4 w-4" />
               </button>
             </Tooltip>
-            <Tooltip content="Sign out" side="right">
-              <button
-                type="button"
-                onClick={() => void handleSignOut()}
-                aria-label="Sign out"
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </Tooltip>
-          </>
-        ) : (
-          <>
-            <Avatar
-              src={currentUser.avatarUrl}
-              name={currentUser.name}
-              size="sm"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium text-foreground truncate">
-                {currentUser.name ? (
-                  currentUser.name
-                ) : (
-                  <Skeleton className="h-3 w-24" />
-                )}
-              </div>
-              <div className="text-[10px] text-muted-foreground truncate">
-                {currentUser.email ? (
-                  currentUser.email
-                ) : (
-                  <Skeleton className="h-3 w-32 mt-1" />
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-0.5 shrink-0">
-              <Tooltip content="Settings" side="top">
-                <Link
-                  href="/dashboard/settings"
-                  aria-label="Settings"
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                </Link>
-              </Tooltip>
-              <Tooltip content="Sign out" side="top">
-                <button
-                  type="button"
-                  onClick={() => void handleSignOut()}
-                  aria-label="Sign out"
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                </button>
-              </Tooltip>
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </aside>
   );
@@ -373,7 +408,7 @@ function NavItem({
         active
           ? "bg-accent text-foreground"
           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-        collapsed && "justify-center w-full",
+        collapsed && "justify-center py-2",
       )}
     >
       {icon}
@@ -391,7 +426,11 @@ function NavItem({
 
   if (collapsed) {
     return (
-      <Tooltip content={label} side="right" className="w-full">
+      <Tooltip
+        content={label}
+        side="right"
+        className={!collapsed ? "w-full" : ""}
+      >
         {link}
       </Tooltip>
     );
