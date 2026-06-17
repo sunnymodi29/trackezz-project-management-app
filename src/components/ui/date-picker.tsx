@@ -73,8 +73,7 @@ function computePopoverPosition(
 ) {
   const spaceBelow = window.innerHeight - triggerRect.bottom;
   const spaceAbove = triggerRect.top;
-  const openAbove =
-    spaceBelow < size.height + GAP && spaceAbove > spaceBelow;
+  const openAbove = spaceBelow < size.height + GAP && spaceAbove > spaceBelow;
 
   let top = openAbove
     ? triggerRect.top - size.height - GAP
@@ -138,7 +137,8 @@ export function DatePicker({
   const years = useMemo(() => yearRange(min, max), [min, max]);
 
   const monthOptions = useMemo(
-    () => MONTHS.map((month, index) => ({ value: String(index), label: month })),
+    () =>
+      MONTHS.map((month, index) => ({ value: String(index), label: month })),
     [],
   );
 
@@ -251,8 +251,10 @@ export function DatePicker({
       aria-label="Choose date"
       style={{ top: position.top, left: position.left, width: POPOVER_WIDTH }}
       className={cn(
-        "fixed z-9999 rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl transition-opacity duration-100",
-        positioned ? "opacity-100 animate-scale-in" : "opacity-0 pointer-events-none",
+        "fixed z-10000 rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl transition-opacity duration-100",
+        positioned
+          ? "opacity-100 animate-scale-in"
+          : "opacity-0 pointer-events-none",
       )}
     >
       <div className="flex items-center justify-between gap-1 border-b border-border px-2 py-2">
@@ -270,25 +272,21 @@ export function DatePicker({
             options={monthOptions}
             value={String(viewMonth.getMonth())}
             onChange={(val) =>
-              setViewMonth(
-                (m) => new Date(m.getFullYear(), Number(val), 1),
-              )
+              setViewMonth((m) => new Date(m.getFullYear(), Number(val), 1))
             }
             className="min-w-0 flex-1 max-w-[120px]"
             triggerClassName="h-7 px-1.5 text-xs font-medium border-border bg-card/50 shadow-none"
-            optionsClassName="max-h-48"
+            optionsClassName="max-h-48 !max-w-32 z-10000!"
           />
           <CustomSelect
             options={yearOptions}
             value={String(viewMonth.getFullYear())}
             onChange={(val) =>
-              setViewMonth(
-                (m) => new Date(Number(val), m.getMonth(), 1),
-              )
+              setViewMonth((m) => new Date(Number(val), m.getMonth(), 1))
             }
             className="w-[76px] shrink-0"
             triggerClassName="h-7 px-1.5 text-xs font-medium border-border bg-card/50 shadow-none"
-            optionsClassName="max-h-48"
+            optionsClassName="max-h-48 !max-w-26 z-10000!"
           />
         </div>
 
@@ -330,13 +328,17 @@ export function DatePicker({
               className={cn(
                 "flex h-8 w-full items-center justify-center rounded-md text-xs transition-colors",
                 !inMonth && "text-muted-foreground/50",
-                inMonth && !selected && !today && "text-foreground hover:bg-accent",
+                inMonth &&
+                  !selected &&
+                  !today &&
+                  "text-foreground hover:bg-accent",
                 today &&
                   !selected &&
                   "font-semibold text-primary ring-1 ring-primary/30",
                 selected &&
                   "bg-primary font-semibold text-primary-foreground hover:bg-primary/90",
-                outOfRange && "cursor-not-allowed opacity-30 hover:bg-transparent",
+                outOfRange &&
+                  "cursor-not-allowed opacity-30 hover:bg-transparent",
               )}
             >
               {format(day, "d")}
@@ -390,7 +392,9 @@ export function DatePicker({
           <span
             className={cn(
               "truncate",
-              hasValue ? "text-foreground font-medium" : "text-muted-foreground",
+              hasValue
+                ? "text-foreground font-medium"
+                : "text-muted-foreground",
             )}
           >
             {displayLabel}

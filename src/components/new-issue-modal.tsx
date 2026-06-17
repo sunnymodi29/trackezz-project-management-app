@@ -225,7 +225,7 @@ export function NewIssueModal() {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={closeNewIssue}
       />
-      <div className="relative w-full max-w-3xl max-h-[57vh] flex flex-col animate-scale-in rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-3xl max-h-[90vh] min-h-[510px] flex flex-col animate-scale-in rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-3">
@@ -242,6 +242,7 @@ export function NewIssueModal() {
               }}
               className="w-36 shrink-0"
               triggerClassName="bg-muted border-border hover:bg-accent/40 h-7"
+              optionsClassName="z-10000!"
             />
             <CustomSelect
               options={TYPE_OPTIONS}
@@ -249,6 +250,7 @@ export function NewIssueModal() {
               onChange={(val) => setType(val as IssueType)}
               className="w-36 shrink-0"
               triggerClassName="bg-muted border-border hover:bg-accent/40 h-7"
+              optionsClassName="z-10000!"
             />
             <span className="text-xs text-muted-foreground font-mono">
               {nextIssueKeyPreview}
@@ -302,6 +304,7 @@ export function NewIssueModal() {
                   value={assigneeIds}
                   onChange={setAssigneeIds}
                   placeholder="Unassigned"
+                  optionsClassName="z-10000!"
                   renderTrigger={() => (
                     <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto w-full bg-transparent text-xs text-foreground outline-none cursor-pointer p-1 rounded hover:bg-accent/50 min-h-[24px]">
                       {selectedAssignees.length === 0 ? (
@@ -333,6 +336,7 @@ export function NewIssueModal() {
                   value={status}
                   onChange={(val) => setStatus(val as IssueStatus)}
                   triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
+                  optionsClassName="z-10000!"
                 />
               </MetaField>
               <MetaField label="Priority">
@@ -341,6 +345,7 @@ export function NewIssueModal() {
                   value={priority}
                   onChange={(val) => setPriority(val as Priority)}
                   triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
+                  optionsClassName="z-10000!"
                 />
               </MetaField>
               <MetaField label="Estimate (pts)">

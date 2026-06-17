@@ -45,7 +45,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
 
   const suggestedKey = useMemo(
     () => (keyOverride.trim() || deriveProjectKey(name)).toUpperCase(),
-    [name, keyOverride]
+    [name, keyOverride],
   );
 
   const assignableOrgUsers = useMemo(
@@ -57,13 +57,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
         projects,
         currentUser,
       ),
-    [
-      organization,
-      organizationMembers,
-      projectMembers,
-      projects,
-      currentUser,
-    ],
+    [organization, organizationMembers, projectMembers, projects, currentUser],
   );
 
   const autoAddedUserIds = useMemo(() => {
@@ -235,18 +229,19 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                         prev.map((row) =>
                           row.userId === m.userId
                             ? { ...row, role: val as ProjectRole }
-                            : row
-                        )
+                            : row,
+                        ),
                       )
                     }
                     className="w-36"
                     triggerClassName="h-8 text-xs"
+                    optionsClassName="z-10000!"
                   />
                   <button
                     type="button"
                     onClick={() =>
                       setMembers((prev) =>
-                        prev.filter((row) => row.userId !== m.userId)
+                        prev.filter((row) => row.userId !== m.userId),
                       )
                     }
                     className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
@@ -274,6 +269,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                   }
                   className="flex-1"
                   triggerClassName="h-9"
+                  optionsClassName="z-10000!"
                 />
                 <CustomSelect
                   options={PROJECT_ROLE_OPTIONS}
@@ -281,6 +277,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                   onChange={(val) => setAddRole(val as ProjectRole)}
                   className="w-36"
                   triggerClassName="h-9 text-xs"
+                  optionsClassName="z-10000!"
                 />
                 <Button
                   type="button"
@@ -289,6 +286,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                   onClick={addMember}
                   disabled={!addUserId}
                   title="Add to project"
+                  className="w-9 h-9"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -301,7 +299,10 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={() => void handleSubmit()} disabled={submitting || !name.trim()}>
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={submitting || !name.trim()}
+          >
             {submitting ? "Creating…" : "Create project"}
           </Button>
         </div>

@@ -365,6 +365,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                         disabled={memberBusy === m.userId}
                         className="w-36"
                         triggerClassName="h-8 text-xs"
+                        optionsClassName="z-10000!"
                       />
                       <button
                         type="button"
@@ -405,6 +406,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                         onChange={(val) => setInviteRole(val as ProjectRole)}
                         className="w-36"
                         triggerClassName="h-9 text-xs"
+                        optionsClassName="z-10000!"
                       />
                       <Button
                         type="button"
@@ -496,6 +498,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                         placeholder="Select user..."
                         className="flex-1 min-w-[160px]"
                         triggerClassName="h-9"
+                        optionsClassName="z-10000!"
                       />
                       <CustomSelect
                         options={PROJECT_ROLE_OPTIONS}
@@ -503,6 +506,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                         onChange={(val) => setAddRole(val as ProjectRole)}
                         className="w-36"
                         triggerClassName="h-9 text-xs"
+                        optionsClassName="z-10000!"
                       />
                       <Button
                         type="button"

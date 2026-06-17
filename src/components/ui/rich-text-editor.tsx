@@ -234,7 +234,7 @@ export function RichTextEditor({
       <EditorContent
         editor={editor}
         className={cn(
-          "text-sm overflow-y-auto max-h-[28vh]",
+          "text-sm overflow-y-auto max-h-[62vh]",
           compact ? "px-2 py-1.5" : "px-3 py-2",
         )}
       />
