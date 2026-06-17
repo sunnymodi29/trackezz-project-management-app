@@ -9,12 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Check,
-  ChevronsUpDown,
-  Plus,
-  Search,
-} from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Search } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { setActiveProject } from "@/lib/actions/org";
@@ -104,13 +99,7 @@ export function ProjectSwitcher() {
       });
       void setActiveProject(project.key, { revalidate: false });
     },
-    [
-      beginProjectSwitch,
-      close,
-      currentProject.id,
-      router,
-      setCurrentProject,
-    ],
+    [beginProjectSwitch, close, currentProject.id, router, setCurrentProject],
   );
 
   useEffect(() => {
@@ -265,7 +254,6 @@ export function ProjectSwitcher() {
           </div>
         )}
       </div>
-
     </>
   );
 }

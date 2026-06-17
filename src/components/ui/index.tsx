@@ -265,7 +265,7 @@ export function Loader({
       aria-busy="true"
       aria-label={ariaLabel}
       className={cn(
-        "fixed z-45 inset-0 animate-in fade-in duration-150",
+        "fixed z-10000 inset-0 animate-in fade-in duration-150",
         className,
       )}
     >

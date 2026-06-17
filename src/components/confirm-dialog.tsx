@@ -40,7 +40,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="fixed inset-0 z-10000 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
@@ -52,17 +52,27 @@ export function ConfirmDialog({
       <div
         className={cn(
           "relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl",
-          "animate-scale-in p-5"
+          "animate-scale-in p-5",
         )}
       >
-        <h2 id="confirm-dialog-title" className="text-base font-semibold text-foreground">
+        <h2
+          id="confirm-dialog-title"
+          className="text-base font-semibold text-foreground"
+        >
           {title}
         </h2>
         {description && (
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{description}</p>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            {description}
+          </p>
         )}
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="outline" size="sm" disabled={loading} onClick={onClose}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            onClick={onClose}
+          >
             {cancelLabel}
           </Button>
           <Button

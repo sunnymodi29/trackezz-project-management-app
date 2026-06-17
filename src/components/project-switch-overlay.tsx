@@ -19,7 +19,7 @@ export function ProjectSwitchOverlay() {
       aria-busy="true"
       aria-label={`Switching to ${project.name}`}
       className={cn(
-        "fixed z-45 flex items-center justify-center",
+        "fixed z-10000 flex items-center justify-center",
         "bg-background/55 backdrop-blur-md",
         "animate-in fade-in duration-200",
         "right-0 top-0 bottom-0",
@@ -72,7 +72,9 @@ export function ProjectSwitchOverlay() {
           <p className="text-lg font-bold text-foreground leading-tight">
             {project.name}
           </p>
-          <p className="font-mono text-xs text-muted-foreground">{project.key}</p>
+          <p className="font-mono text-xs text-muted-foreground">
+            {project.key}
+          </p>
         </div>
 
         <div className="flex items-center gap-2" aria-hidden>

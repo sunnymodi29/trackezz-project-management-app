@@ -24,7 +24,7 @@ export function ImageLightbox({ open, src, alt = "", onClose }: ImageLightboxPro
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8"
+      className="fixed inset-0 z-10000 flex items-center justify-center p-4 md:p-8"
       role="dialog"
       aria-modal="true"
       aria-label="Image preview"
