@@ -294,6 +294,8 @@ model Issue {
   reproductionSteps String?
   expectedResult    String?
   actualResult      String?
+  /// Order within a workflow status column on the Kanban board (same project + sprint scope).
+  kanbanOrder       Int         @default(0)
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -312,6 +314,7 @@ model Issue {
 
   @@unique([projectId, issueNumber])
   @@index([projectId, status])
+  @@index([projectId, status, sprintId, kanbanOrder])
   @@index([projectId, updatedAt])
   @@index([parentId])
 }

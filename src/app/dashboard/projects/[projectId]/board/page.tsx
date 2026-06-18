@@ -16,11 +16,12 @@ import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
+  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
-import { updateIssueStatus } from "@/lib/actions/issues";
+import { updateIssueStatus, reorderKanbanIssues } from "@/lib/actions/issues";
 import type { Issue } from "@/types";
 import {
   PriorityIcon,
@@ -43,6 +44,11 @@ interface BoardColumn {
 
 interface BoardState {
   [key: string]: Issue[];
+}
+
+function compareKanbanOrder(a: Issue, b: Issue): number {
+  if (a.kanbanOrder !== b.kanbanOrder) return a.kanbanOrder - b.kanbanOrder;
+  return b.updatedAt.getTime() - a.updatedAt.getTime();
 }
 
 export default function BoardPage() {
@@ -79,7 +85,9 @@ export default function BoardPage() {
   const board = useMemo(
     () =>
       columns.reduce((acc, col) => {
-        acc[col.id] = projectIssues.filter((i) => i.status === col.id);
+        acc[col.id] = projectIssues
+          .filter((i) => i.status === col.id)
+          .sort(compareKanbanOrder);
         return acc;
       }, {} as BoardState),
     [projectIssues, columns],
@@ -109,7 +117,45 @@ export default function BoardPage() {
       overColumnId ??
       columns.find((col) => board[col.id]?.some((i) => i.id === over.id))?.id;
 
-    if (!toCol || draggedIssue.status === toCol) return;
+    if (!toCol) return;
+
+    if (draggedIssue.status === toCol) {
+      const columnList = [...(board[toCol] ?? [])];
+      const items = columnList.map((i) => i.id);
+      const oldIndex = items.indexOf(active.id as string);
+      let newIndex = items.indexOf(over.id as string);
+      if (newIndex === -1 && String(over.id).startsWith("column-")) {
+        newIndex = items.length - 1;
+      }
+      if (oldIndex === -1 || newIndex === -1) return;
+      if (oldIndex === newIndex) return;
+
+      const newOrder = arrayMove(columnList, oldIndex, newIndex);
+      const updates = newOrder.map((issue, idx) => ({
+        issueId: issue.id,
+        kanbanOrder: idx,
+      }));
+
+      const snapshot = columnList.map((i) => ({ ...i }));
+      const now = new Date();
+      newOrder.forEach((issue, idx) => {
+        upsertIssue({ ...issue, kanbanOrder: idx, updatedAt: now });
+      });
+
+      void reorderKanbanIssues(updates)
+        .then((rows) => {
+          rows.forEach((row) => {
+            patchIssue(row.id, {
+              kanbanOrder: row.kanbanOrder,
+              updatedAt: row.updatedAt,
+            });
+          });
+        })
+        .catch(() => {
+          snapshot.forEach((issue) => upsertIssue(issue));
+        });
+      return;
+    }
 
     const optimistic = {
       ...draggedIssue,
@@ -220,7 +266,7 @@ function KanbanColumn({
           <button
             type="button"
             onClick={onAddIssue}
-            className="rounded p-0.5 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+            className="rounded-sm p-0.5 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
             aria-label={`Add issue to ${column.label}`}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -236,7 +282,8 @@ function KanbanColumn({
           ref={setNodeRef}
           className={cn(
             "flex-1 overflow-y-auto px-2 pb-2 space-y-2 min-h-[200px] flex flex-col",
-            isOver && "bg-primary/6 rounded-lg outline-1 outline-primary/25 -outline-offset-1",
+            isOver &&
+              "bg-primary/6 rounded-lg outline-1 outline-primary/25 -outline-offset-1",
           )}
           data-column-id={column.id}
         >

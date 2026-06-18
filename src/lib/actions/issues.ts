@@ -58,6 +58,7 @@ export interface IssueQuickPatch {
   dueDate?: Date | null;
   sprintId?: string | null;
   parentId?: string | null;
+  kanbanOrder?: number;
   updatedAt: Date;
 }
 
@@ -183,6 +184,19 @@ export async function createIssue(input: CreateIssueInput) {
     sprintId = parentRow?.sprintId ?? null;
   }
 
+  const sprintScope =
+    sprintId === undefined || sprintId === null ? null : sprintId;
+
+  const maxKanban = await prisma.issue.aggregate({
+    where: {
+      projectId: input.projectId,
+      status: input.status,
+      sprintId: sprintScope === null ? { equals: null } : sprintScope,
+    },
+    _max: { kanbanOrder: true },
+  });
+  const nextKanbanOrder = (maxKanban._max.kanbanOrder ?? -1) + 1;
+
   const issue = await prisma.issue.create({
     data: {
       issueNumber,
@@ -196,6 +210,7 @@ export async function createIssue(input: CreateIssueInput) {
       projectId: input.projectId,
       parentId: input.parentId ?? undefined,
       sprintId: sprintId ?? undefined,
+      kanbanOrder: nextKanbanOrder,
       estimate: input.estimate,
       dueDate: input.dueDate,
       reproductionSteps: input.reproductionSteps,
@@ -578,6 +593,7 @@ export async function patchIssueFields(
     dueDate?: Date | null;
     sprintId?: string | null;
     parentId?: string | null;
+    kanbanOrder?: number;
   } = {};
   let statusLabel: string | undefined;
   let assigneesChanged = false;
@@ -590,6 +606,19 @@ export async function patchIssueFields(
     const row = await assertValidProjectStatus(existing.projectId, input.status);
     issueData.status = input.status;
     statusLabel = row.label;
+
+    const maxInTarget = await prisma.issue.aggregate({
+      where: {
+        projectId: existing.projectId,
+        status: input.status,
+        sprintId:
+          existing.sprintId === null || existing.sprintId === undefined
+            ? { equals: null }
+            : existing.sprintId,
+      },
+      _max: { kanbanOrder: true },
+    });
+    issueData.kanbanOrder = (maxInTarget._max.kanbanOrder ?? -1) + 1;
   }
 
   if (input.priority !== undefined && input.priority !== existing.priority) {
@@ -676,6 +705,7 @@ export async function patchIssueFields(
       dueDate: true,
       sprintId: true,
       parentId: true,
+      kanbanOrder: true,
       updatedAt: true,
     },
   });
@@ -722,6 +752,9 @@ export async function patchIssueFields(
       : input.parentId !== undefined
         ? { parentId: input.parentId ?? null }
         : {}),
+    ...(issueData.kanbanOrder !== undefined
+      ? { kanbanOrder: updated.kanbanOrder }
+      : {}),
     updatedAt: updated.updatedAt,
   };
 }
@@ -731,5 +764,90 @@ export async function updateIssueStatus(
   status: IssueStatus,
 ): Promise<IssueQuickPatch> {
   return patchIssueFields(issueId, { status });
+}
+
+export interface KanbanOrderUpdate {
+  issueId: string;
+  kanbanOrder: number;
+}
+
+/** Persists Kanban column order (same status + sprint scope). */
+export async function reorderKanbanIssues(
+  updates: KanbanOrderUpdate[],
+): Promise<{ id: string; kanbanOrder: number; updatedAt: Date }[]> {
+  if (updates.length === 0) return [];
+
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const ids = [...new Set(updates.map((u) => u.issueId))];
+  if (ids.length !== updates.length) {
+    throw new Error("INVALID: Duplicate issue ids in reorder payload");
+  }
+
+  const rows = await prisma.issue.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      projectId: true,
+      status: true,
+      sprintId: true,
+      project: {
+        select: {
+          key: true,
+          organizationId: true,
+          organization: { select: { slug: true, ownerId: true } },
+        },
+      },
+    },
+  });
+  if (rows.length !== ids.length) throw new Error("NOT_FOUND: Issue not found");
+
+  const projectId = rows[0].projectId;
+  if (!rows.every((r) => r.projectId === projectId)) {
+    throw new Error("INVALID: Issues must belong to the same project");
+  }
+
+  const status = rows[0].status;
+  if (!rows.every((r) => r.status === status)) {
+    throw new Error("INVALID: Issues must share the same status column");
+  }
+
+  const sprintKey = rows[0].sprintId ?? null;
+  if (!rows.every((r) => (r.sprintId ?? null) === sprintKey)) {
+    throw new Error("INVALID: Issues must share the same sprint scope");
+  }
+
+  const access = await requireProjectAccess(session.user.id, projectId);
+  const org = rows[0].project.organization;
+
+  if (
+    !canManageIssues(access.projectMember, {
+      userId: session.user.id,
+      organization: org,
+      orgMember: access.orgMember,
+      isOrgWideProjectAdmin: access.isOrgWideProjectAdmin,
+    })
+  ) {
+    throw new Error("FORBIDDEN: Cannot reorder issues in this project");
+  }
+
+  const now = new Date();
+  const results = await prisma.$transaction(
+    updates.map((u) =>
+      prisma.issue.update({
+        where: { id: u.issueId },
+        data: { kanbanOrder: u.kanbanOrder, updatedAt: now },
+        select: { id: true, kanbanOrder: true, updatedAt: true },
+      }),
+    ),
+  );
+
+  await revalidateIssueViews(
+    rows[0].project.key,
+    session.user.id,
+    org.slug,
+  );
+  return results;
 }
 

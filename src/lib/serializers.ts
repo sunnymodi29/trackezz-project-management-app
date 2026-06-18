@@ -282,6 +282,7 @@ export function serializeIssue(issue: FullIssue): Issue {
     attachments: issue.attachments.map(serializeAttachment),
     comments: buildCommentTree(issue.comments.map(serializeComment)),
     parentId: issue.parentId ?? undefined,
+    kanbanOrder: issue.kanbanOrder,
     createdAt: issue.createdAt,
     updatedAt: issue.updatedAt,
   };

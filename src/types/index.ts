@@ -107,6 +107,8 @@ export interface Issue {
   comments: Comment[];
   subIssues?: Issue[];
   parentId?: string;
+  /** Order within the same status column on the Kanban board. */
+  kanbanOrder: number;
   createdAt: Date;
   updatedAt: Date;
 }

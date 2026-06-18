@@ -107,7 +107,9 @@ interface DataState extends BootstrapData {
   upsertIssue: (issue: Issue) => void;
   patchIssue: (
     issueId: string,
-    patch: Partial<Pick<Issue, "status" | "priority" | "updatedAt">>,
+    patch: Partial<
+      Pick<Issue, "status" | "priority" | "updatedAt" | "kanbanOrder">
+    >,
   ) => void;
   removeIssue: (issueId: string) => void;
   upsertSprint: (sprint: Sprint) => void;
