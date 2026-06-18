@@ -2,9 +2,11 @@
 
 import { startTransition, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutWithLoader } from "@/lib/auth/sign-out-client";
 import { projectPath } from "@/lib/projects/route";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { Avatar, Skeleton, Tooltip } from "@/components/ui";
@@ -129,7 +131,10 @@ export function Sidebar() {
       setProjectsOpen(false);
       setProjectSearch("");
       startTransition(() => {
-        router.push(projectPath(project.key));
+        pushWithDashboardRouteTransition(
+          router,
+          projectPath(project.key),
+        );
       });
       void setActiveProject(project.key, { revalidate: false });
     },
@@ -155,7 +160,7 @@ export function Sidebar() {
       {/* Logo / Workspace */}
       <div className="flex items-center justify-between h-14 px-3 border-b border-border">
         {!sidebarCollapsed && (
-          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
+          <DashboardLink href="/dashboard" className="flex items-center gap-2.5 min-w-0">
             <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <Zap className="h-4 w-4 text-white" />
             </div>
@@ -171,18 +176,18 @@ export function Sidebar() {
                 )}
               </div>
             </div>
-          </Link>
+          </DashboardLink>
         )}
         {sidebarCollapsed && (
           <Tooltip content={organization?.name || ""} side="right">
-            <Link
+            <DashboardLink
               href="/dashboard"
               className="flex items-center gap-2.5 min-w-0"
             >
               <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
                 <Zap className="h-4 w-4 text-white" />
               </div>
-            </Link>
+            </DashboardLink>
           </Tooltip>
         )}
         {!sidebarCollapsed && (

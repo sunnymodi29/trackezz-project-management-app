@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useCallback, useMemo, useState } from "react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -26,6 +26,7 @@ import {
 import { ProjectManageDialog } from "@/components/project-manage-dialog";
 import { useDataStore } from "@/store/data-store";
 import { projectPath } from "@/lib/projects/route";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { projectIconFromName } from "@/lib/projects/project-utils";
 import type { Project } from "@/types";
 import { canManageProject } from "@/lib/permissions/client";
@@ -85,7 +86,7 @@ export function ProjectsPageClient() {
       beginProjectSwitch(project);
       setCurrentProject(project);
       startTransition(() => {
-        router.push(href);
+        pushWithDashboardRouteTransition(router, href);
       });
       void setActiveProject(project.key, { revalidate: false });
     },
@@ -284,7 +285,7 @@ function ProjectCard({
   return (
     <Card className="hover:border-primary/40 hover:shadow-lg transition-all group relative h-full">
       <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl -mr-12 -mt-12 transition-all group-hover:bg-primary/10" />
-      <Link
+      <DashboardLink
         href={href}
         className="block"
         onClick={(e) => {
@@ -354,7 +355,7 @@ function ProjectCard({
             </div>
           </div>
         </CardContent>
-      </Link>
+      </DashboardLink>
     </Card>
   );
 }
@@ -376,7 +377,7 @@ function ProjectListRow({
 }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-[1fr_80px_100px_120px_48px] gap-2 md:gap-4 items-center px-4 py-3 rounded-lg border border-border hover:bg-accent/30 transition-colors">
-      <Link
+      <DashboardLink
         href={projectPath(project.key)}
         className="flex items-center gap-3 min-w-0"
         onClick={(e) => {
@@ -402,7 +403,7 @@ function ProjectListRow({
             {project.description || "—"}
           </div>
         </div>
-      </Link>
+      </DashboardLink>
       <span className="font-mono text-xs text-muted-foreground hidden md:block">
         {project.key}
       </span>

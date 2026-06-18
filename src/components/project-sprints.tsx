@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { useRouter, useParams } from "next/navigation";
 import {
   Target,
@@ -220,12 +220,12 @@ export function ProjectSprints() {
                 <div>
                   <Badge className="mb-2">CURRENT SPRINT</Badge>
                   <CardTitle className="text-xl">
-                    <Link
+                    <DashboardLink
                       href={sprintPath(project.key, activeSprint.id)}
                       className="hover:text-primary transition-colors"
                     >
                       {activeSprint.name}
-                    </Link>
+                    </DashboardLink>
                   </CardTitle>
                   {activeSprint.goal && (
                     <p className="text-xs text-muted-foreground mt-1">
@@ -332,12 +332,12 @@ export function ProjectSprints() {
                 </div>
               </div>
 
-              <Link
+              <DashboardLink
                 href={projectPath(project.key, "/board")}
                 className="inline-flex items-center text-sm font-bold text-primary hover:underline gap-1 pt-2"
               >
                 Go to Active Board <ArrowRight className="h-4 w-4" />
-              </Link>
+              </DashboardLink>
             </CardContent>
           </Card>
         )}
@@ -355,7 +355,7 @@ export function ProjectSprints() {
                 key={s.id}
                 className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:border-primary/20 transition-all group"
               >
-                <Link
+                <DashboardLink
                   href={sprintPath(project.key, s.id)}
                   className="flex items-center gap-4 flex-1 min-w-0"
                 >
@@ -379,7 +379,7 @@ export function ProjectSprints() {
                         : `Starts ${s.startDate.toLocaleDateString()}`}
                     </div>
                   </div>
-                </Link>
+                </DashboardLink>
                 <div className="flex items-center gap-4 shrink-0">
                   <div className="hidden md:flex flex-col items-end">
                     <div className="text-xs font-bold">
@@ -403,12 +403,12 @@ export function ProjectSprints() {
                       <Play className="h-3.5 w-3.5" /> Start
                     </Button>
                   )}
-                  <Link
+                  <DashboardLink
                     href={sprintPath(project.key, s.id)}
                     className="opacity-0 group-hover:opacity-100 p-2 rounded-lg hover:bg-muted transition-all"
                   >
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </Link>
+                  </DashboardLink>
                 </div>
               </div>
             ))}

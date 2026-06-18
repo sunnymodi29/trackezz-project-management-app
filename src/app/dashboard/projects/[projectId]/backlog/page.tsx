@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import {
   resolveProjectFromParam,
   projectPath,
@@ -165,11 +165,11 @@ export default function BacklogPage() {
                 Create Sprint
               </Button>
             )}
-            <Link href={projectPath(project.key, "/sprints")}>
+            <DashboardLink href={projectPath(project.key, "/sprints")}>
               <Button size="sm" variant="ghost" className="gap-1.5">
                 <Target className="h-3.5 w-3.5" /> Sprints
               </Button>
-            </Link>
+            </DashboardLink>
             <Button size="sm" onClick={() => openNewIssue()} className="gap-1.5">
               <Plus className="h-3.5 w-3.5" /> Add Issue
             </Button>
@@ -184,12 +184,12 @@ export default function BacklogPage() {
                   <div className="flex items-center justify-center p-1 rounded hover:bg-muted cursor-pointer">
                     <ChevronDown className="h-4 w-4" />
                   </div>
-                  <Link
+                  <DashboardLink
                     href={sprintPath(project.key, sprint.id)}
                     className="text-sm font-bold hover:text-primary transition-colors truncate"
                   >
                     {sprint.name}
-                  </Link>
+                  </DashboardLink>
                   <span className="text-[10px] text-muted-foreground hidden sm:inline">
                     {sprint.startDate.toLocaleDateString()} —{" "}
                     {sprint.endDate.toLocaleDateString()}
@@ -221,12 +221,12 @@ export default function BacklogPage() {
                       Complete Sprint
                     </Button>
                   )}
-                  <Link
+                  <DashboardLink
                     href={sprintPath(project.key, sprint.id)}
                     className="p-1 hover:bg-muted rounded"
                   >
                     <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                  </Link>
+                  </DashboardLink>
                 </div>
               </div>
               <div className="space-y-1 ml-6 border-l-2 border-border/50 pl-4">

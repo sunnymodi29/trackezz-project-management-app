@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { resolveProjectFromParam } from "@/lib/projects/route";
 import { useDataStore } from "@/store/data-store";
 import { ProjectCalendar } from "@/components/project-calendar";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { Button } from "@/components/ui";
 import { CalendarDays, FolderOpen } from "lucide-react";
 
@@ -27,12 +27,12 @@ export default function ProjectCalendarPage() {
         <p className="text-sm text-muted-foreground mt-2 max-w-sm">
           Create a project first, then open the calendar to schedule issues by due date.
         </p>
-        <Link href="/dashboard/projects" className="mt-6">
+        <DashboardLink href="/dashboard/projects" className="mt-6">
           <Button className="gap-2">
             <FolderOpen className="h-4 w-4" />
             Go to Projects
           </Button>
-        </Link>
+        </DashboardLink>
       </div>
     );
   }

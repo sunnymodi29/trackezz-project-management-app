@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { useParams, useSearchParams } from "next/navigation";
 import { IssueDetailView } from "@/components/issue-detail-view";
 import { COMMENT_QUERY_PARAM } from "@/lib/comments/share";
@@ -18,13 +18,13 @@ function IssuePageContent() {
   return (
     <div className="flex flex-col h-[calc(100vh-56px)] bg-background">
       <div className="px-6 py-3 border-b border-border bg-card/50 shrink-0">
-        <Link
+        <DashboardLink
           href={projectPath(projectKey, "/issues")}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to issues
-        </Link>
+        </DashboardLink>
       </div>
       <div className="flex-1 min-h-0 flex justify-center overflow-hidden">
         <IssueDetailView

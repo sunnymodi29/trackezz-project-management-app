@@ -15,6 +15,7 @@ import {
 import { Avatar, Button, Tooltip, Skeleton } from "@/components/ui";
 import { formatRelativeTime } from "@/lib/utils";
 import { projectKeyForId, issuePath } from "@/lib/projects/route";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { useDataStore } from "@/store/data-store";
 import {
   markNotificationRead,
@@ -228,7 +229,13 @@ function NotificationItem({
         const updated = await markNotificationRead(notification.id);
         onRead(updated);
       }
-      if (href) router.push(href);
+      if (href) {
+        if (href.startsWith("/dashboard")) {
+          pushWithDashboardRouteTransition(router, href);
+        } else {
+          router.push(href);
+        }
+      }
     } finally {
       setBusy(false);
     }

@@ -19,9 +19,7 @@ import {
   sendBrevoEmailOrThrow,
 } from "@/lib/email/brevo";
 import { notifyInvitationReceived } from "@/lib/notifications/service";
-import {
-  getInvitationWorkspaceTargets,
-} from "@/lib/invitations/workspace-path";
+import { getInvitationWorkspaceTargets } from "@/lib/invitations/workspace-path";
 import { applyInvitationWorkspaceCookies } from "@/lib/org/workspace-cookies";
 import { isRedirectError } from "@/lib/next/redirect-error";
 import type { Invitation, ProjectRole } from "@/types";
@@ -63,7 +61,7 @@ async function deliverInvitationEmail(
     html: string;
     text: string;
     replyTo?: { email: string; name?: string };
-  }
+  },
 ): Promise<void> {
   try {
     await sendBrevoEmailOrThrow({
@@ -74,7 +72,9 @@ async function deliverInvitationEmail(
       replyTo: params.replyTo,
     });
   } catch (e) {
-    await prisma.invitation.delete({ where: { id: invitationId } }).catch(() => {});
+    await prisma.invitation
+      .delete({ where: { id: invitationId } })
+      .catch(() => {});
     throw e;
   }
 }
@@ -92,7 +92,9 @@ export async function sendOrganizationProjectAdminInvitation(input: {
   });
   if (!org) throw new Error("NOT_FOUND");
   if (!isOrgOwner(session.user.id, org)) {
-    throw new Error("FORBIDDEN: Only the organization owner can invite project admins");
+    throw new Error(
+      "FORBIDDEN: Only the organization owner can invite project admins",
+    );
   }
 
   const email = normalizeInvitationEmail(input.email);
@@ -170,7 +172,7 @@ export async function sendProjectInvitation(input: {
 
   const orgCtx = await requireOrganizationMember(
     session.user.id,
-    project.organizationId
+    project.organizationId,
   );
   const projectMember = await prisma.projectMember.findUnique({
     where: {
@@ -258,7 +260,7 @@ export async function sendProjectInvitation(input: {
 
 /** Resend the invitation email for a pending invite. */
 export async function resendInvitationEmail(
-  invitationId: string
+  invitationId: string,
 ): Promise<{ inviteUrl: string; emailSent: true }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -286,7 +288,7 @@ export async function resendInvitationEmail(
   } else if (invitation.projectId && invitation.project) {
     const orgCtx = await requireOrganizationMember(
       session.user.id,
-      invitation.project.organizationId
+      invitation.project.organizationId,
     );
     const pm = await prisma.projectMember.findUnique({
       where: {
@@ -371,7 +373,10 @@ export async function resendInvitationEmail(
   return { inviteUrl, emailSent: true };
 }
 
-async function validateNotDuplicateMember(email: string, organizationId: string) {
+async function validateNotDuplicateMember(
+  email: string,
+  organizationId: string,
+) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (user) {
     const member = await prisma.organizationMember.findUnique({
@@ -383,7 +388,10 @@ async function validateNotDuplicateMember(email: string, organizationId: string)
   }
 }
 
-async function validateNotDuplicateProjectMember(email: string, projectId: string) {
+async function validateNotDuplicateProjectMember(
+  email: string,
+  projectId: string,
+) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (user) {
     const member = await prisma.projectMember.findUnique({
@@ -413,7 +421,7 @@ export async function cancelInvitation(invitationId: string): Promise<void> {
   } else if (invitation.projectId && invitation.project) {
     const orgCtx = await requireOrganizationMember(
       session.user.id,
-      invitation.project.organizationId
+      invitation.project.organizationId,
     );
     const pm = await prisma.projectMember.findUnique({
       where: {
@@ -489,7 +497,7 @@ export async function acceptInvitationAction(
   try {
     const { projectKey } = await acceptInvitation(token);
     if (projectKey) {
-      redirect(`/dashboard/projects/${projectKey}/board`);
+      redirect(`/dashboard/projects/${projectKey}`);
     }
     redirect("/dashboard");
     return null;
@@ -633,4 +641,3 @@ export async function acceptInvitation(token: string): Promise<{
 
   return { organizationSlug, projectKey };
 }
-

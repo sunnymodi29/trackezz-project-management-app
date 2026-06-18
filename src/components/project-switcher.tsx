@@ -7,13 +7,14 @@ import {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, Plus, Search } from "lucide-react";
+import { DashboardLink } from "@/components/dashboard-link";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { setActiveProject } from "@/lib/actions/org";
 import { projectPath } from "@/lib/projects/route";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { Skeleton, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/types";
@@ -95,7 +96,10 @@ export function ProjectSwitcher() {
       setCurrentProject(project);
       close();
       startTransition(() => {
-        router.push(projectPath(project.key));
+        pushWithDashboardRouteTransition(
+          router,
+          projectPath(project.key),
+        );
       });
       void setActiveProject(project.key, { revalidate: false });
     },
@@ -151,7 +155,7 @@ export function ProjectSwitcher() {
         ref={containerRef}
         className="relative flex items-center gap-1 min-w-0 max-w-[min(100%,360px)] pr-1"
       >
-        <Link
+        <DashboardLink
           href={overviewHref}
           className="flex items-center gap-2.5 min-w-0 flex-1 py-1.5 pl-2.5 pr-1 transition-colors"
         >
@@ -163,7 +167,7 @@ export function ProjectSwitcher() {
               <Skeleton className="h-4 w-32" />
             )}
           </span>
-        </Link>
+        </DashboardLink>
 
         <Tooltip content="Switch project" side="bottom">
           <button

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { useRouter, useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -21,6 +21,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import IssueDrawer from "@/components/issue-drawer";
 import { useDataStore } from "@/store/data-store";
 import { resolveProjectFromParam, projectPath } from "@/lib/projects/route";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { canManageProjectIssues } from "@/lib/permissions/client";
 import {
   updateSprint,
@@ -104,11 +105,11 @@ export function SprintDetailView() {
     return (
       <div className="p-8 text-center space-y-4">
         <p className="text-muted-foreground">Sprint not found.</p>
-        <Link href={projectPath(project.key, "/sprints")}>
+        <DashboardLink href={projectPath(project.key, "/sprints")}>
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4" /> Back to Sprints
           </Button>
-        </Link>
+        </DashboardLink>
       </div>
     );
   }
@@ -167,7 +168,10 @@ export function SprintDetailView() {
     try {
       await deleteSprint(sprint.id);
       removeSprint(sprint.id);
-      router.push(projectPath(project.key, "/sprints"));
+      pushWithDashboardRouteTransition(
+        router,
+        projectPath(project.key, "/sprints"),
+      );
       router.refresh();
     } finally {
       setActionLoading(false);
@@ -197,12 +201,12 @@ export function SprintDetailView() {
         )}
       >
         <div className="px-6 py-4 border-b border-border bg-card/50 space-y-3">
-          <Link
+          <DashboardLink
             href={projectPath(project.key, "/sprints")}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> All sprints
-          </Link>
+          </DashboardLink>
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -262,11 +266,11 @@ export function SprintDetailView() {
                   <Trash2 className="h-3.5 w-3.5" /> Delete Sprint
                 </Button>
                 {sprint.status === "active" && (
-                  <Link href={projectPath(project.key, "/board")}>
+                  <DashboardLink href={projectPath(project.key, "/board")}>
                     <Button size="sm" variant="secondary">
                       Open Board
                     </Button>
-                  </Link>
+                  </DashboardLink>
                 )}
               </div>
             )}

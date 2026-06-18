@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, Suspense } from "react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { COMMENT_QUERY_PARAM } from "@/lib/comments/share";
 import type { Issue, IssueStatus, Priority } from "@/types";
@@ -31,6 +31,7 @@ import {
   issuePath,
   getIssueShareUrl,
 } from "@/lib/projects/route";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { usePersistIssue } from "@/lib/issues/use-persist-issue";
 import { deleteIssue } from "@/lib/actions/issues";
 import { IssueCommentSection } from "@/components/issue-comment-section";
@@ -264,7 +265,7 @@ function IssueDetailViewInner({
       removeIssue(issue.id);
       setDeleteConfirmOpen(false);
       onClose?.();
-      router.push(projectPath(key, "/issues"));
+      pushWithDashboardRouteTransition(router, projectPath(key, "/issues"));
       router.refresh();
     } catch (e) {
       console.error(e instanceof Error ? e.message : "Failed to delete issue");
@@ -321,13 +322,13 @@ function IssueDetailViewInner({
           )}
           {variant === "drawer" && (
             <Tooltip content="Open full page" side="bottom">
-              <Link
+              <DashboardLink
                 href={fullPageHref}
                 className="rounded-md p-1.5 hover:bg-accent transition-colors text-muted-foreground"
                 aria-label="Open full page"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-              </Link>
+              </DashboardLink>
             </Tooltip>
           )}
           <Tooltip content="Delete issue" side="bottom">
@@ -533,7 +534,7 @@ function IssueDetailViewInner({
                   <span className="line-clamp-2">{parentIssue.title}</span>
                 </button>
               ) : (
-                <Link
+                <DashboardLink
                   href={issuePath(projectKey, parentIssue.id)}
                   className="text-sm text-foreground hover:text-primary transition-colors block"
                 >
@@ -542,7 +543,7 @@ function IssueDetailViewInner({
                   </span>
                   <span className="mx-1.5 text-muted-foreground">·</span>
                   <span className="line-clamp-2">{parentIssue.title}</span>
-                </Link>
+                </DashboardLink>
               )}
             </div>
           )}
@@ -779,7 +780,7 @@ function IssueDetailViewInner({
                           />
                         </button>
                       ) : (
-                        <Link
+                        <DashboardLink
                           href={issuePath(projectKey, item.id)}
                           className="flex flex-1 min-w-0 items-center gap-2"
                         >
@@ -794,7 +795,7 @@ function IssueDetailViewInner({
                             projectId={issue.projectId}
                             status={item.status}
                           />
-                        </Link>
+                        </DashboardLink>
                       )}
                     </div>
                   );
@@ -803,7 +804,6 @@ function IssueDetailViewInner({
             )}
           </div>
 
-          {projectIssues.length > 1 && (
             <div className="px-5 py-4 border-b border-border">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -846,7 +846,7 @@ function IssueDetailViewInner({
                           />
                         </button>
                       ) : (
-                        <Link
+                        <DashboardLink
                           href={issuePath(projectKey, item.id)}
                           className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors"
                         >
@@ -861,7 +861,7 @@ function IssueDetailViewInner({
                             projectId={issue.projectId}
                             status={item.status}
                           />
-                        </Link>
+                        </DashboardLink>
                       )}
                     </li>
                   ))}
@@ -894,7 +894,6 @@ function IssueDetailViewInner({
                 </div>
               )}
             </div>
-          )}
 
           <div
             className={cn(

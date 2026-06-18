@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from "@/components/ui";
 import { StatusBadge, PriorityBadge, SeverityBadge } from "@/components/ui/issue-badges";
 import { Bug, AlertTriangle, ArrowRight, Terminal, Info, CheckCircle2 } from "lucide-react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import type { Metadata } from "next";
 import type { Issue } from "@/types";
 
@@ -107,11 +107,11 @@ export default async function ProjectBugsPage({ params }: { params: Promise<{ pr
                    </div>
                 </div>
 
-                <Link href={issuePath(project.key, bug.id)} className="block">
+                <DashboardLink href={issuePath(project.key, bug.id)} className="block">
                   <Button variant="ghost" size="sm" className="w-full text-[11px] h-8 mt-2 group-hover:bg-accent/80">
                     Fix Bug <ArrowRight className="ml-1 h-3 w-3" />
                   </Button>
-                </Link>
+                </DashboardLink>
              </CardContent>
           </Card>
         ))}

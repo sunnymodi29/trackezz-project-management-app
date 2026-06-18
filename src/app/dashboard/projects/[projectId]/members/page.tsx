@@ -6,6 +6,7 @@ import { Users, Settings } from "lucide-react";
 import { Button, Card, CardHeader, CardTitle, CardContent, Avatar } from "@/components/ui";
 import { useDataStore } from "@/store/data-store";
 import { projectPath, resolveProjectFromParam } from "@/lib/projects/route";
+import { replaceWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { canManageProject } from "@/lib/permissions/client";
 import { ProjectManageDialog } from "@/components/project-manage-dialog";
 import { PROJECT_ROLE_OPTIONS } from "@/lib/projects/constants";
@@ -41,7 +42,7 @@ export default function ProjectMembersPage() {
 
   useEffect(() => {
     if (!project || canManage) return;
-    router.replace(projectPath(project.key));
+    replaceWithDashboardRouteTransition(router, projectPath(project.key));
   }, [project, canManage, router]);
 
   if (!project) {

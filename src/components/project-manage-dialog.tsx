@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { X, Users, Settings, Trash2, Mail, Clock, Send, Copy, Check } from "lucide-react";
 import {
   Button,
@@ -220,7 +221,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
     try {
       await deleteProject(project.id);
       onClose();
-      router.push("/dashboard/projects");
+      pushWithDashboardRouteTransition(router, "/dashboard/projects");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete project");

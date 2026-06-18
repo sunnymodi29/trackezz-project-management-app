@@ -18,6 +18,7 @@ import {
 import { IssueTypeIcon, StatusIcon } from "@/components/ui/issue-badges";
 import { cn } from "@/lib/utils";
 import { projectKeyForId, projectPath, issuePath } from "@/lib/projects/route";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 
 const ACTIONS = [
   {
@@ -110,7 +111,7 @@ export function CommandPalette() {
       openNewIssue();
       return;
     }
-    if (item.href) router.push(item.href);
+    if (item.href) pushWithDashboardRouteTransition(router, item.href);
   };
 
   return (
@@ -169,7 +170,10 @@ export function CommandPalette() {
                     sub={`${p.issueCount} issues`}
                     onClick={() => {
                       closeCommandPalette();
-                      router.push(projectPath(p.key));
+                      pushWithDashboardRouteTransition(
+                        router,
+                        projectPath(p.key),
+                      );
                     }}
                   />
                 ))}
@@ -188,7 +192,8 @@ export function CommandPalette() {
                     rightIcon={<StatusIcon status={issue.status} />}
                     onClick={() => {
                       closeCommandPalette();
-                      router.push(
+                      pushWithDashboardRouteTransition(
+                        router,
                         issuePath(
                           projectKeyForId(projects, issue.projectId),
                           issue.id,

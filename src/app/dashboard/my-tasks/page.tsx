@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui";
 import { StatusBadge, PriorityBadge, IssueTypeIcon } from "@/components/ui/issue-badges";
 import { formatRelativeTime } from "@/lib/utils";
 import { CheckCircle2, ListTodo, Clock, Calendar } from "lucide-react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { projectKeyForId, issuePath } from "@/lib/projects/route";
 import type { Metadata } from "next";
 import type { Issue } from "@/types";
@@ -132,7 +132,7 @@ export default async function MyTasksPage() {
 
 function TaskRow({ issue, projects }: { issue: Issue; projects: import("@/types").Project[] }) {
   return (
-    <Link href={issuePath(projectKeyForId(projects, issue.projectId), issue.id)}>
+    <DashboardLink href={issuePath(projectKeyForId(projects, issue.projectId), issue.id)}>
       <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:bg-accent/30 transition-all group">
         <div className="shrink-0">
           <IssueTypeIcon type={issue.type} />
@@ -157,6 +157,6 @@ function TaskRow({ issue, projects }: { issue: Issue; projects: import("@/types"
           <StatusBadge status={issue.status} />
         </div>
       </div>
-    </Link>
+    </DashboardLink>
   );
 }

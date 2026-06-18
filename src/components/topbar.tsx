@@ -6,11 +6,12 @@ import { useDataStore } from "@/store/data-store";
 import { Avatar, Tooltip } from "@/components/ui";
 import { Bell, Sun, Moon, Plus, Search, Menu } from "lucide-react";
 import { ProjectSwitcher } from "@/components/project-switcher";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { projectKeyForId, issuePath } from "@/lib/projects/route";
+import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { markNotificationRead } from "@/lib/actions/notifications";
 
 export function Topbar() {
@@ -60,7 +61,8 @@ export function Topbar() {
       return;
     }
     if (n.issue) {
-      router.push(
+      pushWithDashboardRouteTransition(
+        router,
         issuePath(projectKeyForId(projects, n.issue.projectId), n.issue.id),
       );
     }
@@ -205,13 +207,13 @@ export function Topbar() {
                 ))}
               </div>
               <div className="p-2 border-t border-border">
-                <Link
+                <DashboardLink
                   href="/dashboard/inbox"
                   onClick={() => setNotifOpen(false)}
                   className="block text-center text-xs text-primary hover:underline py-1"
                 >
                   View all notifications
-                </Link>
+                </DashboardLink>
               </div>
             </div>
           )}

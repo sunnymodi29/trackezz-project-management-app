@@ -6,7 +6,7 @@ import {
   CheckCircle2, Bug, Clock, TrendingUp, AlertCircle,
   ArrowUpRight, BarChart3, Target, Activity
 } from "lucide-react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { projectKeyForId, projectPath, issuePath } from "@/lib/projects/route";
 import type { Metadata } from "next";
 
@@ -48,12 +48,12 @@ export default async function DashboardPage() {
         </div>
         <div className="hidden sm:flex items-center gap-2">
           {unreadNotifs.length > 0 && (
-            <Link href="/dashboard/inbox">
+            <DashboardLink href="/dashboard/inbox">
               <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400 hover:bg-amber-500/20 transition-colors">
                 <AlertCircle className="h-3.5 w-3.5" />
                 {unreadNotifs.length} unread notification{unreadNotifs.length !== 1 ? "s" : ""}
               </div>
-            </Link>
+            </DashboardLink>
           )}
         </div>
       </div>
@@ -105,9 +105,9 @@ export default async function DashboardPage() {
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" /> My Tasks
                 </CardTitle>
-                <Link href="/dashboard/my-tasks" className="text-xs text-primary hover:underline flex items-center gap-1">
+                <DashboardLink href="/dashboard/my-tasks" className="text-xs text-primary hover:underline flex items-center gap-1">
                   View all <ArrowUpRight className="h-3 w-3" />
-                </Link>
+                </DashboardLink>
               </div>
             </CardHeader>
             <CardContent>
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
                   </div>
                 )}
                 {myIssues.map((issue) => (
-                  <Link key={issue.id} href={issuePath(projectKeyForId(projects, issue.projectId), issue.id)} className="block">
+                  <DashboardLink key={issue.id} href={issuePath(projectKeyForId(projects, issue.projectId), issue.id)} className="block">
                     <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-accent transition-colors group">
                       <IssueTypeIcon type={issue.type} />
                       <div className="flex-1 min-w-0">
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
                         <StatusBadge status={issue.status} />
                       </div>
                     </div>
-                  </Link>
+                  </DashboardLink>
                 ))}
               </div>
             </CardContent>
@@ -204,7 +204,7 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="space-y-3">
                 {projects.map((p) => (
-                  <Link key={p.id} href={projectPath(p.key)} className="flex items-center gap-3 group">
+                  <DashboardLink key={p.id} href={projectPath(p.key)} className="flex items-center gap-3 group">
                     <div className="h-8 w-8 rounded-lg flex items-center justify-center text-base shrink-0" style={{ backgroundColor: `${p.color}20` }}>
                       {p.icon}
                     </div>
@@ -213,7 +213,7 @@ export default async function DashboardPage() {
                       <div className="text-xs text-muted-foreground">{p.issueCount} issues · {p.memberCount} members</div>
                     </div>
                     <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </Link>
+                  </DashboardLink>
                 ))}
               </div>
             </CardContent>

@@ -27,7 +27,7 @@ import {
   ArrowUpRight,
   Target,
 } from "lucide-react";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import type { Metadata } from "next";
 import { issuePath } from "@/lib/projects/route";
 
@@ -131,16 +131,16 @@ export default async function ProjectOverviewPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/dashboard/projects/${project.key}/board`}>
+          <DashboardLink href={`/dashboard/projects/${project.key}/board`}>
             <button className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors">
               View Board <ArrowUpRight className="h-3 w-3" />
             </button>
-          </Link>
-          <Link href={`/dashboard/projects/${project.key}/issues`}>
+          </DashboardLink>
+          <DashboardLink href={`/dashboard/projects/${project.key}/issues`}>
             <button className="flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors">
               All Issues
             </button>
-          </Link>
+          </DashboardLink>
         </div>
       </div>
 
@@ -176,12 +176,12 @@ export default async function ProjectOverviewPage({
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Recent Issues</CardTitle>
-                <Link
+                <DashboardLink
                   href={`/dashboard/projects/${project.key}/issues`}
                   className="text-xs text-primary hover:underline flex items-center gap-1"
                 >
                   View all <ArrowUpRight className="h-3 w-3" />
-                </Link>
+                </DashboardLink>
               </div>
             </CardHeader>
             <CardContent>
@@ -192,7 +192,7 @@ export default async function ProjectOverviewPage({
                       key={issue.id}
                       className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-accent transition-colors group cursor-pointer"
                     >
-                      <Link
+                      <DashboardLink
                         href={issuePath(project.key, issue.id)}
                         className="flex items-center gap-3 w-full"
                       >
@@ -208,7 +208,7 @@ export default async function ProjectOverviewPage({
                         {issue.assignees.length > 0 && (
                           <AvatarGroup users={issue.assignees} max={2} />
                         )}
-                      </Link>
+                      </DashboardLink>
                     </div>
                   ))}
                 </div>

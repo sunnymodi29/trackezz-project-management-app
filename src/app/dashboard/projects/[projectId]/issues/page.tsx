@@ -32,7 +32,7 @@ import { useProjectAssigneeSelect } from "@/hooks/use-project-assignee-select";
 import { Search, Plus, ChevronDown } from "lucide-react";
 import IssueDrawer from "@/components/issue-drawer";
 import type { Issue } from "@/types";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import {
   buildIssueTreeForStatusColumn,
   expandIssuesWithAncestors,
@@ -385,14 +385,14 @@ function IssueGroup({
                   <IssueTypeIcon type={issue.type} />
                 </div>
                 <div className="w-20 shrink-0">
-                  <Link
+                  <DashboardLink
                     href={issuePath(projectKey, issue.id)}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <span className="text-[11px] font-mono text-muted-foreground group-hover:text-primary hover:underline transition-colors">
                       {issue.issueKey}
                     </span>
-                  </Link>
+                  </DashboardLink>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div

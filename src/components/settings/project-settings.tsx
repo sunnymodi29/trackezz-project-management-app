@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { DashboardLink } from "@/components/dashboard-link";
 import { Users, Trash2, Settings } from "lucide-react";
 import {
   Card,
@@ -17,6 +17,10 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useDataStore } from "@/store/data-store";
 import { useAppStore } from "@/store/app-store";
 import { resolveProjectFromParam, projectPath } from "@/lib/projects/route";
+import {
+  pushWithDashboardRouteTransition,
+  replaceWithDashboardRouteTransition,
+} from "@/lib/navigation/dashboard-navigation";
 import { updateProject, deleteProject } from "@/lib/actions/projects";
 import { canManageProject } from "@/lib/permissions/client";
 
@@ -65,7 +69,7 @@ export function ProjectSettings() {
 
   useEffect(() => {
     if (!project || canManage) return;
-    router.replace(projectPath(project.key));
+    replaceWithDashboardRouteTransition(router, projectPath(project.key));
   }, [project, canManage, router]);
 
   if (!project || !canManage) {
@@ -92,7 +96,10 @@ export function ProjectSettings() {
       setSuccess(true);
       router.refresh();
       if (updated.key !== routeParam) {
-        router.replace(projectPath(updated.key, "/settings"));
+        replaceWithDashboardRouteTransition(
+          router,
+          projectPath(updated.key, "/settings"),
+        );
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update project");
@@ -107,7 +114,7 @@ export function ProjectSettings() {
       await deleteProject(project.id);
       removeProject(project.id);
       setDeleteOpen(false);
-      router.push("/dashboard/projects");
+      pushWithDashboardRouteTransition(router, "/dashboard/projects");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete project");
@@ -204,12 +211,12 @@ export function ProjectSettings() {
             <p className="text-sm text-muted-foreground mb-4">
               Invite members and assign project roles.
             </p>
-            <Link href={projectPath(project.key, "/members")}>
+            <DashboardLink href={projectPath(project.key, "/members")}>
               <Button variant="outline" className="gap-2">
                 <Users className="h-4 w-4" />
                 Manage members
               </Button>
-            </Link>
+            </DashboardLink>
           </CardContent>
         </Card>
 

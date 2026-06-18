@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { projectPath, resolveProjectFromParam } from "@/lib/projects/route";
+import { replaceWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 
 export function ProjectRouteSync() {
   const pathname = usePathname();
@@ -20,7 +21,7 @@ export function ProjectRouteSync() {
     const match = pathname.match(/^\/dashboard\/projects\/([^/]+)(\/.*)?$/);
     if (match) {
       if (!hasWorkspace || projects.length === 0) {
-        router.replace("/dashboard");
+        replaceWithDashboardRouteTransition(router, "/dashboard");
         return;
       }
 
@@ -29,7 +30,10 @@ export function ProjectRouteSync() {
       const project = resolveProjectFromParam(projects, param);
       if (!project) {
         const fallback = projects[0]!;
-        router.replace(`${projectPath(fallback.key)}${subpath || "/board"}`);
+        replaceWithDashboardRouteTransition(
+          router,
+          `${projectPath(fallback.key)}${subpath || "/board"}`,
+        );
         return;
       }
       setCurrentProject(project);
