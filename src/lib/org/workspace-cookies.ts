@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import {
   ACTIVE_ORG_COOKIE,
   ACTIVE_PROJECT_COOKIE,
+  expireWorkspaceCookieOptions,
   orgCookieOptions,
   projectCookieOptions,
 } from "@/lib/org/cookies";
@@ -14,6 +15,10 @@ import {
 /** Remove active org and project cookies. */
 export async function clearWorkspaceCookies(): Promise<void> {
   const cookieStore = await cookies();
+  const expire = expireWorkspaceCookieOptions();
+  // Expire with the same path/httpOnly/secure/sameSite as creation — `delete()` alone often leaves httpOnly cookies.
+  cookieStore.set(ACTIVE_ORG_COOKIE, "", expire);
+  cookieStore.set(ACTIVE_PROJECT_COOKIE, "", expire);
   cookieStore.delete(ACTIVE_ORG_COOKIE);
   cookieStore.delete(ACTIVE_PROJECT_COOKIE);
 }

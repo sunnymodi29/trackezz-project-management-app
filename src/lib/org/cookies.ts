@@ -14,3 +14,11 @@ export function projectCookieOptions(maxAgeSeconds = 60 * 60 * 24 * 365) {
 export function orgCookieOptions(maxAgeSeconds = 60 * 60 * 24 * 365) {
   return projectCookieOptions(maxAgeSeconds);
 }
+
+/** Same attributes as when the cookie was set, but `maxAge: 0` removes it reliably (delete alone can miss httpOnly + path). */
+export function expireWorkspaceCookieOptions() {
+  return {
+    ...orgCookieOptions(),
+    maxAge: 0,
+  } as const;
+}

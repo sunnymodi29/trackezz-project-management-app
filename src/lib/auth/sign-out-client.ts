@@ -11,7 +11,13 @@ export async function signOutWithLoader(callbackUrl = "/login") {
 
   try {
     await clearWorkspaceCookies();
-    await nextAuthSignOut({ callbackUrl });
+    // `redirect: false` so this response’s Set-Cookie is applied before we hard-navigate; then full load clears client state.
+    await nextAuthSignOut({ redirect: false, redirectTo: callbackUrl });
+    window.location.assign(
+      callbackUrl.startsWith("/")
+        ? `${window.location.origin}${callbackUrl}`
+        : callbackUrl,
+    );
   } catch (error) {
     endRouteTransition();
     throw error;
