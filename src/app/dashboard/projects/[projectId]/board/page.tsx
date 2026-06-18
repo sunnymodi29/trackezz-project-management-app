@@ -7,6 +7,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragStartEvent,
   type DragEndEvent,
   closestCenter,
@@ -103,8 +104,9 @@ export default function BoardPage() {
     const draggedIssue = projectIssues.find((i) => i.id === active.id);
     if (!draggedIssue) return;
 
+    const overColumnId = over.data.current?.columnId as string | undefined;
     const toCol =
-      (over.data.current?.columnId as string | undefined) ??
+      overColumnId ??
       columns.find((col) => board[col.id]?.some((i) => i.id === over.id))?.id;
 
     if (!toCol || draggedIssue.status === toCol) return;
@@ -196,6 +198,11 @@ function KanbanColumn({
   onAddIssue: () => void;
   onOpenIssue: (issue: Issue) => void;
 }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column-${column.id}`,
+    data: { columnId: column.id },
+  });
+
   return (
     <div
       className="flex flex-col rounded-xl border bg-muted/30 w-72 shrink-0"
@@ -226,7 +233,11 @@ function KanbanColumn({
         strategy={verticalListSortingStrategy}
       >
         <div
-          className="flex-1 overflow-y-auto px-2 pb-2 space-y-2"
+          ref={setNodeRef}
+          className={cn(
+            "flex-1 overflow-y-auto px-2 pb-2 space-y-2 min-h-[200px] flex flex-col",
+            isOver && "bg-primary/6 rounded-lg outline-1 outline-primary/25 -outline-offset-1",
+          )}
           data-column-id={column.id}
         >
           {issues.map((issue) => (
@@ -238,8 +249,8 @@ function KanbanColumn({
             />
           ))}
           {issues.length === 0 && (
-            <div className="flex items-center justify-center h-20 text-xs text-muted-foreground border border-dashed border-border rounded-lg">
-              No issues
+            <div className="flex flex-1 min-h-[160px] items-center justify-center text-xs text-muted-foreground border border-dashed border-border rounded-lg pointer-events-none">
+              Drop issues here
             </div>
           )}
         </div>
