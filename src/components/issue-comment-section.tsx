@@ -8,6 +8,7 @@ import { Avatar, Button, Tooltip } from "@/components/ui";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextContent } from "@/components/ui/rich-text-content";
 import { hasRichTextContent, looksLikeHtml } from "@/lib/rich-text";
+import { htmlToPlainText } from "@/lib/ai/plain-text";
 import { formatRelativeTime } from "@/lib/utils";
 import { parseCommentContent, linkifyPlainText } from "@/lib/comments/render";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -33,6 +34,8 @@ import {
   Trash2,
   Link2,
   Check,
+  Sparkles,
+  ListTree,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 interface IssueCommentSectionProps {
@@ -62,6 +65,9 @@ export function IssueCommentSection({
     src: string;
     alt: string;
   } | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiDraft, setAiDraft] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<Editor | null>(null);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -187,8 +193,100 @@ export function IssueCommentSection({
     await submitComment(emoji);
   };
 
+  const runAiSummarize = async () => {
+    setAiBusy(true);
+    setAiDraft(null);
+    try {
+      const res = await fetch("/api/ai/issue-comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueId: issue.id, mode: "summarize" }),
+      });
+      const json = (await res.json()) as { data?: { text?: string } };
+      if (res.ok) setAiSummary(json.data?.text ?? null);
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const runAiDraftReply = async () => {
+    setAiBusy(true);
+    setAiSummary(null);
+    try {
+      const hint = replyTo
+        ? htmlToPlainText(replyTo.content).slice(0, 1200)
+        : undefined;
+      const res = await fetch("/api/ai/issue-comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          issueId: issue.id,
+          mode: "draft_reply",
+          hint,
+        }),
+      });
+      const json = (await res.json()) as { data?: { text?: string } };
+      if (res.ok && json.data?.text) {
+        setAiDraft(json.data.text);
+        setCommentText(json.data.text);
+        scrollToComposer();
+      }
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      <div className="px-5 py-2 border-b border-border/60 flex flex-wrap items-center gap-2 shrink-0 bg-muted/10">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          disabled={aiBusy}
+          onClick={() => void runAiSummarize()}
+        >
+          <ListTree className="h-3.5 w-3.5 mr-1 shrink-0" />
+          {aiBusy ? "Working…" : "Summarize thread"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          disabled={aiBusy}
+          onClick={() => void runAiDraftReply()}
+        >
+          <Sparkles className="h-3.5 w-3.5 mr-1 shrink-0" />
+          Draft reply
+        </Button>
+        {(aiSummary || aiDraft) && (
+          <button
+            type="button"
+            className="text-[10px] text-muted-foreground hover:text-foreground ml-auto"
+            onClick={() => {
+              setAiSummary(null);
+              setAiDraft(null);
+            }}
+          >
+            Clear AI panel
+          </button>
+        )}
+      </div>
+      {aiSummary && (
+        <div className="px-5 py-3 border-b border-border bg-muted/20 text-xs max-h-40 overflow-y-auto shrink-0">
+          <div className="text-[10px] font-semibold text-muted-foreground mb-1">
+            Summary
+          </div>
+          <div className="whitespace-pre-wrap text-foreground/90">{aiSummary}</div>
+        </div>
+      )}
+      {aiDraft && (
+        <div className="px-5 py-2 border-b border-border bg-primary/5 text-[10px] text-muted-foreground shrink-0">
+          Draft inserted into the composer — edit before sending.
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 comments-container">
         {commentTree.length === 0 && (
           <div className="text-center py-8 text-xs text-muted-foreground">

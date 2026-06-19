@@ -130,6 +130,14 @@ prisma/
   seed.ts           # Demo data
 ```
 
+## Troubleshooting (development)
+
+### React hydration warning: `bis_skin_checked` (or similar extra attributes)
+
+If the console shows a hydration mismatch and the diff lists attributes like **`bis_skin_checked`**, a **browser extension** (often a password manager or security tool) is mutating the DOM before React hydrates. That is not produced by TrackEzz and cannot be fully suppressed from app code.
+
+**What to do:** turn off extensions for `localhost` (or use a private/incognito window with extensions disabled), or ignore the warning in local dev. The root layout already sets `suppressHydrationWarning` on `<html>` and `<body>` for legitimate cases (for example theme).
+
 ## Security
 
 - Argon2 password hashing
@@ -151,6 +159,8 @@ prisma/
    - `SMTP_*` and `EMAIL` — Brevo invitation emails
 5. Deploy. Optionally seed production once: `npm run db:seed` (with `DATABASE_URL` pointing at Neon).
 
+**AI (optional):** set `GROQ_API_KEY` for LLM features (project assistant, triage, comment tools). Set `OPENAI_API_KEY` for semantic similar-issue search from embeddings; without it, similar search uses lexical overlap only.
+
 **Note:** Avatar and comment file uploads use local disk in development. On Vercel they are disabled until you add object storage (e.g. Vercel Blob).
 
 ## Roadmap (from spec)
@@ -158,7 +168,7 @@ prisma/
 - [x] Foundation — Prisma, PostgreSQL, seed data
 - [x] Auth — credentials, Google OAuth, RBAC, REST API
 - [ ] Collaboration — Pusher realtime, Resend emails
-- [ ] AI — summarization, duplicate detection (OpenAI + Embeddings)
+- [x] AI — Vercel AI SDK + Groq (assistant, triage, comments); optional OpenAI embeddings for similar issues
 - [ ] SaaS — Stripe subscriptions, audit exports
 - [ ] Tests — Playwright + Vitest
 
