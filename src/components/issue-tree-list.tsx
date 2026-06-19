@@ -107,11 +107,12 @@ export function IssueTreeList({
             aria-expanded={expanded}
             aria-label={expanded ? "Collapse" : "Expand"}
           >
-            {expanded ? (
-              <ChevronDown className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5" />
-            )}
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 transition-transform",
+                !expanded ? "-rotate-90" : "",
+              )}
+            />
           </button>
         ) : (
           <span className="w-4 shrink-0 inline-block" aria-hidden />
