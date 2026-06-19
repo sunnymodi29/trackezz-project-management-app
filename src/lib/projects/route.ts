@@ -36,6 +36,32 @@ export function projectKeyForId(
   return projects.find((p) => p.id === projectId)?.key ?? projectId;
 }
 
+/** Project assistant: /dashboard/projects/{projectKey}/assistant */
+export function assistantPath(projectKey: string): string {
+  return projectPath(projectKey, "/assistant");
+}
+
+/** Query param on assistant page for a specific conversation id. */
+export const ASSISTANT_CHAT_QUERY = "chat";
+
+/** Assistant URL for a specific saved conversation (query param). */
+export function assistantConversationPath(
+  projectKey: string,
+  conversationId: string,
+): string {
+  const base = assistantPath(projectKey);
+  const q = new URLSearchParams({ [ASSISTANT_CHAT_QUERY]: conversationId });
+  return `${base}?${q}`;
+}
+
+export function getAssistantConversationShareUrl(
+  origin: string,
+  projectKey: string,
+  conversationId: string,
+): string {
+  return `${origin}${assistantConversationPath(projectKey, conversationId)}`;
+}
+
 /** Shareable issue URL: /dashboard/projects/{projectKey}/issues/{issueId} */
 export function issuePath(projectKey: string, issueId: string): string {
   return `${projectPath(projectKey)}/issues/${encodeURIComponent(issueId)}`;

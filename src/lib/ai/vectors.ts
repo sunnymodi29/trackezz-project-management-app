@@ -1,0 +1,30 @@
+export function parseEmbeddingVectorJson(raw: string): number[] | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    const nums = parsed.map((v) => Number(v));
+    if (nums.some((n) => !Number.isFinite(n))) return null;
+    return nums;
+  } catch {
+    return null;
+  }
+}
+
+export function serializeEmbeddingVector(vector: number[]): string {
+  return JSON.stringify(vector);
+}
+
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length === 0 || b.length === 0 || a.length !== b.length) return 0;
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  if (!denom) return 0;
+  return dot / denom;
+}

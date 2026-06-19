@@ -18,6 +18,7 @@ import {
   assertParentIssueForCreate,
   assertValidIssueParent,
 } from "@/lib/issues/parent-validation";
+import { upsertIssueEmbeddingRow } from "@/lib/ai/issue-embeddings";
 import type { Issue, IssueStatus, IssueType, Priority } from "@/types";
 
 async function statusLabelFor(projectId: string, statusKey: string) {
@@ -258,6 +259,13 @@ export async function createIssue(input: CreateIssueInput) {
   }
 
   await revalidateIssueViews(project.key, userId, project.organization.slug, issue.id);
+
+  after(() => {
+    void upsertIssueEmbeddingRow(issue.id).catch((err) => {
+      console.error("[ai] issue embedding sync failed", err);
+    });
+  });
+
   return serializeIssue(issue);
 }
 
@@ -408,6 +416,15 @@ export async function updateIssue(
     org.slug,
     issueId
   );
+
+  if (input.title !== undefined || input.description !== undefined) {
+    after(() => {
+      void upsertIssueEmbeddingRow(issueId).catch((err) => {
+        console.error("[ai] issue embedding sync failed", err);
+      });
+    });
+  }
+
   return serializeIssue(issue);
 }
 

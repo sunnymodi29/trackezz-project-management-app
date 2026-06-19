@@ -4,13 +4,26 @@ import { useTheme } from "next-themes";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { Avatar, Tooltip } from "@/components/ui";
-import { Bell, Sun, Moon, Plus, Search, Menu } from "lucide-react";
+import {
+  Bell,
+  Bot,
+  Sun,
+  Moon,
+  Plus,
+  Search,
+  Menu,
+  Sparkles,
+} from "lucide-react";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { DashboardLink } from "@/components/dashboard-link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn, formatRelativeTime } from "@/lib/utils";
-import { projectKeyForId, issuePath } from "@/lib/projects/route";
+import {
+  assistantPath,
+  projectKeyForId,
+  issuePath,
+} from "@/lib/projects/route";
 import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { markNotificationRead } from "@/lib/actions/notifications";
 
@@ -38,7 +51,8 @@ export function Topbar() {
   useEffect(() => {
     setMounted(true);
   }, []);
-  const { toggleSidebar, openCommandPalette, openNewIssue } = useAppStore();
+  const { toggleSidebar, openCommandPalette, openNewIssue, currentProject } =
+    useAppStore();
   const {
     notifications,
     projects,
@@ -46,9 +60,17 @@ export function Topbar() {
     patchNotification,
   } = useDataStore();
   const router = useRouter();
+  const pathname = usePathname();
   const [notifOpen, setNotifOpen] = useState(false);
   const unread = getUnreadNotificationCount();
   const recent = notifications.slice(0, 5);
+
+  const assistantHref = currentProject.id
+    ? assistantPath(currentProject.key)
+    : null;
+  const assistantActive =
+    assistantHref != null &&
+    (pathname === assistantHref || pathname.startsWith(`${assistantHref}?`));
 
   const openNotification = async (n: (typeof notifications)[0]) => {
     if (!n.read) {
@@ -102,6 +124,22 @@ export function Topbar() {
 
       {/* Right */}
       <div className="flex items-center gap-1.5 min-w-72 justify-end">
+        {assistantHref && (
+          <Tooltip content="Open project assistant" side="bottom">
+            <DashboardLink
+              href={assistantHref}
+              className={cn(
+                "hidden sm:flex items-center gap-1.5 rounded-md border text-xs font-medium px-3 py-1.5 transition-colors",
+                assistantActive
+                  ? "bg-muted"
+                  : "border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground",
+              )}
+              aria-label="Open project assistant"
+            >
+              <Sparkles className="h-4 w-4 text-primary" /> Ask AI
+            </DashboardLink>
+          </Tooltip>
+        )}
         <Tooltip content="Create new issue" side="bottom">
           <button
             onClick={() => openNewIssue()}

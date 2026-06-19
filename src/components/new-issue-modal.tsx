@@ -5,6 +5,7 @@ import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { createIssue } from "@/lib/actions/issues";
 import { useRouter } from "next/navigation";
+import { DashboardLink } from "@/components/dashboard-link";
 import {
   X,
   Bug,
@@ -16,6 +17,7 @@ import {
   ChevronDown,
   Paperclip,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import {
   Button,
@@ -33,6 +35,7 @@ import {
   previewNextIssueKey,
   parseIssueNumberFromKey,
 } from "@/lib/issues/issue-key";
+import { issuePath } from "@/lib/projects/route";
 import { dateFromKey, toDateKey } from "@/lib/issues/dates";
 import { workflowStatusSelectOptions } from "@/lib/projects/workflow-status";
 import type { IssueType, Priority, IssueStatus } from "@/types";
@@ -124,6 +127,24 @@ export function NewIssueModal() {
   const [dueDate, setDueDate] = useState("");
   const titleRef = useRef<HTMLInputElement>(null);
 
+  type SimilarRow = {
+    id: string;
+    issueKey: string;
+    title: string;
+    status: string;
+    score: number;
+    match: string;
+  };
+  const [similar, setSimilar] = useState<SimilarRow[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [triageLoading, setTriageLoading] = useState(false);
+  const [triageSuggestion, setTriageSuggestion] = useState<{
+    type: IssueType;
+    status: IssueStatus;
+    priority: Priority;
+    rationale: string;
+  } | null>(null);
+
   const parentIssueForCreate = useMemo(
     () =>
       newIssueDefaultParentId
@@ -144,6 +165,8 @@ export function NewIssueModal() {
         "todo";
       setStatus(newIssueDefaultStatus ?? defaultStatus);
       setTimeout(() => titleRef.current?.focus(), 50);
+      setSimilar([]);
+      setTriageSuggestion(null);
     }
   }, [
     newIssueModalOpen,
@@ -156,6 +179,74 @@ export function NewIssueModal() {
   useEffect(() => {
     setShowBugFields(type === "bug");
   }, [type]);
+
+  useEffect(() => {
+    if (!newIssueModalOpen || !currentProject.id) return;
+    const handle = window.setTimeout(() => {
+      void (async () => {
+        const draftTitle = title.trim();
+        const draftDesc = normalizeRichTextForSave(description);
+        if (!draftTitle && !draftDesc) {
+          setSimilar([]);
+          return;
+        }
+        setSimilarLoading(true);
+        try {
+          const res = await fetch("/api/ai/similar-issues", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              projectId: currentProject.id,
+              title: draftTitle || "(no title)",
+              description: draftDesc,
+            }),
+          });
+          const json = (await res.json()) as {
+            data?: { similar?: SimilarRow[] };
+          };
+          if (res.ok) setSimilar(json.data?.similar ?? []);
+          else setSimilar([]);
+        } catch {
+          setSimilar([]);
+        } finally {
+          setSimilarLoading(false);
+        }
+      })();
+    }, 450);
+    return () => window.clearTimeout(handle);
+  }, [newIssueModalOpen, currentProject.id, title, description]);
+
+  const runTriageSuggestion = async () => {
+    if (!title.trim()) {
+      titleRef.current?.focus();
+      return;
+    }
+    setTriageLoading(true);
+    try {
+      const res = await fetch("/api/ai/triage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: currentProject.id,
+          title,
+          description: normalizeRichTextForSave(description),
+        }),
+      });
+      const json = (await res.json()) as {
+        data?: {
+          suggestion: {
+            type: IssueType;
+            status: IssueStatus;
+            priority: Priority;
+            rationale: string;
+          };
+        };
+      };
+      if (res.ok && json.data?.suggestion) setTriageSuggestion(json.data.suggestion);
+    } finally {
+      setTriageLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -208,6 +299,8 @@ export function NewIssueModal() {
       closeNewIssue();
       setTitle("");
       setDesc("");
+      setSimilar([]);
+      setTriageSuggestion(null);
       setReproSteps("");
       setExpected("");
       setActual("");
@@ -293,6 +386,34 @@ export function NewIssueModal() {
                 placeholder="Add a description..."
                 minHeight="236px"
               />
+              {(similarLoading || similar.length > 0) && (
+                <div className="rounded-lg border border-border/80 bg-muted/25 p-3 space-y-2">
+                  <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    {similarLoading ? "Finding similar issues…" : "Similar issues"}
+                  </div>
+                  {!similarLoading && (
+                    <ul className="space-y-1.5">
+                      {similar.map((s) => (
+                        <li key={s.id} className="text-xs min-w-0">
+                          <DashboardLink
+                            href={issuePath(currentProject.key, s.id)}
+                            className="text-primary hover:underline font-mono shrink-0"
+                            onClick={() => closeNewIssue()}
+                          >
+                            {s.issueKey}
+                          </DashboardLink>
+                          <span className="text-muted-foreground mx-1">·</span>
+                          <span className="text-foreground/90">{s.title}</span>
+                          <span className="text-[10px] text-muted-foreground ml-1">
+                            ({s.match})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Meta row */}
@@ -347,6 +468,40 @@ export function NewIssueModal() {
                   triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
                   optionsClassName="z-10000!"
                 />
+              </MetaField>
+              <MetaField label="AI triage">
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-7 text-[10px]"
+                    disabled={triageLoading}
+                    onClick={() => void runTriageSuggestion()}
+                  >
+                    {triageLoading ? "Suggesting…" : "Suggest type & fields"}
+                  </Button>
+                  {triageSuggestion && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-muted-foreground leading-snug">
+                        {triageSuggestion.rationale}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full h-7 text-[10px]"
+                        onClick={() => {
+                          setType(triageSuggestion.type);
+                          setStatus(triageSuggestion.status);
+                          setPriority(triageSuggestion.priority);
+                          setShowBugFields(triageSuggestion.type === "bug");
+                        }}
+                      >
+                        Apply suggestion
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </MetaField>
               <MetaField label="Estimate (pts)">
                 <input
