@@ -8,7 +8,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import type { UIMessage } from "ai";
@@ -247,9 +252,16 @@ function ProjectAssistantContent() {
   );
 
   const bootstrapped = useRef(false);
+  /**
+   * Last `chat` query value from the URL. We only apply URL → selection when the
+   * query actually changed, so stale `?chat=` after `router.replace` cannot
+   * override a newly selected conversation (e.g. New chat).
+   */
+  const prevUrlChatIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     bootstrapped.current = false;
+    prevUrlChatIdRef.current = null;
   }, [project?.id]);
 
   useEffect(() => {
@@ -263,8 +275,13 @@ function ProjectAssistantContent() {
   useEffect(() => {
     if (!project?.id || loadingList || conversations.length === 0) return;
 
-    const urlMatch =
-      urlChatId && conversations.find((c) => c.id === urlChatId);
+    const prev = prevUrlChatIdRef.current;
+    const urlChanged = prev !== null && prev !== urlChatId;
+    const initialDeepLink = prev === null && urlChatId.length > 0;
+    const shouldApplyChatFromUrl = urlChanged || initialDeepLink;
+    prevUrlChatIdRef.current = urlChatId;
+
+    const urlMatch = urlChatId && conversations.find((c) => c.id === urlChatId);
 
     if (urlChatId && !urlMatch) {
       const params = new URLSearchParams(window.location.search);
@@ -274,7 +291,7 @@ function ProjectAssistantContent() {
     }
 
     if (urlMatch) {
-      if (conversationId !== urlMatch.id) {
+      if (conversationId !== urlMatch.id && shouldApplyChatFromUrl) {
         void selectConversation(urlMatch.id);
       }
       return;
@@ -300,13 +317,7 @@ function ProjectAssistantContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set(ASSISTANT_CHAT_QUERY, conversationId);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [
-    project?.key,
-    conversationId,
-    pathname,
-    router,
-    searchParams,
-  ]);
+  }, [project?.key, conversationId, pathname, router, searchParams]);
 
   if (!project) {
     return (
@@ -344,6 +355,7 @@ function ProjectAssistantContent() {
                 className={cn(
                   "group flex items-center gap-0.5 rounded-md min-w-0 hover:bg-accent/60 pe-1.5",
                   conversationId === c.id && "bg-muted",
+                  editingConversationId === c.id && "pe-0",
                 )}
               >
                 {editingConversationId === c.id ? (
@@ -538,9 +550,7 @@ function waitPhaseFromElapsed(ms: number): number {
 
 function AssistantGeneratingBubble({ phase }: { phase: number }) {
   const line =
-    ASSISTANT_WAIT_LINES[
-      Math.min(phase, ASSISTANT_WAIT_LINES.length - 1)
-    ]!;
+    ASSISTANT_WAIT_LINES[Math.min(phase, ASSISTANT_WAIT_LINES.length - 1)]!;
   return (
     <div
       className={cn(
@@ -600,7 +610,9 @@ function AssistantChat({
 
   const busy = status === "submitted" || status === "streaming";
 
-  const lastMessage = messages.length ? messages[messages.length - 1] : undefined;
+  const lastMessage = messages.length
+    ? messages[messages.length - 1]
+    : undefined;
 
   const waitingForAssistantContent = useMemo(() => {
     const last = messages.length ? messages[messages.length - 1] : undefined;
