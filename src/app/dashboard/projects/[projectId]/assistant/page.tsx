@@ -112,7 +112,9 @@ function hasRenderableAssistantContent(m: UIMessage) {
 function updateProposeIssueStatusToolInMessages(
   messages: UIMessage[],
   toolCallId: string,
-  updater: (prev: IssueStatusProposalToolOutput) => IssueStatusProposalToolOutput,
+  updater: (
+    prev: IssueStatusProposalToolOutput,
+  ) => IssueStatusProposalToolOutput,
 ): UIMessage[] {
   return messages.map((m) => {
     if (m.role !== "assistant" || !m.parts) return m;
@@ -227,20 +229,24 @@ function IssueStatusProposalInline({
   const markRejected = () => {
     setApplyError(null);
     setMessages((prev) => {
-      const next = updateProposeIssueStatusToolInMessages(prev, toolCallId, (o) => {
-        if (o.phase !== "pending") return o;
-        return {
-          phase: "rejected",
-          issueId: o.issueId,
-          issueKey: o.issueKey,
-          issueTitle: o.issueTitle,
-          fromStatus: o.fromStatus,
-          fromStatusLabel: o.fromStatusLabel,
-          toStatus: o.toStatus,
-          toStatusLabel: o.toStatusLabel,
-          reason: o.reason,
-        };
-      });
+      const next = updateProposeIssueStatusToolInMessages(
+        prev,
+        toolCallId,
+        (o) => {
+          if (o.phase !== "pending") return o;
+          return {
+            phase: "rejected",
+            issueId: o.issueId,
+            issueKey: o.issueKey,
+            issueTitle: o.issueTitle,
+            fromStatus: o.fromStatus,
+            fromStatusLabel: o.fromStatusLabel,
+            toStatus: o.toStatus,
+            toStatusLabel: o.toStatusLabel,
+            reason: o.reason,
+          };
+        },
+      );
       if (next !== prev) {
         void saveAiConversationSnapshot(conversationId, next).catch((e) => {
           console.error("[assistant] persist after reject failed", e);
@@ -292,9 +298,7 @@ function IssueStatusProposalInline({
         return next;
       });
     } catch (e) {
-      setApplyError(
-        e instanceof Error ? e.message : "Could not apply change.",
-      );
+      setApplyError(e instanceof Error ? e.message : "Could not apply change.");
     } finally {
       setApplying(false);
     }
@@ -317,8 +321,8 @@ function IssueStatusProposalInline({
         className="rounded-md border border-border/80 bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
         role="status"
       >
-        This status change proposal was cancelled because a newer one is available
-        below.
+        This status change proposal was cancelled because a newer one is
+        available below.
       </div>
     );
   }
@@ -1075,9 +1079,9 @@ function AssistantChat({
             {messages.length === 0 && (
               <div className="text-xs text-muted-foreground flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 opacity-50" />
-                Ask about scope, risks, related issues, or next steps. Replies
-                cite issue keys from your catalog. Status changes run through an
-                inline proposal you must confirm in chat.
+                Ask about project overview, members, labels, sprints, epics, and
+                issues (with links). Status changes require in-chat approval to
+                save.
               </div>
             )}
             {messages.map((m, i) => {
@@ -1156,9 +1160,7 @@ function AssistantChat({
                               projectId={projectId}
                               projectKey={projectKey}
                               toolCallId={p.toolCallId}
-                              output={
-                                p.output as IssueStatusProposalToolOutput
-                              }
+                              output={p.output as IssueStatusProposalToolOutput}
                               setMessages={setMessages}
                               patchIssue={patchIssue}
                             />

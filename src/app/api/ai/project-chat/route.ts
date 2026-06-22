@@ -14,6 +14,8 @@ import { requireProjectAccess } from "@/lib/auth/rbac";
 import {
   buildProjectIssueCatalogText,
   buildWorkflowStatusKeysCatalogText,
+  formatProjectWorkspaceContextText,
+  loadProjectWorkspaceForAssistant,
 } from "@/lib/ai/project-grounding";
 import { requireGroqLanguageModel } from "@/lib/ai/require-groq";
 import { validateIssueStatusChangeProposal } from "@/lib/ai/issue-status-proposal";
@@ -74,15 +76,14 @@ export async function POST(req: Request) {
     })) as UIMessage[];
 
     const model = requireGroqLanguageModel();
-    const catalog = await buildProjectIssueCatalogText(projectId);
-    const workflowKeysText =
-      await buildWorkflowStatusKeysCatalogText(projectId);
-
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { key: true, name: true },
-    });
-    if (!project) throw new Error("NOT_FOUND: Project not found");
+    const [projectWorkspace, catalog, workflowKeysText] = await Promise.all([
+      loadProjectWorkspaceForAssistant(projectId),
+      buildProjectIssueCatalogText(projectId),
+      buildWorkflowStatusKeysCatalogText(projectId),
+    ]);
+    if (!projectWorkspace) throw new Error("NOT_FOUND: Project not found");
+    const workspaceContextText =
+      formatProjectWorkspaceContextText(projectWorkspace);
 
     const existingConv = await prisma.aIConversation.findUnique({
       where: { id: conversationId },
@@ -106,20 +107,24 @@ export async function POST(req: Request) {
       });
     }
 
-    const basePath = `/dashboard/projects/${encodeURIComponent(project.key)}/issues`;
+    const basePath = `/dashboard/projects/${encodeURIComponent(projectWorkspace.key)}/issues`;
 
-    const system = `You are the TrackEzz project assistant for project "${project.name}" (key ${project.key}).
+    const system = `You are the TrackEzz project assistant for project "${projectWorkspace.name}" (key ${projectWorkspace.key}).
 
 Rules:
-- Ground every factual claim in the issue catalog below. If information is missing, say you do not know.
+- Ground every factual claim only in the sections below (project workspace, issue catalog, workflow). If something is not listed there, say you do not know rather than guessing.
+- Lists may be truncated (e.g. capped issue count); say so if the user asks for exhaustive data.
 - When referencing an issue, cite its exact issue key and include a markdown link using the id from the catalog:
   [ISSUEKEY](${basePath}/ISSUE_ID)
   Replace ISSUEKEY and ISSUE_ID with values from the catalog line (id=...).
-- Do not invent issue keys or ids that are not listed.
+- Do not invent issue keys, issue ids, member names, labels, sprint names, or epic names that are not shown below.
 - Prefer short, actionable answers with bullet lists when helpful.
 - When the user wants to change an issue's workflow status (move, transition, close, mark done, etc.), call proposeIssueStatusChange with the catalog issue id, the target status key from the workflow list below (key=...), and a brief reason. The status is not updated until the user confirms the inline proposal in chat.
 
-Issue catalog (most recently updated first). Each line includes status=<current workflow key> for that issue:
+Project workspace (members, labels, sprints, epics — no private emails):
+${workspaceContextText}
+
+Issue catalog (most recently updated first; each line: key, id, status, type, priority, title, optional short description preview after " | "):
 ${catalog}
 
 ${workflowKeysText}`;
