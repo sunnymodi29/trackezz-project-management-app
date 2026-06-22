@@ -109,12 +109,13 @@ export function MyTasksList({ issues, projects }: MyTasksListProps) {
         </div>
       )}
 
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+        <Clock className="h-4 w-4" /> Active ({openIssues.length})
+      </h2>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Active ({openIssues.length})
-            </h2>
             <div className="space-y-2">
               {openIssues.length === 0 && (
                 <Card className="border-dashed">
