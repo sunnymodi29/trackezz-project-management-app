@@ -469,7 +469,7 @@ export function NewIssueModal() {
                   optionsClassName="z-10000!"
                 />
               </MetaField>
-              <MetaField label="AI triage">
+              {/* <MetaField label="AI triage">
                 <div className="space-y-2">
                   <Button
                     type="button"
@@ -502,7 +502,7 @@ export function NewIssueModal() {
                     </div>
                   )}
                 </div>
-              </MetaField>
+              </MetaField> */}
               <MetaField label="Estimate (pts)">
                 <input
                   value={estimate}
