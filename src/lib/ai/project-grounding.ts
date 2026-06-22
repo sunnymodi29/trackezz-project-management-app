@@ -26,9 +26,27 @@ export async function buildProjectIssueCatalogText(
   return issues
     .map(
       (i) =>
-        `- ${i.issueKey} id=${i.id} [${i.type}] (${i.status}, ${i.priority}) ${i.title}`,
+        `- ${i.issueKey} id=${i.id} status=${i.status} type=${i.type} priority=${i.priority} ${i.title}`,
     )
     .join("\n");
+}
+
+/** Lists canonical workflow keys so the model does not guess snake_case variants. */
+export async function buildWorkflowStatusKeysCatalogText(
+  projectId: string,
+): Promise<string> {
+  const rows = await prisma.workflowStatus.findMany({
+    where: { projectId },
+    orderBy: { position: "asc" },
+    select: { key: true, label: true },
+  });
+  if (rows.length === 0) {
+    return "Workflow: no statuses configured for this project.";
+  }
+  return [
+    "Workflow status keys for proposeIssueStatusChange.toStatus (copy the key= value exactly; keys use hyphens, not underscores):",
+    ...rows.map((r) => `- key=${r.key} (${r.label})`),
+  ].join("\n");
 }
 
 export async function buildProjectIssueCatalogRich(

@@ -10,7 +10,13 @@ function createPrismaClient(): PrismaClient {
     );
   }
 
-  const pool = new Pool({ connectionString: url });
+  const pool = new Pool({
+    connectionString: url,
+    /** Bootstrap runs many queries in parallel; default max (10) can starve and yield P1017. */
+    max: Number(process.env.PG_POOL_MAX ?? 20),
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 15_000,
+  });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }

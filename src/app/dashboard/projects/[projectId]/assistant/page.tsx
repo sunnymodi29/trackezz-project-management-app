@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -17,6 +18,8 @@ import {
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import type { UIMessage } from "ai";
+import { applyAssistantIssueStatusProposal } from "@/lib/actions/assistant-issue-status";
+import type { IssueStatusProposalToolOutput } from "@/lib/ai/issue-status-proposal";
 import {
   ASSISTANT_CHAT_QUERY,
   getAssistantConversationShareUrl,
@@ -32,6 +35,7 @@ import {
   listAiConversations,
   loadAiConversationMessages,
   renameAiConversation,
+  saveAiConversationSnapshot,
 } from "@/lib/actions/ai-conversations";
 import {
   Bot,
@@ -48,11 +52,11 @@ import { cn } from "@/lib/utils";
 
 function ChatListSkeleton() {
   const rows = [
-    "max-w-[76%]",
-    "max-w-[76%]",
-    "max-w-[76%]",
-    "max-w-[76%]",
-    "max-w-[76%]",
+    "max-w-[100%]",
+    "max-w-[100%]",
+    "max-w-[100%]",
+    "max-w-[100%]",
+    "max-w-[100%]",
   ] as const;
   return (
     <ul
@@ -62,12 +66,12 @@ function ChatListSkeleton() {
       aria-label="Loading chats"
     >
       {rows.map((widthClass, i) => (
-        <li key={i} className="flex items-center gap-1.5 rounded-sm px-2 py-2">
+        <li key={i} className="flex items-center gap-1.5 rounded-md pb-1.5">
           <Skeleton
-            className={cn("h-3.5 flex-1 rounded-md min-w-0", widthClass)}
+            className={cn("h-6 flex-1 rounded-md min-w-0", widthClass)}
           />
-          <Skeleton className="h-4 w-4 shrink-0 rounded-sm opacity-60" />
-          <Skeleton className="h-4 w-4 shrink-0 rounded-sm opacity-60" />
+          {/* <Skeleton className="h-4 w-4 shrink-0 rounded-sm opacity-60" />
+          <Skeleton className="h-4 w-4 shrink-0 rounded-sm opacity-60" /> */}
         </li>
       ))}
     </ul>
@@ -89,6 +93,330 @@ function textFromMessage(m: UIMessage) {
     .filter((p): p is { type: "text"; text: string } => p.type === "text")
     .map((p) => p.text)
     .join("\n");
+}
+
+const PROPOSE_ISSUE_STATUS_TOOL = "tool-proposeIssueStatusChange" as const;
+
+function hasRenderableAssistantContent(m: UIMessage) {
+  const parts = m.parts ?? [];
+  if (parts.length === 0) return false;
+  return parts.some((p) => {
+    if (p.type === "text") {
+      return p.text.trim() !== "" || p.state === "streaming";
+    }
+    if (p.type === PROPOSE_ISSUE_STATUS_TOOL) return true;
+    return p.type.startsWith("tool-");
+  });
+}
+
+function updateProposeIssueStatusToolInMessages(
+  messages: UIMessage[],
+  toolCallId: string,
+  updater: (prev: IssueStatusProposalToolOutput) => IssueStatusProposalToolOutput,
+): UIMessage[] {
+  return messages.map((m) => {
+    if (m.role !== "assistant" || !m.parts) return m;
+    let touched = false;
+    const parts = m.parts.map((p) => {
+      if (
+        p.type === PROPOSE_ISSUE_STATUS_TOOL &&
+        p.toolCallId === toolCallId &&
+        p.state === "output-available" &&
+        p.output !== undefined
+      ) {
+        touched = true;
+        return {
+          ...p,
+          output: updater(p.output as IssueStatusProposalToolOutput),
+        };
+      }
+      return p;
+    });
+    return touched ? { ...m, parts } : m;
+  });
+}
+
+function supersedeOlderPendingProposals(messages: UIMessage[]): UIMessage[] {
+  const pendingIds: string[] = [];
+  for (const m of messages) {
+    if (m.role !== "assistant" || !m.parts) continue;
+    for (const p of m.parts) {
+      if (p.type !== PROPOSE_ISSUE_STATUS_TOOL) continue;
+      if (p.state !== "output-available" || p.output === undefined) continue;
+      if (
+        typeof p.output === "object" &&
+        p.output !== null &&
+        "phase" in p.output &&
+        (p.output as IssueStatusProposalToolOutput).phase === "pending"
+      ) {
+        pendingIds.push(p.toolCallId);
+      }
+    }
+  }
+  if (pendingIds.length <= 1) return messages;
+  const supersede = new Set(pendingIds.slice(0, -1));
+
+  let anyChange = false;
+  const next = messages.map((m) => {
+    if (m.role !== "assistant" || !m.parts) return m;
+    let partChanged = false;
+    const parts = m.parts.map((p) => {
+      if (p.type !== PROPOSE_ISSUE_STATUS_TOOL) return p;
+      if (!supersede.has(p.toolCallId)) return p;
+      if (p.state !== "output-available" || p.output === undefined) return p;
+      if ((p.output as IssueStatusProposalToolOutput).phase !== "pending")
+        return p;
+      partChanged = true;
+      anyChange = true;
+      const o = p.output as Extract<
+        IssueStatusProposalToolOutput,
+        { phase: "pending" }
+      >;
+      return {
+        ...p,
+        output: {
+          phase: "superseded",
+          issueId: o.issueId,
+          issueKey: o.issueKey,
+          issueTitle: o.issueTitle,
+          fromStatus: o.fromStatus,
+          fromStatusLabel: o.fromStatusLabel,
+          toStatus: o.toStatus,
+          toStatusLabel: o.toStatusLabel,
+          reason: o.reason,
+        } satisfies IssueStatusProposalToolOutput,
+      };
+    });
+    return partChanged ? { ...m, parts } : m;
+  });
+  return anyChange ? next : messages;
+}
+
+function IssueStatusProposalInline({
+  conversationId,
+  projectId,
+  projectKey,
+  toolCallId,
+  output,
+  setMessages,
+  patchIssue,
+}: {
+  conversationId: string;
+  projectId: string;
+  projectKey: string;
+  toolCallId: string;
+  output: IssueStatusProposalToolOutput;
+  setMessages: (fn: (prev: UIMessage[]) => UIMessage[]) => void;
+  patchIssue: (
+    issueId: string,
+    patch: Partial<{
+      status: string;
+      updatedAt: Date;
+      kanbanOrder: number;
+    }>,
+  ) => void;
+}) {
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+
+  const issueHref =
+    projectKey.length > 0 && output.phase !== "validation_error"
+      ? `/dashboard/projects/${encodeURIComponent(projectKey)}/issues/${encodeURIComponent(output.issueId)}`
+      : "";
+
+  const markRejected = () => {
+    setApplyError(null);
+    setMessages((prev) => {
+      const next = updateProposeIssueStatusToolInMessages(prev, toolCallId, (o) => {
+        if (o.phase !== "pending") return o;
+        return {
+          phase: "rejected",
+          issueId: o.issueId,
+          issueKey: o.issueKey,
+          issueTitle: o.issueTitle,
+          fromStatus: o.fromStatus,
+          fromStatusLabel: o.fromStatusLabel,
+          toStatus: o.toStatus,
+          toStatusLabel: o.toStatusLabel,
+          reason: o.reason,
+        };
+      });
+      if (next !== prev) {
+        void saveAiConversationSnapshot(conversationId, next).catch((e) => {
+          console.error("[assistant] persist after reject failed", e);
+        });
+      }
+      return next;
+    });
+  };
+
+  const apply = async () => {
+    if (output.phase !== "pending") return;
+    setApplying(true);
+    setApplyError(null);
+    try {
+      const patch = await applyAssistantIssueStatusProposal({
+        projectId,
+        issueId: output.issueId,
+        toStatus: output.toStatus,
+      });
+      patchIssue(patch.id, {
+        status: patch.status,
+        updatedAt: patch.updatedAt,
+        kanbanOrder: patch.kanbanOrder,
+      });
+      setMessages((prev) => {
+        const next = updateProposeIssueStatusToolInMessages(
+          prev,
+          toolCallId,
+          (o) => {
+            if (o.phase !== "pending") return o;
+            return {
+              phase: "applied",
+              issueId: o.issueId,
+              issueKey: o.issueKey,
+              issueTitle: o.issueTitle,
+              fromStatus: o.fromStatus,
+              fromStatusLabel: o.fromStatusLabel,
+              toStatus: o.toStatus,
+              toStatusLabel: o.toStatusLabel,
+              reason: o.reason,
+            };
+          },
+        );
+        if (next !== prev) {
+          void saveAiConversationSnapshot(conversationId, next).catch((e) => {
+            console.error("[assistant] persist after apply failed", e);
+          });
+        }
+        return next;
+      });
+    } catch (e) {
+      setApplyError(
+        e instanceof Error ? e.message : "Could not apply change.",
+      );
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  if (output.phase === "validation_error") {
+    return (
+      <div
+        className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+        role="status"
+      >
+        {output.message}
+      </div>
+    );
+  }
+
+  if (output.phase === "superseded") {
+    return (
+      <div
+        className="rounded-md border border-border/80 bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+        role="status"
+      >
+        This status change proposal was cancelled because a newer one is available
+        below.
+      </div>
+    );
+  }
+
+  const { issueKey, issueTitle, fromStatusLabel, toStatusLabel, reason } =
+    output;
+
+  if (output.phase === "rejected") {
+    return (
+      <div
+        className="rounded-md border border-border bg-muted/25 px-3 py-2 text-xs text-muted-foreground"
+        role="status"
+      >
+        <span className="font-medium text-foreground">Rejected</span>
+        {" · "}
+        {issueKey}: {fromStatusLabel} → {toStatusLabel}
+      </div>
+    );
+  }
+
+  if (output.phase === "applied") {
+    return (
+      <div
+        className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground"
+        role="status"
+      >
+        <span className="font-medium text-primary">Applied</span>
+        {" · "}
+        {issueKey}: {fromStatusLabel} → {toStatusLabel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border border-border bg-card/80 px-3 py-2.5 space-y-2 text-xs">
+      <div className="font-medium text-foreground">Status change proposal</div>
+      <div className="text-muted-foreground space-y-1">
+        <div>
+          <span className="text-foreground font-medium">{issueKey}</span>
+          {issueHref.length > 0 ? (
+            <>
+              {" · "}
+              <a
+                href={issueHref}
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                Open issue
+              </a>
+            </>
+          ) : null}
+        </div>
+        <div className="line-clamp-2" title={issueTitle}>
+          {issueTitle}
+        </div>
+        <div>
+          {fromStatusLabel} →{" "}
+          <span className="text-foreground">{toStatusLabel}</span>
+        </div>
+        {reason ? (
+          <div className="text-[11px] border-t border-border/60 mt-1.5 pt-1.5">
+            <span className="text-muted-foreground">Reason: </span>
+            {reason}
+          </div>
+        ) : null}
+      </div>
+      {applyError ? (
+        <div className="text-[11px] text-destructive">{applyError}</div>
+      ) : null}
+      <div className="flex flex-wrap gap-2 pt-0.5">
+        <Button
+          type="button"
+          size="sm"
+          className="h-8"
+          disabled={applying}
+          onClick={() => void apply()}
+        >
+          {applying ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              Applying…
+            </>
+          ) : (
+            "Apply change"
+          )}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8"
+          disabled={applying}
+          onClick={markRejected}
+        >
+          Reject
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function ProjectAssistantContent() {
@@ -404,8 +732,8 @@ function ProjectAssistantContent() {
                       <button
                         type="button"
                         className={cn(
-                          "p-1 rounded-sm shrink-0 opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground",
-                          copiedChatLinkId === c.id && "opacity-100",
+                          "p-1 rounded-sm shrink-0 hidden group-hover:block hover:bg-accent text-muted-foreground hover:text-foreground",
+                          copiedChatLinkId === c.id && "block",
                         )}
                         aria-label={
                           copiedChatLinkId === c.id
@@ -432,7 +760,7 @@ function ProjectAssistantContent() {
                     >
                       <button
                         type="button"
-                        className="p-1 rounded-sm shrink-0 opacity-0 group-hover:opacity-100 hover:bg-accent text-muted-foreground hover:text-foreground"
+                        className="p-1 rounded-sm shrink-0 hidden group-hover:block hover:bg-accent text-muted-foreground hover:text-foreground"
                         aria-label="Rename chat"
                         onClick={(e) => {
                           e.preventDefault();
@@ -450,7 +778,7 @@ function ProjectAssistantContent() {
                     >
                       <button
                         type="button"
-                        className="p-1 rounded-sm shrink-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                        className="p-1 rounded-sm shrink-0 hidden group-hover:block hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                         aria-label="Delete chat"
                         onClick={(e) => {
                           e.preventDefault();
@@ -493,6 +821,7 @@ function ProjectAssistantContent() {
             <AssistantChat
               key={conversationId}
               projectId={project.id}
+              projectKey={project.key}
               conversationId={conversationId}
               initialMessages={initialMessages}
               onAssistantTurnComplete={refreshList}
@@ -581,19 +910,21 @@ function AssistantGeneratingBubble({ phase }: { phase: number }) {
 
 function AssistantChat({
   projectId,
+  projectKey,
   conversationId,
   initialMessages,
   onAssistantTurnComplete,
 }: {
   projectId: string;
+  projectKey: string;
   conversationId: string;
   initialMessages: UIMessage[];
   onAssistantTurnComplete?: () => void;
 }) {
   const [text, setText] = useState("");
-  const { currentUser } = useDataStore();
+  const { currentUser, patchIssue } = useDataStore();
 
-  const { messages, sendMessage, status, stop } = useChat({
+  const { messages, sendMessage, status, stop, setMessages } = useChat({
     id: conversationId,
     messages: initialMessages,
     transport: new DefaultChatTransport({
@@ -603,9 +934,43 @@ function AssistantChat({
     }),
     onFinish: ({ isAbort, isError }) => {
       if (isAbort || isError) return;
+      setMessages((prev) => {
+        const next = supersedeOlderPendingProposals(prev);
+        if (next !== prev) {
+          void saveAiConversationSnapshot(conversationId, next).catch((e) => {
+            console.error("[assistant] persist after supersede (finish)", e);
+          });
+        }
+        return next === prev ? prev : next;
+      });
       onAssistantTurnComplete?.();
     },
   });
+
+  /** Dedupe duplicate pending proposals when opening a thread (do not depend on `messages` — that loops with streaming). */
+  useLayoutEffect(() => {
+    setMessages((prev) => {
+      const next = supersedeOlderPendingProposals(prev);
+      if (next !== prev) {
+        void saveAiConversationSnapshot(conversationId, next).catch((e) => {
+          console.error("[assistant] persist after supersede (hydrate)", e);
+        });
+      }
+      return next === prev ? prev : next;
+    });
+  }, [conversationId, setMessages]);
+
+  /** After switching chats or loading a thread, jump to the latest messages (post-supersede layout). */
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const snap = () => {
+      el.scrollTop = el.scrollHeight;
+    };
+    snap();
+    const raf = requestAnimationFrame(snap);
+    return () => cancelAnimationFrame(raf);
+  }, [conversationId, initialMessages]);
 
   const busy = status === "submitted" || status === "streaming";
 
@@ -615,7 +980,7 @@ function AssistantChat({
       busy &&
       (!last ||
         last.role === "user" ||
-        (last.role === "assistant" && textFromMessage(last).trim() === ""))
+        (last.role === "assistant" && !hasRenderableAssistantContent(last)))
     );
   }, [busy, messages]);
 
@@ -677,6 +1042,28 @@ function AssistantChat({
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, []);
 
+  const lastScrolledUserMessageIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    lastScrolledUserMessageIdRef.current = null;
+  }, [conversationId, initialMessages]);
+
+  /** Snap to bottom when the user sends a new message (last bubble is a new user message). */
+  useEffect(() => {
+    const last = messages.length ? messages[messages.length - 1] : undefined;
+    if (!last || last.role !== "user") return;
+    if (lastScrolledUserMessageIdRef.current === last.id) return;
+    lastScrolledUserMessageIdRef.current = last.id;
+    const el = scrollRef.current;
+    if (!el) return;
+    const snap = () => {
+      el.scrollTop = el.scrollHeight;
+    };
+    snap();
+    const raf = requestAnimationFrame(snap);
+    return () => cancelAnimationFrame(raf);
+  }, [messages]);
+
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0">
       <div className="relative flex-1 min-h-0 min-w-0">
@@ -689,7 +1076,8 @@ function AssistantChat({
               <div className="text-xs text-muted-foreground flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 opacity-50" />
                 Ask about scope, risks, related issues, or next steps. Replies
-                cite issue keys from your catalog.
+                cite issue keys from your catalog. Status changes run through an
+                inline proposal you must confirm in chat.
               </div>
             )}
             {messages.map((m, i) => {
@@ -698,7 +1086,7 @@ function AssistantChat({
                 isLast &&
                 m.role === "assistant" &&
                 busy &&
-                textFromMessage(m).trim() === ""
+                !hasRenderableAssistantContent(m)
               ) {
                 return null;
               }
@@ -736,7 +1124,49 @@ function AssistantChat({
                     </div>
                   </div>
                   {m.role === "assistant" ? (
-                    <AssistantMarkdown>{textFromMessage(m)}</AssistantMarkdown>
+                    <div className="space-y-2">
+                      {(m.parts ?? []).map((p, pi) => {
+                        if (p.type === "text") {
+                          return p.text.trim() === "" &&
+                            p.state !== "streaming" ? null : (
+                            <AssistantMarkdown key={`${m.id}-t-${pi}`}>
+                              {p.text}
+                            </AssistantMarkdown>
+                          );
+                        }
+                        if (p.type === PROPOSE_ISSUE_STATUS_TOOL) {
+                          if (
+                            p.state !== "output-available" ||
+                            p.output === undefined
+                          ) {
+                            return (
+                              <div
+                                key={p.toolCallId}
+                                className="rounded-md border border-dashed border-border px-3 py-2 text-[11px] text-muted-foreground"
+                                role="status"
+                              >
+                                Preparing status proposal…
+                              </div>
+                            );
+                          }
+                          return (
+                            <IssueStatusProposalInline
+                              key={p.toolCallId}
+                              conversationId={conversationId}
+                              projectId={projectId}
+                              projectKey={projectKey}
+                              toolCallId={p.toolCallId}
+                              output={
+                                p.output as IssueStatusProposalToolOutput
+                              }
+                              setMessages={setMessages}
+                              patchIssue={patchIssue}
+                            />
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
                   ) : (
                     <div className="whitespace-pre-wrap wrap-break-word">
                       {textFromMessage(m)}

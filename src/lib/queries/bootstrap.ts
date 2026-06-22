@@ -246,19 +246,12 @@ export async function getBootstrapData(
     });
   }
 
+  /** Split across a few waves so we stay under pool / server concurrent-connection limits (avoids P1017). */
   const [
     orgMembers,
     projects,
     projectMembers,
     issues,
-    sprints,
-    epics,
-    labels,
-    notifications,
-    activityLogs,
-    invitations,
-    aiConversations,
-    workflowStatuses,
   ] = await Promise.all([
     prisma.organizationMember.findMany({
       where: { organizationId: org.id },
@@ -282,6 +275,9 @@ export async function getBootstrapData(
     projectIds.length > 0
       ? getIssues(org.id, projectIds)
       : Promise.resolve([]),
+  ]);
+
+  const [sprints, epics, labels, notifications] = await Promise.all([
     projectIds.length > 0
       ? prisma.sprint.findMany({
           where: { projectId: { in: projectIds } },
@@ -311,41 +307,45 @@ export async function getBootstrapData(
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
-    projectIds.length > 0
-      ? prisma.activityLog.findMany({
-          where: { projectId: { in: projectIds } },
-          include: { user: true },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-        })
-      : Promise.resolve([]),
-    projectIds.length > 0
-      ? prisma.invitation.findMany({
-          where: {
-            OR: [
-              { organizationId: org.id, status: "pending" },
-              { projectId: { in: projectIds }, status: "pending" },
-            ],
-          },
-          include: { invitedBy: true },
-        })
-      : prisma.invitation.findMany({
-          where: { organizationId: org.id, status: "pending" },
-          include: { invitedBy: true },
-        }),
-    projectIds.length > 0
-      ? prisma.aIConversation.findMany({
-          where: { projectId: { in: projectIds } },
-          include: { messages: { orderBy: { createdAt: "asc" } } },
-        })
-      : Promise.resolve([]),
-    projectIds.length > 0
-      ? prisma.workflowStatus.findMany({
-          where: { projectId: { in: projectIds } },
-          orderBy: { position: "asc" },
-        })
-      : Promise.resolve([]),
   ]);
+
+  const [activityLogs, invitations, aiConversations, workflowStatuses] =
+    await Promise.all([
+      projectIds.length > 0
+        ? prisma.activityLog.findMany({
+            where: { projectId: { in: projectIds } },
+            include: { user: true },
+            orderBy: { createdAt: "desc" },
+            take: 20,
+          })
+        : Promise.resolve([]),
+      projectIds.length > 0
+        ? prisma.invitation.findMany({
+            where: {
+              OR: [
+                { organizationId: org.id, status: "pending" },
+                { projectId: { in: projectIds }, status: "pending" },
+              ],
+            },
+            include: { invitedBy: true },
+          })
+        : prisma.invitation.findMany({
+            where: { organizationId: org.id, status: "pending" },
+            include: { invitedBy: true },
+          }),
+      projectIds.length > 0
+        ? prisma.aIConversation.findMany({
+            where: { projectId: { in: projectIds } },
+            include: { messages: { orderBy: { createdAt: "asc" } } },
+          })
+        : Promise.resolve([]),
+      projectIds.length > 0
+        ? prisma.workflowStatus.findMany({
+            where: { projectId: { in: projectIds } },
+            orderBy: { position: "asc" },
+          })
+        : Promise.resolve([]),
+    ]);
 
   const owner = isOrgOwner(resolvedUserId, org);
   const isOrgWide = await isOrgWideProjectAdmin(

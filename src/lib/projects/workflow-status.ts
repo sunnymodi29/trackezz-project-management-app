@@ -12,6 +12,14 @@ export const DEFAULT_WORKFLOW_STATUSES: Omit<
   { key: "cancelled", label: "Cancelled", color: "#f87171", position: 5 },
 ];
 
+/**
+ * Workflow status keys in TrackEzz use hyphens (e.g. `in-progress`). Models often
+ * emit snake_case (`in_progress`); normalize before DB lookup.
+ */
+export function normalizeWorkflowStatusKey(key: string): string {
+  return key.trim().replace(/_/g, "-");
+}
+
 export function slugifyStatusKey(label: string): string {
   const base = label
     .trim()
