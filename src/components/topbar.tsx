@@ -132,7 +132,7 @@ export function Topbar() {
                 "hidden sm:flex items-center gap-1.5 rounded-md border text-xs font-medium px-3 py-1.5 transition-colors",
                 assistantActive
                   ? "bg-muted"
-                  : "border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground",
+                  : "border-border bg-muted/40 hover:bg-muted hover:text-foreground",
               )}
               aria-label="Open project assistant"
             >

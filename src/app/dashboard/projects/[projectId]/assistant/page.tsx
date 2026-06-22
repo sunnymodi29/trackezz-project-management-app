@@ -36,6 +36,7 @@ import {
 import {
   Bot,
   Check,
+  ArrowDown,
   Copy,
   Loader2,
   MessageSquare,
@@ -395,9 +396,7 @@ function ProjectAssistantContent() {
                     </button>
                     <Tooltip
                       content={
-                        copiedChatLinkId === c.id
-                          ? "Copied!"
-                          : "Copy link to this chat"
+                        copiedChatLinkId === c.id ? "Copied!" : "Copy link"
                       }
                       side="top"
                       className="shrink-0"
@@ -610,10 +609,6 @@ function AssistantChat({
 
   const busy = status === "submitted" || status === "streaming";
 
-  const lastMessage = messages.length
-    ? messages[messages.length - 1]
-    : undefined;
-
   const waitingForAssistantContent = useMemo(() => {
     const last = messages.length ? messages[messages.length - 1] : undefined;
     return (
@@ -647,74 +642,130 @@ function AssistantChat({
     return () => window.clearInterval(id);
   }, [waitingForAssistantContent]);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
+  const updateScrollToBottomVisibility = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollToBottom(distanceFromBottom > 80);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollToBottomVisibility();
+    el.addEventListener("scroll", updateScrollToBottomVisibility, {
+      passive: true,
+    });
+    const ro = new ResizeObserver(updateScrollToBottomVisibility);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateScrollToBottomVisibility);
+      ro.disconnect();
+    };
+  }, [updateScrollToBottomVisibility, conversationId]);
+
+  useEffect(() => {
+    updateScrollToBottomVisibility();
+  }, [messages, waitingForAssistantContent, updateScrollToBottomVisibility]);
+
+  const scrollChatToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="px-4 py-4 space-y-3 max-w-5xl mx-auto">
-          {messages.length === 0 && (
-            <div className="text-xs text-muted-foreground flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 opacity-50" />
-              Ask about scope, risks, related issues, or next steps. Replies
-              cite issue keys from your catalog.
-            </div>
-          )}
-          {messages.map((m, i) => {
-            const isLast = i === messages.length - 1;
-            if (
-              isLast &&
-              m.role === "assistant" &&
-              busy &&
-              textFromMessage(m).trim() === ""
-            ) {
-              return null;
-            }
-            return (
-              <div
-                key={m.id}
-                className={cn(
-                  "rounded-lg border px-3 py-2 text-sm",
-                  m.role === "user"
-                    ? "border-primary/25 bg-primary/5 ml-auto max-w-md rounded-tr-none"
-                    : "border-border bg-muted/30 mr-auto max-w-2xl rounded-tl-none",
-                )}
-              >
-                <div className="flex items-center gap-2 mb-1.5 min-w-0">
-                  {m.role === "user" && currentUser && (
-                    <Avatar
-                      src={currentUser.avatarUrl}
-                      name={currentUser.name}
-                      size="xs"
-                      className="shrink-0"
-                    />
-                  )}
-                  {m.role === "assistant" && (
-                    <Bot className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium text-foreground truncate">
-                      {m.role === "user"
-                        ? userMessageAuthorLabel(currentUser)
-                        : "TrackEzz Assistant"}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {m.role === "user" ? "Question" : "Reply"}
-                    </div>
-                  </div>
-                </div>
-                {m.role === "assistant" ? (
-                  <AssistantMarkdown>{textFromMessage(m)}</AssistantMarkdown>
-                ) : (
-                  <div className="whitespace-pre-wrap wrap-break-word">
-                    {textFromMessage(m)}
-                  </div>
-                )}
+    <div className="flex flex-col flex-1 min-h-0 min-w-0">
+      <div className="relative flex-1 min-h-0 min-w-0">
+        <div
+          ref={scrollRef}
+          className="absolute inset-0 overflow-y-auto overflow-x-hidden"
+        >
+          <div className="px-4 py-4 space-y-3 max-w-5xl mx-auto">
+            {messages.length === 0 && (
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 opacity-50" />
+                Ask about scope, risks, related issues, or next steps. Replies
+                cite issue keys from your catalog.
               </div>
-            );
-          })}
-          {waitingForAssistantContent ? (
-            <AssistantGeneratingBubble phase={waitPhase} />
-          ) : null}
+            )}
+            {messages.map((m, i) => {
+              const isLast = i === messages.length - 1;
+              if (
+                isLast &&
+                m.role === "assistant" &&
+                busy &&
+                textFromMessage(m).trim() === ""
+              ) {
+                return null;
+              }
+              return (
+                <div
+                  key={m.id}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-sm",
+                    m.role === "user"
+                      ? "border-primary/25 bg-primary/5 ml-auto max-w-md rounded-tr-none"
+                      : "border-border bg-muted/30 mr-auto max-w-2xl rounded-tl-none",
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1.5 min-w-0">
+                    {m.role === "user" && currentUser && (
+                      <Avatar
+                        src={currentUser.avatarUrl}
+                        name={currentUser.name}
+                        size="xs"
+                        className="shrink-0"
+                      />
+                    )}
+                    {m.role === "assistant" && (
+                      <Bot className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-foreground truncate">
+                        {m.role === "user"
+                          ? userMessageAuthorLabel(currentUser)
+                          : "TrackEzz Assistant"}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {m.role === "user" ? "Question" : "Reply"}
+                      </div>
+                    </div>
+                  </div>
+                  {m.role === "assistant" ? (
+                    <AssistantMarkdown>{textFromMessage(m)}</AssistantMarkdown>
+                  ) : (
+                    <div className="whitespace-pre-wrap wrap-break-word">
+                      {textFromMessage(m)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {waitingForAssistantContent ? (
+              <AssistantGeneratingBubble phase={waitPhase} />
+            ) : null}
+          </div>
         </div>
+        {showScrollToBottom ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              className={cn(
+                "pointer-events-auto h-10 w-10 rounded-full border border-border bg-accent/5 backdrop-blur-sm shadow-md text-foreground",
+              )}
+              onClick={() => scrollChatToBottom()}
+              aria-label="Scroll to bottom"
+            >
+              <ArrowDown className="h-5 w-5" />
+            </Button>
+          </div>
+        ) : null}
       </div>
       <form
         className="border-t border-border p-3 flex gap-2 shrink-0 bg-card/30"
