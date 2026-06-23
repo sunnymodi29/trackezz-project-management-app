@@ -136,7 +136,7 @@ export function Topbar() {
               )}
               aria-label="Open project assistant"
             >
-              <Sparkles className="h-4 w-4 text-primary" /> Ask AI
+              <Sparkles className="h-4 w-4" /> Ask AI
             </DashboardLink>
           </Tooltip>
         )}
