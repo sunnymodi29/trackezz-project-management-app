@@ -129,10 +129,10 @@ export function Topbar() {
             <DashboardLink
               href={assistantHref}
               className={cn(
-                "hidden sm:flex items-center gap-1.5 rounded-md border text-xs font-medium px-3 py-1.5 transition-colors",
+                "hidden sm:flex items-center gap-1.5 rounded-md border text-xs font-medium px-3 py-1.5",
                 assistantActive
-                  ? "bg-muted"
-                  : "border-border bg-muted/40 hover:bg-muted hover:text-foreground",
+                  ? "bg-linear-to-l from-violet-600 to-primary"
+                  : "transition-colors whitespace-nowrap bg-linear-to-r from-violet-600 to-primary text-primary-foreground shadow-sm",
               )}
               aria-label="Open project assistant"
             >

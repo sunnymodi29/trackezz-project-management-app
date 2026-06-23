@@ -1,26 +1,42 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { useRouter } from "next/navigation";
 import {
   Search,
   ArrowRight,
-  Hash,
   Folder,
-  Zap,
   Settings,
   Plus,
   LayoutDashboard,
   Inbox,
+  Sparkles,
+  Wand2,
+  MessageSquare,
 } from "lucide-react";
 import { IssueTypeIcon, StatusIcon } from "@/components/ui/issue-badges";
-import { cn } from "@/lib/utils";
-import { projectKeyForId, projectPath, issuePath } from "@/lib/projects/route";
+import {
+  assistantPath,
+  projectKeyForId,
+  projectPath,
+  issuePath,
+} from "@/lib/projects/route";
 import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 
-const ACTIONS = [
+type PaletteAction = {
+  id: string;
+  label: string;
+  sub?: string;
+  icon: React.ReactNode;
+  shortcut?: string | null;
+  href?: string | null;
+  action?: "new-issue";
+  keywords?: string[];
+};
+
+const ACTIONS: PaletteAction[] = [
   {
     id: "new-issue",
     label: "Create new issue",
@@ -52,6 +68,25 @@ const ACTIONS = [
   },
 ];
 
+const AI_HINTS = [
+  "What's blocking our current sprint?",
+  "Summarize open bugs",
+  "Which issues are overdue?",
+];
+
+function matchesQuery(
+  q: string,
+  parts: Array<string | undefined | null>,
+  keywords: string[] = [],
+) {
+  if (!q) return true;
+  const haystack = [...parts, ...keywords]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
 export function CommandPalette() {
   const {
     commandPaletteOpen,
@@ -59,10 +94,28 @@ export function CommandPalette() {
     openNewIssue,
     searchQuery,
     setSearchQuery,
+    currentProject,
   } = useAppStore();
   const { issues, projects } = useDataStore();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const aiActions = useMemo<PaletteAction[]>(() => {
+    const actions: PaletteAction[] = [];
+
+    if (currentProject.id) {
+      actions.push({
+        id: "assistant",
+        label: "Open project assistant",
+        sub: `Ask AI about ${currentProject.name}`,
+        icon: <Sparkles className="h-4 w-4 text-violet-500" />,
+        href: assistantPath(currentProject.key),
+        keywords: ["ai", "assistant", "chat", "copilot", "ask", "help", "bot"],
+      });
+    }
+
+    return actions;
+  }, [currentProject.id, currentProject.key, currentProject.name]);
 
   useEffect(() => {
     if (commandPaletteOpen) {
@@ -101,11 +154,17 @@ export function CommandPalette() {
     q.length > 0
       ? projects.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 3)
       : projects.slice(0, 3);
-  const filteredActions = ACTIONS.filter(
-    (a) => q.length === 0 || a.label.toLowerCase().includes(q),
+  const filteredActions = ACTIONS.filter((a) =>
+    matchesQuery(q, [a.label], a.keywords),
   );
+  const hasNonAiResults =
+    filteredIssues.length > 0 ||
+    filteredProjects.length > 0 ||
+    filteredActions.length > 0;
+  const showNoResults = q.length > 0 && !hasNonAiResults;
+  const showAiHints = q.length === 0 && currentProject.id;
 
-  const handleSelect = (item: (typeof ACTIONS)[0]) => {
+  const handleSelect = (item: PaletteAction) => {
     closeCommandPalette();
     if (item.action === "new-issue") {
       openNewIssue();
@@ -132,7 +191,7 @@ export function CommandPalette() {
               ref={inputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search issues, projects, actions..."
+              placeholder="Search issues, projects, actions, or AI…"
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">
@@ -142,6 +201,40 @@ export function CommandPalette() {
 
           {/* Results */}
           <div className="max-h-[420px] overflow-y-auto p-2">
+            {/* AI — always visible */}
+            {aiActions.length > 0 && (
+              <Group label="AI">
+                {aiActions.map((action) => (
+                  <ResultItem
+                    key={action.id}
+                    icon={action.icon}
+                    label={action.label}
+                    sub={action.sub}
+                    shortcut={action.shortcut}
+                    onClick={() => handleSelect(action)}
+                  />
+                ))}
+                {showAiHints && (
+                  <div className="mx-2 mt-1 mb-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-3 py-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-300">
+                      Try asking the assistant
+                    </p>
+                    <ul className="mt-1.5 space-y-1">
+                      {AI_HINTS.map((hint) => (
+                        <li
+                          key={hint}
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                        >
+                          <MessageSquare className="h-3 w-3 shrink-0 text-violet-500/70" />
+                          <span className="truncate">&ldquo;{hint}&rdquo;</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </Group>
+            )}
+
             {/* Actions */}
             {filteredActions.length > 0 && (
               <Group label="Actions">
@@ -205,12 +298,9 @@ export function CommandPalette() {
               </Group>
             )}
 
-            {q.length > 0 &&
-              filteredIssues.length === 0 &&
-              filteredProjects.length === 0 &&
-              filteredActions.length === 0 && (
+            {showNoResults && (
                 <div className="py-8 text-center text-sm text-muted-foreground">
-                  No results for &quot;{q}&quot;
+                  No results for &quot;{searchQuery}&quot;
                 </div>
               )}
           </div>

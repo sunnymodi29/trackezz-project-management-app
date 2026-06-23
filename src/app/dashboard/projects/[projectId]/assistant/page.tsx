@@ -886,7 +886,7 @@ function AssistantGeneratingBubble({ phase }: { phase: number }) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-dashed border-primary/20 bg-muted/25 mr-auto max-w-md rounded-tl-none",
+        "rounded-2xl border border-dashed border-primary/20 bg-muted/25 mr-auto max-w-md rounded-tl-md",
         "px-3 py-2.5 text-sm shadow-sm animate-in fade-in duration-200",
       )}
       role="status"
@@ -1098,10 +1098,10 @@ function AssistantChat({
                 <div
                   key={m.id}
                   className={cn(
-                    "rounded-lg border px-3 py-2 text-sm",
+                    "rounded-2xl border px-3 py-2 text-sm",
                     m.role === "user"
-                      ? "border-primary/25 bg-primary/5 ml-auto max-w-md rounded-tr-none"
-                      : "border-border bg-muted/30 mr-auto max-w-2xl rounded-tl-none",
+                      ? "border-primary/25 bg-primary/5 ml-auto max-w-md rounded-br-md"
+                      : "border-border bg-muted/30 mr-auto max-w-2xl rounded-tl-md",
                   )}
                 >
                   <div className="flex items-center gap-2 mb-1.5 min-w-0">
