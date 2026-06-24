@@ -13,6 +13,9 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
+    "mcp:build": "npm run build --prefix packages/trackezz-mcp",
+    "mcp:publish": "npm publish --access public --prefix packages/trackezz-mcp",
+    "prepublishOnly": "node -e \"console.error('\\nPublish the MCP package only: npm run mcp:publish\\n'); process.exit(1)\"",
     "postinstall": "prisma generate"
   },
   "prisma": {

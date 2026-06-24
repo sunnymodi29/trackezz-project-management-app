@@ -28,7 +28,7 @@ const triageSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(req);
     await withRateLimit(user.id!, "ai-triage");
     const { success } = await rateLimit(`${user.id}:ai-triage`, {
       requests: 30,

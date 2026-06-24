@@ -41,7 +41,7 @@ function buildCommentThreadText(
 
 export async function POST(req: Request) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(req);
     await withRateLimit(user.id!, "ai-issue-comments");
     const { success } = await rateLimit(`${user.id}:ai-issue-comments`, {
       requests: 35,

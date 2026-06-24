@@ -29,6 +29,7 @@
 /public/uploads
 
 # misc
+.cursor/mcp.json
 .DS_Store
 *.pem
 

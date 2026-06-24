@@ -4,7 +4,7 @@ import { handleApiError, jsonOk } from "@/lib/api/response";
 
 export async function GET(request: Request) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(request);
     await withRateLimit(user.id!, "projects");
 
     const { searchParams } = new URL(request.url);

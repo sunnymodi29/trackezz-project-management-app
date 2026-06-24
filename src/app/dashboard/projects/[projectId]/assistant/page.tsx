@@ -758,7 +758,7 @@ function ProjectAssistantContent() {
                       </button>
                     </Tooltip>
                     <Tooltip
-                      content="Rename Chat"
+                      content="Rename"
                       side="top"
                       className="shrink-0"
                     >
@@ -776,7 +776,7 @@ function ProjectAssistantContent() {
                       </button>
                     </Tooltip>
                     <Tooltip
-                      content="Delete Chat"
+                      content="Delete"
                       side="top"
                       className="shrink-0"
                     >

@@ -25,7 +25,7 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(_request);
     const { projectId: projectKey } = await params;
     const data = await getBootstrapData();
     if (!data.organization) {
@@ -50,7 +50,7 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(request);
     const { projectId: projectKey } = await params;
     const data = await getBootstrapData();
     if (!data.organization) {

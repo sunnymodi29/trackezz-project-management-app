@@ -17,7 +17,7 @@ export async function GET(
   { params }: { params: Promise<{ issueId: string }> }
 ) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(_request);
     const { issueId } = await params;
     await withRateLimit(user.id!, `issue:${issueId}`);
 
@@ -42,7 +42,7 @@ export async function PATCH(
   { params }: { params: Promise<{ issueId: string }> }
 ) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(request);
     const { issueId } = await params;
     await withRateLimit(user.id!, `issue:patch:${issueId}`);
 

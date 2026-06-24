@@ -31,7 +31,7 @@ const PLACEHOLDER_CHAT_TITLES = new Set(["New chat", "Project assistant"]);
 
 export async function POST(req: Request) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(req);
     await withRateLimit(user.id!, "ai-project-chat");
     const { success } = await rateLimit(`${user.id}:ai-project-chat`, {
       requests: 40,

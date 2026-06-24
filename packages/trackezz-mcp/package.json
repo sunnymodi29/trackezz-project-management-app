@@ -1,0 +1,48 @@
+{
+  "name": "@trackezz/mcp",
+  "version": "0.1.0",
+  "description": "TrackEzz MCP server — HTTP + PAT integration for Cursor and Claude Desktop",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://www.npmjs.com/package/@trackezz/mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sunnymodi29/trackezz-project-management-app.git",
+    "directory": "packages/trackezz-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/sunnymodi29/trackezz-project-management-app/issues"
+  },
+  "keywords": [
+    "mcp",
+    "trackezz",
+    "cursor",
+    "model-context-protocol",
+    "issue-tracking"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "trackezz-mcp": "dist/index.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.22.3",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

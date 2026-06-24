@@ -95,7 +95,13 @@ Open [http://localhost:3000](http://localhost:3000) and sign in:
 
 ## REST API (v1)
 
-All routes require an authenticated session (cookie) or sign in via `/api/auth`.
+Routes accept either a **browser session cookie** (after sign-in) or a **Personal Access Token**:
+
+```bash
+Authorization: Bearer tezz_pat_...
+```
+
+Create tokens in the app: **Settings → API & MCP**.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -105,12 +111,70 @@ All routes require an authenticated session (cookie) or sign in via `/api/auth`.
 | `POST` | `/api/v1/projects/:id/issues` | Create issue |
 | `GET` | `/api/v1/issues/:id` | Get issue |
 | `PATCH` | `/api/v1/issues/:id` | Update issue |
+| `GET` | `/api/v1/tokens` | List your PATs (session only) |
+| `POST` | `/api/v1/tokens` | Create PAT (session only) |
+| `DELETE` | `/api/v1/tokens/:id` | Revoke PAT (session only) |
 
-Example (after signing in in the browser, use session cookie):
+AI routes (`/api/ai/*`) also accept PAT auth for triage, similar issues, and comment tools.
+
+Example:
 
 ```bash
-curl http://localhost:3000/api/v1/bootstrap -H "Cookie: ..."
+curl http://localhost:3000/api/v1/bootstrap \
+  -H "Authorization: Bearer tezz_pat_..."
 ```
+
+## MCP (Cursor / Claude Desktop)
+
+TrackEzz ships an MCP server that calls the HTTP API using a PAT.
+
+### Commands to run (once)
+
+From the **repo root**:
+
+```bash
+npm run db:migrate
+npx prisma generate
+```
+
+From **`packages/trackezz-mcp`**:
+
+```bash
+npm install
+npm run build
+```
+
+Or from root after installing MCP deps: `npm run mcp:build`
+
+### Publish to npm
+
+The root app is `"private": true` and must **not** be published. Publish only the MCP package (after creating the **`trackezz`** org on [npmjs.com/org/create](https://www.npmjs.com/org/create)):
+
+```bash
+npm run mcp:publish
+```
+
+### Cursor config
+
+Create a token in **Settings → API & MCP**, then add to `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "trackezz": {
+      "command": "node",
+      "args": ["C:/path/to/taskforge-ai/packages/trackezz-mcp/dist/index.js"],
+      "env": {
+        "TRACKEZZ_API_URL": "https://trackezz-webapp.vercel.app/",
+        "TRACKEZZ_API_TOKEN": "tezz_pat_your_token_here"
+      }
+    }
+  }
+}
+```
+
+See [packages/trackezz-mcp/README.md](packages/trackezz-mcp/README.md) for the full tool list.
+
 
 ## Project structure
 
@@ -144,6 +208,7 @@ If the console shows a hydration mismatch and the diff lists attributes like **`
 - Database sessions (Auth.js + Prisma adapter)
 - RBAC on server actions and API routes
 - Upstash rate limiting on `/api/v1/*` (when Redis is configured)
+- Personal access tokens (SHA-256 hashed) for API & MCP integrations
 - Zod validation on API inputs
 
 ## Deployment (Vercel + Neon)

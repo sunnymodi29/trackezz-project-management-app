@@ -6,7 +6,7 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
-    const user = await requireApiUser();
+    const user = await requireApiUser(req);
     await withRateLimit(user.id!, "ai-similar-issues");
     const { success } = await rateLimit(`${user.id}:ai-similar-issues`, {
       requests: 45,

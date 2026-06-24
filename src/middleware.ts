@@ -11,7 +11,14 @@ export default auth((req) => {
   const isProtected =
     pathname.startsWith("/dashboard") || pathname.startsWith("/api/v1");
 
+  const hasBearerPat =
+    req.headers.get("authorization")?.toLowerCase().startsWith("bearer tezz_pat_") ??
+    false;
+
   if (isProtected && !isLoggedIn) {
+    if (pathname.startsWith("/api/") && hasBearerPat) {
+      return;
+    }
     if (pathname.startsWith("/api/")) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
