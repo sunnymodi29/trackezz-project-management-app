@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
 import {
   Zap,
   ArrowRight,
@@ -19,8 +18,6 @@ import {
   ChevronDown,
   Menu,
   X,
-  Sun,
-  Moon,
   Layers,
   Inbox,
   LayoutDashboard,
@@ -31,6 +28,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Button, Skeleton } from "@/components/ui";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { useRouter } from "next/navigation";
@@ -276,32 +274,6 @@ function Logo({ size = "md" }: { size?: "sm" | "md" }) {
         Track<span className="text-primary">Ezz</span>
       </span>
     </Link>
-  );
-}
-
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) {
-    return <div className="h-8 w-8 rounded-md border border-border" />;
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-      aria-label="Toggle theme"
-    >
-      {theme === "dark" ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
-    </button>
   );
 }
 
@@ -622,7 +594,7 @@ export function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle />
+            <ThemeToggle size="sm" />
             {isLoading ? (
               <NavAuthSkeleton />
             ) : isSignedIn ? (

@@ -1,14 +1,13 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { useAppStore } from "@/store/app-store";
 import { useDataStore } from "@/store/data-store";
 import { Avatar, Tooltip } from "@/components/ui";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "next-themes";
 import {
   Bell,
   Bot,
-  Sun,
-  Moon,
   Plus,
   Search,
   Menu,
@@ -28,9 +27,8 @@ import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-nav
 import { markNotificationRead } from "@/lib/actions/notifications";
 
 export function Topbar() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [keyboardShortcut, setKeyboardShortcut] = useState<string>("Ctrl + K");
+  const { theme } = useTheme();
 
   const getKeyboardShortcut = () => {
     if ((navigator as any).userAgentData) {
@@ -48,9 +46,6 @@ export function Topbar() {
     setKeyboardShortcut(getKeyboardShortcut());
   }, [keyboardShortcut]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
   const { toggleSidebar, openCommandPalette, openNewIssue, currentProject } =
     useAppStore();
   const {
@@ -150,25 +145,10 @@ export function Topbar() {
           </button>
         </Tooltip>
 
-        <Tooltip
-          content={theme === "dark" ? "Light mode" : "Dark mode"}
-          side="bottom"
-        >
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="rounded-md p-1.5 hover:bg-accent transition-colors text-muted-foreground"
-            aria-label="Toggle theme"
-          >
-            {mounted ? (
-              theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )
-            ) : (
-              <div className="h-4 w-4" />
-            )}
-          </button>
+        <Tooltip content={theme === "dark" ? "Light mode" : "Dark mode"} side="bottom">
+          <span className="inline-flex">
+            <ThemeToggle size="sm" className="border-0 bg-transparent hover:bg-accent" />
+          </span>
         </Tooltip>
 
         {/* Notifications */}
