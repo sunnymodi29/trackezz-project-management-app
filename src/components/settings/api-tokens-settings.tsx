@@ -33,7 +33,20 @@ import {
   type ApiTokenListItem,
 } from "@/lib/actions/api-tokens";
 
-const MCP_PACKAGE = "@trackezz/mcp@0.1.0";
+const MCP_PACKAGE = "@trackezz/mcp@0.1.1";
+
+const TEZZ_SLASH_COMMANDS = [
+  "tezz-projects",
+  "tezz-workspace",
+  "tezz-issues",
+  "tezz-issue",
+  "tezz-create-issue",
+  "tezz-update-issue",
+  "tezz-triage",
+  "tezz-similar-issues",
+  "tezz-summarize-comments",
+  "tezz-draft-reply",
+] as const;
 
 const MCP_CLIENTS = [
   {
@@ -627,6 +640,31 @@ function McpSetupPanel({
           {mcpConfigJson}
         </pre>
       </div>
+
+      {clientId === "cursor" && (
+        <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3 text-xs">
+          <div>
+            <p className="font-medium text-foreground">Cursor slash commands</p>
+            <p className="mt-1 text-muted-foreground leading-relaxed">
+              After you save <code className="text-[10px]">mcp.json</code> and
+              restart Cursor, TrackEzz MCP prompts appear when you type{" "}
+              <code className="text-[10px]">/</code> in Agent chat — in any repo
+              (global or project MCP config). No extra install step.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {TEZZ_SLASH_COMMANDS.map((command) => (
+              <code
+                key={command}
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground"
+              >
+                /{command}
+              </code>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -703,7 +741,7 @@ function EditTokenModal({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              PAT name
+              PAT Name
             </label>
             <Input
               value={name}
@@ -750,8 +788,12 @@ function ActiveTokensTableSkeleton() {
         <tr className="border-b border-border text-left text-xs text-muted-foreground">
           <th className="px-5 py-3 font-medium">Name</th>
           <th className="px-3 py-3 font-medium">PAT</th>
-          <th className="px-3 py-3 font-medium hidden sm:table-cell">Expires</th>
-          <th className="px-3 py-3 font-medium hidden md:table-cell">Created</th>
+          <th className="px-3 py-3 font-medium hidden sm:table-cell">
+            Expires
+          </th>
+          <th className="px-3 py-3 font-medium hidden md:table-cell">
+            Created
+          </th>
           <th className="px-3 py-3 font-medium hidden lg:table-cell">Used</th>
           <th className="px-5 py-3 font-medium text-right">Actions</th>
         </tr>

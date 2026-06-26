@@ -1,6 +1,6 @@
 {
   "name": "@trackezz/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TrackEzz MCP server — HTTP + PAT integration for Cursor and Claude Desktop",
   "type": "module",
   "license": "MIT",
@@ -24,9 +24,10 @@
     "access": "public"
   },
   "bin": {
-    "trackezz-mcp": "dist/index.js"
+    "trackezz-mcp": "dist/index.js",
+    "trackezz-install-cursor-commands": "dist/install-commands.js"
   },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "cursor-commands", "README.md"],
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",

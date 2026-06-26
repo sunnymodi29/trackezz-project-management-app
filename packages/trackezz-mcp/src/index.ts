@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { TrackEzzClient, jsonText } from "./client.js";
+import { registerTrackEzzPrompts } from "./prompts.js";
 
 const issueTypeSchema = z.enum([
   "task",
@@ -66,7 +67,7 @@ const draftReplySchema = z.object({
 export function createTrackEzzMcpServer(client: TrackEzzClient) {
   const server = new McpServer({
     name: "trackezz",
-    version: "0.1.0",
+    version: "0.1.1",
   });
 
   server.registerTool(
@@ -259,6 +260,8 @@ export function createTrackEzzMcpServer(client: TrackEzzClient) {
       ],
     }),
   );
+
+  registerTrackEzzPrompts(server);
 
   return server;
 }
