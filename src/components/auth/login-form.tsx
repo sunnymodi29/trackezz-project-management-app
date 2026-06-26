@@ -4,11 +4,18 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Zap, Mail, Lock, Loader2 } from "lucide-react";
-import { Button, Input } from "@/components/ui";
+import { Lock, Mail, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui";
 import { navigateAfterAuth } from "@/lib/auth/auth-navigation-client";
+import {
+  AuthDivider,
+  AuthShell,
+  AuthTrustLine,
+} from "@/components/auth/auth-shell";
+import { AuthField } from "@/components/auth/auth-field";
+import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 
-export function LoginForm() {
+export function LoginForm({ googleAuthEnabled = false }: { googleAuthEnabled?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
@@ -31,7 +38,7 @@ export function LoginForm() {
 
     if (result?.error) {
       setLoading(false);
-      setError("Invalid email or password.");
+      setError("Invalid email or password. Please try again.");
       return;
     }
 
@@ -39,65 +46,71 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8 animate-fade-in">
-        <div className="text-center">
-          <div className="inline-flex h-12 w-12 rounded-xl bg-primary items-center justify-center mb-4">
-            <Zap className="h-6 w-6 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold">Welcome back</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Sign in to your TrackEzz workspace.
+    <AuthShell
+      footer={
+        <p className="text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/register"
+            className="font-medium text-primary hover:underline"
+          >
+            Create account
+          </Link>
+        </p>
+      }
+    >
+      <div className="space-y-6">
+        <div className="space-y-2 text-center lg:text-left">
+          <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+          <p className="text-sm text-muted-foreground">
+            Sign in to your TrackEzz workspace to continue.
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-xl border border-border bg-card p-6 shadow-lg space-y-4"
-        >
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="john.doe@example.com"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-9"
-                required
-                autoComplete="email"
-              />
-            </div>
+        {googleAuthEnabled ? (
+          <div className="space-y-4">
+            <GoogleOAuthButton callbackUrl={callbackUrl} />
+            <AuthDivider />
           </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Enter your password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-9"
-                required
-                autoComplete="current-password"
-              />
-            </div>
-          </div>
-          {error && (
-            <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">
+        ) : null}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <AuthField
+            id="login-email"
+            label="Email"
+            icon={Mail}
+            placeholder="you@example.com"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
+          <AuthField
+            id="login-password"
+            label="Password"
+            icon={Lock}
+            placeholder="Enter your password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+          />
+
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            >
               {error}
             </p>
-          )}
-          <Button type="submit" className="w-full" disabled={loading}>
+          ) : null}
+
+          <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Signing in…
               </>
             ) : (
@@ -106,13 +119,8 @@ export function LoginForm() {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline font-medium">
-            Create account
-          </Link>
-        </p>
+        <AuthTrustLine />
       </div>
-    </div>
+    </AuthShell>
   );
 }

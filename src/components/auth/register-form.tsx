@@ -4,12 +4,32 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Zap, Mail, Lock, User, Loader2 } from "lucide-react";
-import { Button, Input } from "@/components/ui";
+import { Lock, Mail, User, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui";
 import { registerUser } from "@/lib/actions/auth";
 import { navigateAfterAuth } from "@/lib/auth/auth-navigation-client";
+import {
+  AuthDivider,
+  AuthShell,
+  AuthTrustLine,
+} from "@/components/auth/auth-shell";
+import { AuthField } from "@/components/auth/auth-field";
+import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
+import {
+  PasswordMatchHint,
+  PasswordRequirements,
+} from "@/components/auth/password-requirements";
+import {
+  getPasswordValidationError,
+  isPasswordValid,
+  passwordsMatch,
+} from "@/lib/auth/password-policy";
 
-export function RegisterForm() {
+export function RegisterForm({
+  googleAuthEnabled = false,
+}: {
+  googleAuthEnabled?: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite");
@@ -17,11 +37,34 @@ export function RegisterForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const passwordValid = isPasswordValid(password);
+  const confirmValid = passwordsMatch(password, confirmPassword);
+  const canSubmit = passwordValid && confirmValid && !loading;
+
+  const loginHref = inviteToken
+    ? `/login?email=${encodeURIComponent(prefilledEmail || email)}&callbackUrl=${encodeURIComponent(`/invite/${inviteToken}/join`)}`
+    : "/login";
+
+  const postRegisterTarget = inviteToken
+    ? `/invite/${inviteToken}/join`
+    : "/dashboard";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const passwordError = getPasswordValidationError(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+    if (!passwordsMatch(password, confirmPassword)) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -50,93 +93,117 @@ export function RegisterForm() {
       return;
     }
 
-    const target = inviteToken ? `/invite/${inviteToken}/join` : "/dashboard";
-    navigateAfterAuth(router, target);
+    navigateAfterAuth(router, postRegisterTarget);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8 animate-fade-in">
-        <div className="text-center">
-          <div className="inline-flex h-12 w-12 rounded-xl bg-primary flex items-center justify-center mb-4">
-            <Zap className="h-6 w-6 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold">
-            {inviteToken
-              ? "Create your account to join"
-              : "Create your account"}
+    <AuthShell
+      footer={
+        <p className="text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link href={loginHref} className="font-medium text-primary hover:underline">
+            Sign in
+          </Link>
+        </p>
+      }
+    >
+      <div className="space-y-6">
+        <div className="space-y-2 text-center lg:text-left">
+          <h1 className="text-2xl font-bold tracking-tight">
+            {inviteToken ? "Join your team" : "Create your account"}
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
+          <p className="text-sm text-muted-foreground">
             {inviteToken
-              ? "You’ll be added to the project right after signup"
-              : "Join TrackEzz and start shipping faster."}
+              ? "Create an account to accept the project invite and get started."
+              : "Start free — plan sprints, track issues, and use AI in one place."}
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-xl border border-border bg-card p-6 shadow-lg space-y-4"
-        >
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Name
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="pl-9"
-                required
-                minLength={2}
-              />
-            </div>
+        {googleAuthEnabled && !inviteToken ? (
+          <div className="space-y-4">
+            <GoogleOAuthButton
+              callbackUrl="/dashboard"
+              label="Sign up with Google"
+            />
+            <AuthDivider label="or sign up with email" />
           </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="john.doe@example.com"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-9"
-                required
-                readOnly={!!inviteToken && !!prefilledEmail}
-                disabled={!!inviteToken && !!prefilledEmail}
-              />
-            </div>
+        ) : null}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <AuthField
+            id="register-name"
+            label="Full name"
+            icon={User}
+            placeholder="Jane Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            minLength={2}
+            autoComplete="name"
+          />
+          <AuthField
+            id="register-email"
+            label="Email"
+            icon={Mail}
+            placeholder="you@example.com"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            readOnly={!!inviteToken && !!prefilledEmail}
+            disabled={!!inviteToken && !!prefilledEmail}
+            autoComplete="email"
+          />
+          <AuthField
+            id="register-password"
+            label="Password"
+            icon={Lock}
+            placeholder="Create a strong password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            maxLength={128}
+            autoComplete="new-password"
+          />
+          <PasswordRequirements password={password} />
+          <div className="space-y-1.5">
+            <AuthField
+              id="register-confirm-password"
+              label="Confirm password"
+              icon={Lock}
+              placeholder="Re-enter your password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              maxLength={128}
+              autoComplete="new-password"
+            />
+            <PasswordMatchHint
+              password={password}
+              confirmPassword={confirmPassword}
+            />
           </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Enter your password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-9"
-                required
-                minLength={8}
-              />
-            </div>
-          </div>
-          {error && (
-            <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">
+
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            >
               {error}
             </p>
-          )}
-          <Button type="submit" className="w-full" disabled={loading}>
+          ) : null}
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={!canSubmit}
+          >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Creating account…
               </>
             ) : inviteToken ? (
@@ -147,20 +214,13 @@ export function RegisterForm() {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link
-            href={
-              inviteToken
-                ? `/login?email=${encodeURIComponent(prefilledEmail || email)}&callbackUrl=${encodeURIComponent(`/invite/${inviteToken}/join`)}`
-                : "/login"
-            }
-            className="text-primary hover:underline font-medium"
-          >
-            Sign in
-          </Link>
+        <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+          By creating an account, you agree to use TrackEzz in accordance with
+          your organization&apos;s policies.
         </p>
+
+        <AuthTrustLine />
       </div>
-    </div>
+    </AuthShell>
   );
 }

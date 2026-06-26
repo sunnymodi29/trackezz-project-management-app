@@ -4,10 +4,14 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Sign in" };
 
+function googleAuthEnabled() {
+  return !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+}
+
 export default function LoginPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background" />}>
-      <LoginForm />
+      <LoginForm googleAuthEnabled={googleAuthEnabled()} />
     </Suspense>
   );
 }

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import { isPasswordValid, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/auth/password-policy";
 import { provisionOrganizationForUser } from "@/lib/organizations/setup";
 import {
   clearWorkspaceCookies,
@@ -12,7 +13,13 @@ import { z } from "zod";
 const registerSchema = z.object({
   name: z.string().min(2).max(80),
   email: z.string().email(),
-  password: z.string().min(8).max(128),
+  password: z
+    .string()
+    .min(PASSWORD_MIN_LENGTH)
+    .max(PASSWORD_MAX_LENGTH)
+    .refine(isPasswordValid, {
+      message: "Password must meet all requirements.",
+    }),
   inviteToken: z.string().min(1).optional(),
 });
 
