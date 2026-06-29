@@ -215,8 +215,15 @@ export function RegisterForm({
         </form>
 
         <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-          By creating an account, you agree to use TrackEzz in accordance with
-          your organization&apos;s policies.
+          By creating an account, you agree to our{" "}
+          <Link href="/terms-of-service" className="text-primary hover:underline">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy-policy" className="text-primary hover:underline">
+            Privacy Policy
+          </Link>
+          .
         </p>
 
         <AuthTrustLine />
