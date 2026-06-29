@@ -31,7 +31,8 @@ import { Button, Skeleton } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
-import { useRouter } from "next/navigation";
+import { PricingSection } from "@/components/landing/pricing-section";
+import { MARKETING_FOOTER_LINKS } from "@/components/landing/marketing-footer-links";
 
 const DASHBOARD_HREF = "/dashboard";
 
@@ -218,18 +219,6 @@ const WORKFLOW_STEPS = [
   },
 ];
 
-const PRICING_FEATURES = [
-  "AI project assistant & chat history",
-  "Smart triage & similar-issue detection",
-  "Comment summaries & draft replies",
-  "Unlimited projects & issues",
-  "Kanban, backlog & sprints",
-  "Custom workflow statuses",
-  "Rich text & file attachments",
-  "Team invites & member roles",
-  "Dark & light themes",
-];
-
 const FAQ_ITEMS = [
   {
     q: "What can the AI assistant do?",
@@ -237,7 +226,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Is TrackEzz free to use?",
-    a: "Yes. TrackEzz is free to start while we’re in early access. Create an account, invite your team, and run your projects without a credit card.",
+    a: "Yes. The Free plan includes unlimited projects, up to 10 members, 50 AI messages per month, basic analytics, and 100 MB storage — with no time limit. A Pro plan for larger teams is coming soon.",
   },
   {
     q: "Can I use Google to sign in?",
@@ -564,7 +553,6 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 export function LandingPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isSignedIn, isLoading } = useIsSignedIn();
-  const router = useRouter();
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -967,85 +955,7 @@ export function LandingPage() {
         </section>
 
         {/* Pricing */}
-        <section
-          id="pricing"
-          className="scroll-mt-20 border-t border-border bg-muted/20 py-20 px-4"
-        >
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-12 text-center">
-              <h2 className="mb-3 text-3xl font-bold tracking-tight md:text-4xl">
-                Simple pricing, no surprises
-              </h2>
-              <p className="text-muted-foreground">
-                Start free during early access. Upgrade paths coming later.
-              </p>
-            </div>
-            <div className="mx-auto max-w-md">
-              <div className="rounded-2xl border-2 border-primary/40 bg-card p-8 shadow-xl shadow-primary/10">
-                <div className="mb-6">
-                  <p className="text-sm font-medium text-primary">
-                    Early access
-                  </p>
-                  <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-5xl font-extrabold">$0</span>
-                    <span className="text-muted-foreground">/ month</span>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    For individuals and teams getting started
-                  </p>
-                </div>
-                <ul className="mb-8 space-y-3">
-                  {PRICING_FEATURES.map((feature) => (
-                    <li
-                      key={feature}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <Check className="h-4 w-4 shrink-0 text-primary" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                {isLoading ? (
-                  <CtaButtonSkeleton className="h-11" />
-                ) : isSignedIn ? (
-                  <DashboardLink className="block">
-                    <Button size="lg" className="w-full">
-                      Go to Dashboard
-                    </Button>
-                  </DashboardLink>
-                ) : (
-                  <Link href="/register" className="block">
-                    <Button size="lg" className="w-full">
-                      Create free account
-                    </Button>
-                  </Link>
-                )}
-                {isLoading ? (
-                  <CtaSubtextSkeleton />
-                ) : (
-                  <p className="mt-4 text-center text-xs text-muted-foreground">
-                    {isSignedIn ? (
-                      <>
-                        You&apos;re on the early access plan — all features
-                        included.
-                      </>
-                    ) : (
-                      <>
-                        Already have an account?{" "}
-                        <Link
-                          href="/login"
-                          className="text-primary hover:underline"
-                        >
-                          Sign in
-                        </Link>
-                      </>
-                    )}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
+        <PricingSection />
 
         {/* FAQ */}
         <section id="faq" className="scroll-mt-20 py-20 px-4">
@@ -1108,29 +1018,20 @@ export function LandingPage() {
       <footer className="border-t border-border px-4 py-8">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 md:flex-row">
           <Logo size="sm" />
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-            <button
-              type="button"
-              onClick={() => router.push("/privacy-policy")}
-              className="hover:text-foreground transition-colors"
-            >
-              Privacy Policy
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/terms-of-service")}
-              className="hover:text-foreground transition-colors"
-            >
-              Terms of Service
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/contact-us")}
-              className="hover:text-foreground transition-colors"
-            >
-              Contact Us
-            </button>
-          </div>
+          <nav
+            className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground"
+            aria-label="Legal and support"
+          >
+            {MARKETING_FOOTER_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} TrackEzz
           </p>
