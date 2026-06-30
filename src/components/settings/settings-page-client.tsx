@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { User, Building2, Key, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDataStore } from "@/store/data-store";
@@ -10,12 +10,12 @@ import { OrganizationSettings } from "@/components/settings/organization-setting
 import { ApiTokensSettings } from "@/components/settings/api-tokens-settings";
 import { BillingSettings } from "@/components/settings/billing-settings";
 
-type SettingsTab = "profile" | "organization" | "api" | "billing";
+type SettingsTab = "profile" | "organization" | "pat" | "billing";
 
 const VALID_TABS = new Set<SettingsTab>([
   "profile",
   "organization",
-  "api",
+  "pat",
   "billing",
 ]);
 
@@ -28,8 +28,9 @@ export function SettingsPageClient() {
 }
 
 function SettingsPageClientInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const { permissions } = useDataStore();
+  const { permissions, hydrated } = useDataStore();
   const canManageOrg = permissions.isOrgOwner;
   const tabParam = searchParams.get("tab");
   const initialTab =
@@ -39,16 +40,38 @@ function SettingsPageClientInner() {
   const [tab, setTab] = useState<SettingsTab>(initialTab);
 
   useEffect(() => {
-    if (tabParam && VALID_TABS.has(tabParam as SettingsTab)) {
-      setTab(tabParam as SettingsTab);
+    if (!hydrated) return;
+    if (!tabParam || !VALID_TABS.has(tabParam as SettingsTab)) return;
+
+    const requestedTab = tabParam as SettingsTab;
+    if (
+      !canManageOrg &&
+      (requestedTab === "organization" || requestedTab === "billing")
+    ) {
+      setTab("profile");
+      return;
     }
-  }, [tabParam]);
+
+    setTab(requestedTab);
+  }, [canManageOrg, hydrated, tabParam]);
 
   useEffect(() => {
+    if (!hydrated) return;
     if (!canManageOrg && (tab === "organization" || tab === "billing")) {
       setTab("profile");
+      router.replace("/dashboard/settings");
     }
-  }, [canManageOrg, tab]);
+  }, [canManageOrg, hydrated, router, tab]);
+
+  const selectTab = (nextTab: SettingsTab) => {
+    setTab(nextTab);
+
+    const href =
+      nextTab === "profile"
+        ? "/dashboard/settings"
+        : `/dashboard/settings?tab=${nextTab}`;
+    router.replace(href);
+  };
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-8">
@@ -65,27 +88,27 @@ function SettingsPageClientInner() {
         <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border border-border w-fit flex-wrap">
           <TabButton
             active={tab === "profile"}
-            onClick={() => setTab("profile")}
+            onClick={() => selectTab("profile")}
             icon={<User className="h-4 w-4" />}
             label="Profile"
           />
           <TabButton
-            active={tab === "api"}
-            onClick={() => setTab("api")}
+            active={tab === "pat"}
+            onClick={() => selectTab("pat")}
             icon={<Key className="h-4 w-4" />}
-            label="PAT & MCP"
+            label="PAT & pat"
           />
           {canManageOrg && (
             <>
               <TabButton
                 active={tab === "billing"}
-                onClick={() => setTab("billing")}
+                onClick={() => selectTab("billing")}
                 icon={<CreditCard className="h-4 w-4" />}
                 label="Billing"
               />
               <TabButton
                 active={tab === "organization"}
-                onClick={() => setTab("organization")}
+                onClick={() => selectTab("organization")}
                 icon={<Building2 className="h-4 w-4" />}
                 label="Organization"
               />
@@ -95,7 +118,7 @@ function SettingsPageClientInner() {
       </div>
 
       <div key={tab} className="relative isolate overflow-hidden">
-        {tab === "api" ? (
+        {tab === "pat" ? (
           <ApiTokensSettings />
         ) : tab === "billing" && canManageOrg ? (
           <BillingSettings />
