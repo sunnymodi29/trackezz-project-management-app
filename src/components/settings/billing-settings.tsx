@@ -81,9 +81,16 @@ export function BillingSettings() {
 
       void confirmProCheckout(transactionId!)
         .then((updated) => {
-          window.sessionStorage.removeItem("paddle_checkout_txn");
+          if (!updated.checkoutPending) {
+            window.sessionStorage.removeItem("paddle_checkout_txn");
+          }
           patchBilling(updated);
-          setNotice("Pro subscription is active.");
+          setNotice(
+            updated.checkoutPending
+              ? (updated.checkoutMessage ??
+                  "Payment is still processing. Refresh subscription status in a moment.")
+              : "Pro subscription is active.",
+          );
           router.replace("/dashboard/settings?tab=billing");
           router.refresh();
         })
@@ -139,15 +146,24 @@ export function BillingSettings() {
         await openPaddleOverlayCheckout(session.transactionId, async (txnId) => {
           setLoading("sync");
           const updated = await confirmProCheckout(txnId);
+          if (!updated.checkoutPending) {
+            window.sessionStorage.removeItem("paddle_checkout_txn");
+          }
           patchBilling(updated);
-          setNotice("Pro subscription is active.");
+          setNotice(
+            updated.checkoutPending
+              ? (updated.checkoutMessage ??
+                  "Payment is still processing. Refresh subscription status in a moment.")
+              : "Pro subscription is active.",
+          );
           router.refresh();
         });
         return;
       }
 
       window.sessionStorage.setItem("paddle_checkout_txn", session.transactionId);
-      window.location.href = session.url!;
+      window.location.assign(session.url!);
+      return;
     } catch (e) {
       const message = e instanceof Error ? e.message : "Checkout failed";
       if (message !== "Checkout canceled") {
@@ -268,6 +284,7 @@ export function BillingSettings() {
 
             {isPro && (
               <Button
+                type="button"
                 variant="outline"
                 onClick={openPortal}
                 disabled={loading !== null}
@@ -344,6 +361,7 @@ export function BillingSettings() {
 
                   <div className="flex flex-col gap-2 lg:items-end lg:min-w-[220px]">
                     <Button
+                      type="button"
                       size="lg"
                       onClick={startCheckout}
                       disabled={loading !== null}

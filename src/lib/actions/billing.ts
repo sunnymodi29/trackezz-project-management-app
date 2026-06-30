@@ -53,6 +53,23 @@ export type BillingStatus = BillingSnapshot & {
   canManageBilling: boolean;
 };
 
+export type ConfirmProCheckoutResult = BillingStatus & {
+  checkoutPending?: boolean;
+  checkoutMessage?: string;
+};
+
+async function pendingCheckoutSnapshot(
+  organizationId: string,
+  message: string,
+): Promise<ConfirmProCheckoutResult> {
+  const snapshot = await getOrgBillingSnapshot(organizationId);
+  return {
+    ...toBillingSnapshot(snapshot, true),
+    checkoutPending: true,
+    checkoutMessage: message,
+  };
+}
+
 function toBillingSnapshot(
   snapshot: Awaited<ReturnType<typeof getOrgBillingSnapshot>>,
   canManageBilling: boolean,
@@ -277,7 +294,7 @@ export async function createBillingPortalSession(): Promise<{ url: string }> {
 /** Sync Pro subscription after Paddle checkout redirect. */
 export async function confirmProCheckout(
   transactionId: string,
-): Promise<BillingSnapshot> {
+): Promise<ConfirmProCheckoutResult> {
   const { session, org } = await requireOrgOwnerBillingContext();
   const paddle = getPaddle();
 
@@ -293,18 +310,35 @@ export async function confirmProCheckout(
   }
 
   const completedStatuses = new Set(["completed", "paid", "billed"]);
-  if (!completedStatuses.has(transaction.status)) {
-    throw new Error("Checkout is not complete yet. Refresh in a moment.");
-  }
-
   const subscriptionId = transaction.subscriptionId;
-  if (!subscriptionId) {
-    throw new Error("No subscription found on checkout transaction");
+  if (!completedStatuses.has(transaction.status) && !subscriptionId) {
+    return pendingCheckoutSnapshot(
+      organizationId,
+      "Payment is still processing. Refresh subscription status in a moment.",
+    );
   }
 
-  await syncPaddleSubscriptionById(subscriptionId, organizationId, (id) =>
-    paddle.subscriptions.get(id),
-  );
+  if (!subscriptionId) {
+    return pendingCheckoutSnapshot(
+      organizationId,
+      "Payment was received, but Paddle has not attached a subscription yet. Refresh subscription status in a moment.",
+    );
+  }
+
+  try {
+    await syncPaddleSubscriptionById(subscriptionId, organizationId, (id) =>
+      paddle.subscriptions.get(id),
+    );
+  } catch (error) {
+    console.warn(
+      "[billing] Paddle checkout subscription sync is pending.",
+      error,
+    );
+    return pendingCheckoutSnapshot(
+      organizationId,
+      "Payment was received, but subscription details are still syncing from Paddle. Refresh subscription status in a moment.",
+    );
+  }
 
   await invalidateBootstrapForOrganization(organizationId);
   await invalidateBootstrapForUser(session.user.id!, org.slug);
