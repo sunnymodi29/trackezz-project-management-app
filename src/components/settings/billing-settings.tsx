@@ -74,6 +74,50 @@ export function BillingSettings() {
       !checkoutSyncedRef.current &&
       checkout === "success";
 
+    const shouldOpenCheckout =
+      Boolean(transactionId) &&
+      !checkoutSyncedRef.current &&
+      checkout === "open";
+
+    const handleCheckoutResult = (updated: Awaited<ReturnType<typeof confirmProCheckout>>) => {
+      if (!updated.checkoutPending) {
+        window.sessionStorage.removeItem("paddle_checkout_txn");
+      }
+      patchBilling(updated);
+      setNotice(
+        updated.checkoutPending
+          ? (updated.checkoutMessage ??
+              "Payment is still processing. Refresh subscription status in a moment.")
+          : "Pro subscription is active.",
+      );
+    };
+
+    if (shouldOpenCheckout) {
+      checkoutSyncedRef.current = true;
+      window.sessionStorage.setItem("paddle_checkout_txn", transactionId!);
+      setLoading("checkout");
+      setError(null);
+
+      void openPaddleOverlayCheckout(transactionId!, async (txnId) => {
+        setLoading("sync");
+        const updated = await confirmProCheckout(txnId);
+        handleCheckoutResult(updated);
+        router.replace("/dashboard/settings?tab=billing");
+        router.refresh();
+      })
+        .catch((e) => {
+          const message = e instanceof Error ? e.message : "Checkout failed";
+          if (message !== "Checkout canceled") {
+            setError(message);
+          }
+          checkoutSyncedRef.current = false;
+        })
+        .finally(() => {
+          setLoading(null);
+        });
+      return;
+    }
+
     if (shouldSyncCheckout) {
       checkoutSyncedRef.current = true;
       setLoading("sync");
@@ -81,16 +125,7 @@ export function BillingSettings() {
 
       void confirmProCheckout(transactionId!)
         .then((updated) => {
-          if (!updated.checkoutPending) {
-            window.sessionStorage.removeItem("paddle_checkout_txn");
-          }
-          patchBilling(updated);
-          setNotice(
-            updated.checkoutPending
-              ? (updated.checkoutMessage ??
-                  "Payment is still processing. Refresh subscription status in a moment.")
-              : "Pro subscription is active.",
-          );
+          handleCheckoutResult(updated);
           router.replace("/dashboard/settings?tab=billing");
           router.refresh();
         })

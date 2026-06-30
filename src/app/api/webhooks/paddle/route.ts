@@ -15,6 +15,7 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   const signature = req.headers.get("paddle-signature");
   if (!signature) {
+    console.warn("[paddle webhook] Rejected request with missing paddle-signature header");
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
@@ -29,7 +30,10 @@ export async function POST(req: Request) {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid signature";
-    return NextResponse.json({ error: message }, { status: 400 });
+    console.warn("[paddle webhook] Rejected request during signature verification", {
+      message,
+    });
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   let organizationId: string | null = null;

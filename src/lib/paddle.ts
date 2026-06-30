@@ -76,13 +76,13 @@ function isLocalhostUrl(url: string): boolean {
   }
 }
 
-/** Post-checkout redirect URL (domain must be approved in Paddle dashboard). */
-export function paddleCheckoutSuccessUrl(origin?: string): string {
+/** Payment link page that opens Paddle.js for a transaction. */
+export function paddleCheckoutOpenUrl(origin?: string): string {
   const base =
     process.env.PADDLE_CHECKOUT_RETURN_URL?.trim() ??
     origin ??
     appOrigin();
-  return `${base.replace(/\/$/, "")}/dashboard/settings?tab=billing&checkout=success`;
+  return `${base.replace(/\/$/, "")}/dashboard/settings?tab=billing&checkout=open`;
 }
 
 /**
@@ -97,7 +97,7 @@ export async function paddleCheckoutConfig(): Promise<
     return undefined;
   }
 
-  return { url: paddleCheckoutSuccessUrl(origin) };
+  return { url: paddleCheckoutOpenUrl(origin) };
 }
 
 export function paddleJsEnvironment(): "sandbox" | "production" {
