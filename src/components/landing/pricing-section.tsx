@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -15,15 +15,12 @@ import {
 } from "@/lib/billing/interval-toggle-styles";
 import { useIsDarkTheme } from "@/hooks/use-is-dark-theme";
 import {
+  DEFAULT_PRO_PLAN_PRICING,
   FREE_PLAN_FEATURES,
   PRO_PLAN_FEATURES,
-  PRO_PRICE_ANNUAL_MONTHLY_USD,
-  PRO_PRICE_ANNUAL_TOTAL_USD,
-  PRO_PRICE_MONTHLY_USD,
-  PRO_TRIAL_DAYS,
-  formatUsd,
-  proAnnualSavingsPercent,
 } from "@/lib/billing/plans";
+import type { ProPlanPricing } from "@/lib/billing/plans";
+import { getProPlanPricing } from "@/lib/actions/billing";
 
 const DASHBOARD_BILLING_HREF = "/dashboard/settings?tab=billing";
 
@@ -64,13 +61,33 @@ export function PricingSection({
   const { isSignedIn, isLoading } = useIsSignedIn();
   const beginRouteTransition = useAppStore((s) => s.beginRouteTransition);
   const [interval, setInterval] = useState<BillingInterval>("month");
-  const annualSavings = proAnnualSavingsPercent();
+  const [proPricing, setProPricing] = useState<ProPlanPricing>(
+    DEFAULT_PRO_PLAN_PRICING,
+  );
   const pathname = usePathname();
   const showComparisonTable = showComparison && pathname === "/pricing";
   const proCtaHref = isSignedIn ? DASHBOARD_BILLING_HREF : "/register";
+  const selectedTrialDays =
+    interval === "year"
+      ? proPricing.annualTrialDays
+      : proPricing.monthlyTrialDays;
   const proCtaLabel = isSignedIn
-    ? `Start ${PRO_TRIAL_DAYS}-day free trial`
+    ? `Start ${selectedTrialDays}-day free trial`
     : "Start free — upgrade in app";
+
+  useEffect(() => {
+    let cancelled = false;
+    void getProPlanPricing()
+      .then((pricing) => {
+        if (!cancelled) setProPricing(pricing);
+      })
+      .catch((e) => {
+        console.warn("[pricing] Could not load Paddle pricing.", e);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section
@@ -126,7 +143,7 @@ export function PricingSection({
           <PricingPlanCard highlighted>
             <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
               <Sparkles className="h-3 w-3" />
-              {PRO_TRIAL_DAYS}-day free trial
+              {selectedTrialDays}-day free trial
             </span>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-h-[2.25rem] justify-between">
@@ -134,19 +151,19 @@ export function PricingSection({
               <BillingIntervalToggle
                 interval={interval}
                 onChange={setInterval}
-                annualSavings={annualSavings}
+                annualSavings={proPricing.annualSavingsPercent}
               />
             </div>
 
             <PlanPrice
               amount={
                 interval === "month"
-                  ? formatUsd(PRO_PRICE_MONTHLY_USD)
-                  : formatUsd(PRO_PRICE_ANNUAL_MONTHLY_USD)
+                  ? proPricing.monthly.formatted
+                  : proPricing.annualMonthly.formatted
               }
               sub={
                 interval === "year"
-                  ? `${formatUsd(PRO_PRICE_ANNUAL_TOTAL_USD)} billed yearly`
+                  ? `${proPricing.annual.formatted} billed yearly`
                   : undefined
               }
             />
@@ -159,8 +176,8 @@ export function PricingSection({
             <PlanCtaFooter
               note={
                 interval === "year"
-                  ? `${formatUsd(PRO_PRICE_ANNUAL_TOTAL_USD)}/year after trial · Cancel anytime`
-                  : `${formatUsd(PRO_PRICE_MONTHLY_USD)}/month after trial · Cancel anytime`
+                  ? `${proPricing.annual.formatted}/year after trial · Cancel anytime`
+                  : `${proPricing.monthly.formatted}/month after trial · Cancel anytime`
               }
             >
               {isLoading ? (

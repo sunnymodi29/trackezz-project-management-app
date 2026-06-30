@@ -24,17 +24,14 @@ import {
   confirmProCheckout,
   createBillingPortalSession,
   createProCheckoutSession,
+  getProPlanPricing,
   refreshBillingFromPaddle,
 } from "@/lib/actions/billing";
 import {
+  DEFAULT_PRO_PLAN_PRICING,
   PRO_PLAN_FEATURES,
-  PRO_PRICE_ANNUAL_MONTHLY_USD,
-  PRO_PRICE_ANNUAL_TOTAL_USD,
-  PRO_PRICE_MONTHLY_USD,
-  PRO_TRIAL_DAYS,
-  formatUsd,
-  proAnnualSavingsPercent,
 } from "@/lib/billing/plans";
+import type { ProPlanPricing } from "@/lib/billing/plans";
 import { formatLimit, formatStorageBytes } from "@/lib/billing/format";
 import { openPaddleOverlayCheckout } from "@/lib/paddle-overlay";
 import {
@@ -58,7 +55,24 @@ export function BillingSettings() {
   );
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [proPricing, setProPricing] = useState<ProPlanPricing>(
+    DEFAULT_PRO_PLAN_PRICING,
+  );
   const checkoutSyncedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getProPlanPricing()
+      .then((pricing) => {
+        if (!cancelled) setProPricing(pricing);
+      })
+      .catch((e) => {
+        console.warn("[billing] Could not load Paddle pricing.", e);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const checkout = searchParams.get("checkout");
@@ -171,8 +185,11 @@ export function BillingSettings() {
   const { isPro, status, usage, limits } = billing;
   const planLabel = isPro ? "Pro" : "Free";
   const statusLabel = formatSubscriptionStatus(isPro, status);
-  const annualSavings = proAnnualSavingsPercent();
   const isDark = useIsDarkTheme();
+  const selectedTrialDays =
+    interval === "year"
+      ? proPricing.annualTrialDays
+      : proPricing.monthlyTrialDays;
 
   const startCheckout = async () => {
     setLoading("checkout");
@@ -360,7 +377,7 @@ export function BillingSettings() {
                   </div>
                   <p className="text-sm text-muted-foreground max-w-lg">
                     Unlock unlimited members and AI, full analytics, and 10 GB
-                    storage. Start with a {PRO_TRIAL_DAYS}-day free trial.
+                    storage. Start with a {selectedTrialDays}-day free trial.
                   </p>
                 </div>
 
@@ -390,7 +407,7 @@ export function BillingSettings() {
                         active={interval === "month"}
                         onClick={() => setInterval("month")}
                         title="Monthly"
-                        price={formatUsd(PRO_PRICE_MONTHLY_USD)}
+                        price={proPricing.monthly.formatted}
                         period="/mo"
                         isDark={isDark}
                       />
@@ -398,10 +415,10 @@ export function BillingSettings() {
                         active={interval === "year"}
                         onClick={() => setInterval("year")}
                         title="Yearly"
-                        price={formatUsd(PRO_PRICE_ANNUAL_MONTHLY_USD)}
+                        price={proPricing.annualMonthly.formatted}
                         period="/mo"
-                        badge={`Save ${annualSavings}%`}
-                        sub={`${formatUsd(PRO_PRICE_ANNUAL_TOTAL_USD)} billed yearly`}
+                        badge={`Save ${proPricing.annualSavingsPercent}%`}
+                        sub={`${proPricing.annual.formatted} billed yearly`}
                         isDark={isDark}
                       />
                     </div>
@@ -423,14 +440,14 @@ export function BillingSettings() {
                       ) : (
                         <>
                           <Sparkles className="h-4 w-4" />
-                          Start {PRO_TRIAL_DAYS}-day free trial
+                          Start {selectedTrialDays}-day free trial
                         </>
                       )}
                     </Button>
                     <p className="text-center lg:text-right text-xs text-muted-foreground">
                       {interval === "year"
-                        ? `${formatUsd(PRO_PRICE_ANNUAL_TOTAL_USD)}/year after trial · Cancel anytime`
-                        : `${formatUsd(PRO_PRICE_MONTHLY_USD)}/month after trial · Cancel anytime`}
+                        ? `${proPricing.annual.formatted}/year after trial · Cancel anytime`
+                        : `${proPricing.monthly.formatted}/month after trial · Cancel anytime`}
                     </p>
                   </div>
                 </div>

@@ -9,7 +9,16 @@ import {
   getOrgBillingSnapshot,
   getEffectivePlanId,
 } from "@/lib/billing/entitlements";
-import { PLAN_LIMITS } from "@/lib/billing/plans";
+import {
+  DEFAULT_PRO_PLAN_PRICING,
+  PLAN_LIMITS,
+  PRO_TRIAL_DAYS,
+  formatMinorUnitMoney,
+  formatMoney,
+  proAnnualSavingsPercent,
+  type MoneyAmount,
+  type ProPlanPricing,
+} from "@/lib/billing/plans";
 import type { BillingSnapshot } from "@/lib/queries/bootstrap";
 import {
   getPaddle,
@@ -38,6 +47,98 @@ const orgBillingInclude = {
   subscription: true,
   owner: { select: { email: true, name: true } },
 } as const;
+
+const PRO_PLAN_PRICING_CACHE_MS = 30 * 1000;
+
+let proPlanPricingCache:
+  | { value: ProPlanPricing; expiresAt: number }
+  | undefined;
+
+type PaddlePriceLike = {
+  unitPrice?: {
+    amount?: string | number;
+    currencyCode?: string;
+  };
+  trialPeriod?: {
+    interval?: "day" | "week" | "month" | "year";
+    frequency?: number;
+  } | null;
+};
+
+function toMoneyAmount(price: PaddlePriceLike): MoneyAmount | null {
+  const amount = price.unitPrice?.amount;
+  const currencyCode = price.unitPrice?.currencyCode;
+  if (amount == null || !currencyCode) return null;
+  return formatMinorUnitMoney(amount, currencyCode);
+}
+
+function trialPeriodToDays(price: PaddlePriceLike): number | null {
+  const frequency = price.trialPeriod?.frequency;
+  const interval = price.trialPeriod?.interval;
+  if (!frequency || !interval) return null;
+
+  switch (interval) {
+    case "day":
+      return frequency;
+    case "week":
+      return frequency * 7;
+    case "month":
+      return frequency * 30;
+    case "year":
+      return frequency * 365;
+    default:
+      return null;
+  }
+}
+
+async function getPaddlePrice(priceId: string): Promise<PaddlePriceLike> {
+  const paddle = getPaddle();
+  const prices = paddle.prices as {
+    get: (id: string) => Promise<PaddlePriceLike>;
+  };
+  return prices.get(priceId);
+}
+
+export async function getProPlanPricing(): Promise<ProPlanPricing> {
+  const now = Date.now();
+  if (proPlanPricingCache && proPlanPricingCache.expiresAt > now) {
+    return proPlanPricingCache.value;
+  }
+
+  try {
+    const [monthlyPrice, annualPrice] = await Promise.all([
+      getPaddlePrice(proPriceId("month")),
+      getPaddlePrice(proPriceId("year")),
+    ]);
+
+    const monthly = toMoneyAmount(monthlyPrice);
+    const annual = toMoneyAmount(annualPrice);
+    if (!monthly || !annual) return DEFAULT_PRO_PLAN_PRICING;
+
+    const annualMonthlyAmount = Math.round((annual.amount / 12) * 100) / 100;
+    const pricing = {
+      monthly,
+      annual,
+      annualMonthly: {
+        amount: annualMonthlyAmount,
+        currencyCode: annual.currencyCode,
+        formatted: formatMoney(annualMonthlyAmount, annual.currencyCode),
+      },
+      annualSavingsPercent: proAnnualSavingsPercent({ monthly, annual }),
+      monthlyTrialDays: trialPeriodToDays(monthlyPrice) ?? PRO_TRIAL_DAYS,
+      annualTrialDays: trialPeriodToDays(annualPrice) ?? PRO_TRIAL_DAYS,
+    };
+
+    proPlanPricingCache = {
+      value: pricing,
+      expiresAt: now + PRO_PLAN_PRICING_CACHE_MS,
+    };
+    return pricing;
+  } catch (error) {
+    console.warn("[billing] Paddle pricing lookup failed; using fallback.", error);
+    return DEFAULT_PRO_PLAN_PRICING;
+  }
+}
 
 async function getActiveOrganizationForBilling(userId: string) {
   const slug = await resolveActiveOrganizationSlug(userId);

@@ -4,16 +4,11 @@ import { AuthLogo } from "@/components/auth/auth-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PricingSection } from "@/components/landing/pricing-section";
 import { MARKETING_FOOTER_LINKS } from "@/components/landing/marketing-footer-links";
-import {
-  PRO_PRICE_ANNUAL_TOTAL_USD,
-  PRO_PRICE_MONTHLY_USD,
-  PRO_TRIAL_DAYS,
-  formatUsd,
-} from "@/lib/billing/plans";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: `TrackEzz pricing: Free for small teams. Pro from ${formatUsd(PRO_PRICE_MONTHLY_USD)}/month with a ${PRO_TRIAL_DAYS}-day trial.`,
+  description:
+    "TrackEzz pricing: Free for small teams. Pro pricing and trial details are shown from Paddle.",
 };
 
 const PRICING_FAQ = [
@@ -23,7 +18,7 @@ const PRICING_FAQ = [
   },
   {
     q: "How much does Pro cost?",
-    a: `Pro is ${formatUsd(PRO_PRICE_MONTHLY_USD)}/month or ${formatUsd(PRO_PRICE_ANNUAL_TOTAL_USD)}/year, with a ${PRO_TRIAL_DAYS}-day free trial. You won't be charged until the trial ends.`,
+    a: "The current Pro monthly, yearly, and trial details are shown above from Paddle. You won't be charged until the trial ends.",
   },
   {
     q: "Do you offer refunds?",
@@ -56,9 +51,8 @@ export default function PricingPage() {
               Pricing built for growing teams
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
-              Start free with unlimited projects. Pro from{" "}
-              {formatUsd(PRO_PRICE_MONTHLY_USD)}/month with a {PRO_TRIAL_DAYS}
-              -day trial.
+              Start free with unlimited projects. Pro trial details and current
+              prices are shown below.
             </p>
           </div>
         </section>

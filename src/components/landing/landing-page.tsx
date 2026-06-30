@@ -32,12 +32,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { PricingSection } from "@/components/landing/pricing-section";
-import {
-  PRO_PRICE_ANNUAL_TOTAL_USD,
-  PRO_PRICE_MONTHLY_USD,
-  PRO_TRIAL_DAYS,
-  formatUsd,
-} from "@/lib/billing/plans";
 import { MARKETING_FOOTER_LINKS } from "@/components/landing/marketing-footer-links";
 
 const DASHBOARD_HREF = "/dashboard";
@@ -232,7 +226,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Is TrackEzz free to use?",
-    a: `Yes. The Free plan includes unlimited projects, up to 10 members, 50 AI messages per month, basic analytics, and 100 MB storage — with no time limit. Pro is ${formatUsd(PRO_PRICE_MONTHLY_USD)}/month (or ${formatUsd(PRO_PRICE_ANNUAL_TOTAL_USD)}/year) with a ${PRO_TRIAL_DAYS}-day free trial for unlimited members, AI, full analytics, and 10 GB storage.`,
+    a: "Yes. The Free plan includes unlimited projects, up to 10 members, 50 AI messages per month, basic analytics, and 100 MB storage — with no time limit. Pro pricing and trial details are shown above from Paddle for unlimited members, AI, full analytics, and 10 GB storage.",
   },
   {
     q: "Can I use Google to sign in?",
