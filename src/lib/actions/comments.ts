@@ -13,6 +13,7 @@ import {
   isUploadStorageAvailable,
   storeUploadedFile,
 } from "@/lib/storage";
+import { assertStorageCapacity } from "@/lib/billing/entitlements";
 import type { Issue } from "@/types";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -123,6 +124,13 @@ async function saveIssueUpload(
   if (!isUploadStorageAvailable()) {
     throw new Error(UPLOAD_UNAVAILABLE_MESSAGE);
   }
+
+  const issue = await prisma.issue.findUnique({
+    where: { id: issueId },
+    select: { project: { select: { organizationId: true } } },
+  });
+  if (!issue) throw new Error("NOT_FOUND: Issue not found");
+  await assertStorageCapacity(issue.project.organizationId, file.size);
 
   const stored = await storeUploadedFile({
     file,

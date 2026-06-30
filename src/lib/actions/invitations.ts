@@ -19,6 +19,7 @@ import {
   sendBrevoEmailOrThrow,
 } from "@/lib/email/brevo";
 import { notifyInvitationReceived } from "@/lib/notifications/service";
+import { assertMemberCapacity } from "@/lib/billing/entitlements";
 import { getInvitationWorkspaceTargets } from "@/lib/invitations/workspace-path";
 import { applyInvitationWorkspaceCookies } from "@/lib/org/workspace-cookies";
 import { isRedirectError } from "@/lib/next/redirect-error";
@@ -99,6 +100,7 @@ export async function sendOrganizationProjectAdminInvitation(input: {
 
   const email = normalizeInvitationEmail(input.email);
   await validateNotDuplicateMember(email, input.organizationId);
+  await assertMemberCapacity(input.organizationId);
 
   const inviter = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -553,6 +555,24 @@ export async function acceptInvitation(token: string): Promise<{
       data: { status: "expired" },
     });
     throw new Error("Invitation expired");
+  }
+
+  const orgIdForCapacity =
+    invitation.organizationId ??
+    invitation.project?.organizationId ??
+    null;
+  if (orgIdForCapacity) {
+    const existingMember = await prisma.organizationMember.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: session.user.id,
+          organizationId: orgIdForCapacity,
+        },
+      },
+    });
+    if (!existingMember) {
+      await assertMemberCapacity(orgIdForCapacity);
+    }
   }
 
   let organizationSlug = "";

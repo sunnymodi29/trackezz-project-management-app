@@ -162,7 +162,8 @@ model Organization {
   members       OrganizationMember[]
   projects      Project[]
   invitations   Invitation[]
-  subscriptions Subscription[]
+  subscription  Subscription?
+  usageMetrics  UsageMetric[]
   auditLogs     AuditLog[]
   activityLogs  ActivityLog[]
 }
@@ -493,16 +494,30 @@ model Embedding {
 
 model Subscription {
   id                   String             @id @default(cuid())
-  organizationId       String
-  stripeCustomerId     String?            @unique
-  stripeSubscriptionId String?            @unique
-  status               SubscriptionStatus @default(trialing)
+  organizationId       String             @unique
+  paddleCustomerId     String?            @unique
+  paddleSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(active)
   plan                 String             @default("free")
   currentPeriodEnd     DateTime?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model UsageMetric {
+  id             String   @id @default(cuid())
+  organizationId String
+  metric         String
+  period         String
+  count          Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, metric, period])
+  @@index([organizationId, period])
 }
 
 model AuditLog {

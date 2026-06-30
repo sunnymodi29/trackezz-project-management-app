@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { BootstrapData } from "@/lib/queries/bootstrap";
+import type { BootstrapData, BillingSnapshot } from "@/lib/queries/bootstrap";
 import { refreshSprintCounts } from "@/lib/sprints/counts";
 import { sortWorkflowStatuses } from "@/lib/projects/workflow-status";
 import type {
@@ -120,6 +120,7 @@ interface DataState extends BootstrapData {
   ) => void;
   upsertProject: (project: Project) => void;
   patchOrganization: (patch: Partial<Pick<Organization, "name">>) => void;
+  patchBilling: (billing: BillingSnapshot) => void;
   patchCurrentUser: (patch: Partial<Pick<User, "name" | "avatarUrl">>) => void;
   removeProject: (projectId: string) => void;
   upsertProjectMember: (member: ProjectMember) => void;
@@ -167,6 +168,7 @@ const emptyBootstrap: BootstrapData = {
   invitations: [],
   aiConversations: [],
   workflowStatuses: [],
+  billing: null,
 };
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -273,6 +275,8 @@ export const useDataStore = create<DataState>((set, get) => ({
         ? { ...state.organization, ...patch }
         : null,
     })),
+
+  patchBilling: (billing) => set({ billing }),
 
   patchCurrentUser: (patch) =>
     set((state) => {

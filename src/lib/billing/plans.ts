@@ -24,9 +24,22 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
 
 export const PRO_TRIAL_DAYS = 14;
 
-export const PRO_PRICE_MONTHLY_USD = 6;
-export const PRO_PRICE_ANNUAL_MONTHLY_USD = 5;
-export const PRO_PRICE_ANNUAL_TOTAL_USD = 60;
+export const PRO_PRICE_MONTHLY_USD = 5.99;
+export const PRO_PRICE_ANNUAL_TOTAL_USD = 65.88;
+export const PRO_PRICE_ANNUAL_MONTHLY_USD =
+  Math.round((PRO_PRICE_ANNUAL_TOTAL_USD / 12) * 100) / 100;
+
+export function formatUsd(amount: number): string {
+  const cents = Math.round(amount * 100) % 100;
+  return cents === 0 ? `$${amount}` : `$${amount.toFixed(2)}`;
+}
+
+export function proAnnualSavingsPercent(): number {
+  const monthlyYear = PRO_PRICE_MONTHLY_USD * 12;
+  return Math.round(
+    ((monthlyYear - PRO_PRICE_ANNUAL_TOTAL_USD) / monthlyYear) * 100,
+  );
+}
 
 export const FREE_PLAN_FEATURES = [
   "Unlimited projects",

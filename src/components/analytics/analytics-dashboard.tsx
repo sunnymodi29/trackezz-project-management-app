@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
+import { applyAnalyticsPlanGate } from "@/lib/analytics/apply-plan-gate";
 import { computeOrgAnalytics } from "@/lib/analytics/compute";
 import type { OrgAnalytics } from "@/lib/analytics/types";
 import type { BootstrapData } from "@/lib/queries/bootstrap";
-import { Card, CardHeader, CardTitle, CardContent, CustomSelect } from "@/components/ui";
+import { Card, CardHeader, CardTitle, CardContent, CustomSelect, Button } from "@/components/ui";
 import {
   LineChart,
   GroupedBarChart,
@@ -20,6 +22,7 @@ import {
   CheckCircle2,
   Activity,
   Users,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,11 +45,12 @@ export function AnalyticsDashboard({ bootstrap }: AnalyticsDashboardProps) {
     [bootstrap.projects]
   );
 
-  const analytics: OrgAnalytics = useMemo(
-    () => computeOrgAnalytics(bootstrap, projectFilter),
-    [bootstrap, projectFilter]
-  );
+  const analytics: OrgAnalytics = useMemo(() => {
+    const raw = computeOrgAnalytics(bootstrap, projectFilter);
+    return applyAnalyticsPlanGate(raw, bootstrap.billing?.isPro ?? false);
+  }, [bootstrap, projectFilter]);
 
+  const fullAnalytics = bootstrap.billing?.isPro ?? false;
   const { summary } = analytics;
 
   return (
@@ -68,6 +72,26 @@ export function AnalyticsDashboard({ bootstrap }: AnalyticsDashboardProps) {
           className="min-w-52 max-w-52"
         />
       </div>
+
+      {!fullAnalytics && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="pt-5 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex gap-3">
+              <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm">Basic analytics on Free</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upgrade to Pro for burndown, velocity, throughput charts, project
+                  health, and assignee workload.
+                </p>
+              </div>
+            </div>
+            <Link href="/dashboard/settings?tab=billing">
+              <Button size="sm">Upgrade to Pro</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {analytics.activeSprint && (
         <Card className="border-primary/20 bg-primary/5">
@@ -133,6 +157,8 @@ export function AnalyticsDashboard({ bootstrap }: AnalyticsDashboardProps) {
         />
       </div>
 
+      {fullAnalytics && (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="In progress"
@@ -433,6 +459,8 @@ export function AnalyticsDashboard({ bootstrap }: AnalyticsDashboardProps) {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -46,6 +46,12 @@ export async function provisionOrganizationForUser(
           role: "owner",
         },
       },
+      subscription: {
+        create: {
+          plan: "free",
+          status: "active",
+        },
+      },
     },
   });
 

@@ -1,23 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { User, Building2, Key } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { User, Building2, Key, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDataStore } from "@/store/data-store";
 import { UserProfileSettings } from "@/components/settings/user-profile-settings";
 import { OrganizationSettings } from "@/components/settings/organization-settings";
-
 import { ApiTokensSettings } from "@/components/settings/api-tokens-settings";
+import { BillingSettings } from "@/components/settings/billing-settings";
 
-type SettingsTab = "profile" | "organization" | "api";
+type SettingsTab = "profile" | "organization" | "api" | "billing";
+
+const VALID_TABS = new Set<SettingsTab>([
+  "profile",
+  "organization",
+  "api",
+  "billing",
+]);
 
 export function SettingsPageClient() {
+  return (
+    <Suspense>
+      <SettingsPageClientInner />
+    </Suspense>
+  );
+}
+
+function SettingsPageClientInner() {
+  const searchParams = useSearchParams();
   const { permissions } = useDataStore();
   const canManageOrg = permissions.isOrgOwner;
-  const [tab, setTab] = useState<SettingsTab>("profile");
+  const tabParam = searchParams.get("tab");
+  const initialTab =
+    tabParam && VALID_TABS.has(tabParam as SettingsTab)
+      ? (tabParam as SettingsTab)
+      : "profile";
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
 
   useEffect(() => {
-    if (!canManageOrg && tab === "organization") {
+    if (tabParam && VALID_TABS.has(tabParam as SettingsTab)) {
+      setTab(tabParam as SettingsTab);
+    }
+  }, [tabParam]);
+
+  useEffect(() => {
+    if (!canManageOrg && (tab === "organization" || tab === "billing")) {
       setTab("profile");
     }
   }, [canManageOrg, tab]);
@@ -29,7 +57,7 @@ export function SettingsPageClient() {
           <h1 className="text-2xl font-bold">Settings</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {canManageOrg
-              ? "Your profile and organization preferences."
+              ? "Your profile, billing, and organization preferences."
               : "Your profile and account preferences."}
           </p>
         </div>
@@ -48,12 +76,20 @@ export function SettingsPageClient() {
             label="PAT & MCP"
           />
           {canManageOrg && (
-            <TabButton
-              active={tab === "organization"}
-              onClick={() => setTab("organization")}
-              icon={<Building2 className="h-4 w-4" />}
-              label="Organization"
-            />
+            <>
+              <TabButton
+                active={tab === "billing"}
+                onClick={() => setTab("billing")}
+                icon={<CreditCard className="h-4 w-4" />}
+                label="Billing"
+              />
+              <TabButton
+                active={tab === "organization"}
+                onClick={() => setTab("organization")}
+                icon={<Building2 className="h-4 w-4" />}
+                label="Organization"
+              />
+            </>
           )}
         </div>
       </div>
@@ -61,6 +97,8 @@ export function SettingsPageClient() {
       <div key={tab} className="relative isolate overflow-hidden">
         {tab === "api" ? (
           <ApiTokensSettings />
+        ) : tab === "billing" && canManageOrg ? (
+          <BillingSettings />
         ) : tab === "organization" && canManageOrg ? (
           <OrganizationSettings />
         ) : (

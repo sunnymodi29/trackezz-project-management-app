@@ -3,6 +3,7 @@ import { handleApiError, jsonError, jsonOk } from "@/lib/api/response";
 import { requireProjectAccess } from "@/lib/auth/rbac";
 import { findSimilarIssuesForProject } from "@/lib/ai/similar-issues";
 import { rateLimit } from "@/lib/rate-limit";
+import { recordAiUsageForProject } from "@/lib/billing/record-ai-usage";
 
 export async function POST(req: Request) {
   try {
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
     }
 
     await requireProjectAccess(user.id!, body.projectId);
+    await recordAiUsageForProject(body.projectId);
 
     const similar = await findSimilarIssuesForProject({
       projectId: body.projectId,

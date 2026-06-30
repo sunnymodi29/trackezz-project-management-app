@@ -7,6 +7,7 @@ import { requireProjectAccess } from "@/lib/auth/rbac";
 import { htmlToPlainText } from "@/lib/ai/plain-text";
 import { requireGroqLanguageModel } from "@/lib/ai/require-groq";
 import { rateLimit } from "@/lib/rate-limit";
+import { recordAiUsageForProject } from "@/lib/billing/record-ai-usage";
 
 const issueTypeSchema = z.enum([
   "task",
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
     }
 
     await requireProjectAccess(user.id!, body.projectId);
+    await recordAiUsageForProject(body.projectId);
 
     const statuses = await prisma.workflowStatus.findMany({
       where: { projectId: body.projectId },

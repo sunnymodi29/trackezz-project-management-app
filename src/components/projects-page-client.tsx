@@ -115,7 +115,7 @@ export function ProjectsPageClient() {
 
   return (
     <>
-      <div className="p-6 space-y-8 mx-auto animate-fade-in max-w-7xl">
+      <div className="w-full max-w-7xl mx-auto p-6 space-y-8 overflow-x-hidden animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Projects</h1>
@@ -177,7 +177,7 @@ export function ProjectsPageClient() {
         </div>
 
         {view === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid min-w-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {!hydrated &&
               Array.from({ length: 6 }).map((_, i) => (
                 <ProjectCardSkeleton key={i} />
@@ -200,7 +200,7 @@ export function ProjectsPageClient() {
               )}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             {hydrated && filtered.length !== 0 && (
               <div className="hidden md:grid grid-cols-[1fr_80px_100px_120px_48px] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 <span>Project</span>
@@ -283,7 +283,7 @@ function ProjectCard({
 }) {
   const href = projectPath(project.key);
   return (
-    <Card className="hover:border-primary/40 hover:shadow-lg transition-all group relative h-full">
+    <Card className="hover:border-primary/40 hover:shadow-lg transition-all group relative h-full overflow-hidden">
       <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl -mr-12 -mt-12 transition-all group-hover:bg-primary/10" />
       <DashboardLink
         href={href}
