@@ -7,6 +7,7 @@ import { htmlToPlainText } from "@/lib/ai/plain-text";
 import { requireGroqLanguageModel } from "@/lib/ai/require-groq";
 import { issuePath } from "@/lib/projects/route";
 import { rateLimit } from "@/lib/rate-limit";
+import { recordAiUsageForProject } from "@/lib/billing/record-ai-usage";
 
 function buildCommentThreadText(
   comments: {
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
     if (!issue) throw new Error("NOT_FOUND: Issue not found");
 
     await requireProjectAccess(user.id!, issue.projectId);
+    await recordAiUsageForProject(issue.projectId);
 
     const comments = await prisma.comment.findMany({
       where: { issueId: body.issueId },

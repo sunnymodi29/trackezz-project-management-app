@@ -32,6 +32,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 import { PricingSection } from "@/components/landing/pricing-section";
+import {
+  PRO_PRICE_ANNUAL_TOTAL_USD,
+  PRO_PRICE_MONTHLY_USD,
+  PRO_TRIAL_DAYS,
+  formatUsd,
+} from "@/lib/billing/plans";
 import { MARKETING_FOOTER_LINKS } from "@/components/landing/marketing-footer-links";
 
 const DASHBOARD_HREF = "/dashboard";
@@ -226,7 +232,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Is TrackEzz free to use?",
-    a: "Yes. The Free plan includes unlimited projects, up to 10 members, 50 AI messages per month, basic analytics, and 100 MB storage — with no time limit. A Pro plan for larger teams is coming soon.",
+    a: `Yes. The Free plan includes unlimited projects, up to 10 members, 50 AI messages per month, basic analytics, and 100 MB storage — with no time limit. Pro is ${formatUsd(PRO_PRICE_MONTHLY_USD)}/month (or ${formatUsd(PRO_PRICE_ANNUAL_TOTAL_USD)}/year) with a ${PRO_TRIAL_DAYS}-day free trial for unlimited members, AI, full analytics, and 10 GB storage.`,
   },
   {
     q: "Can I use Google to sign in?",
@@ -477,8 +483,8 @@ function AssistantPreviewPanel() {
                 Proposed status change
               </p>
               <p className="mt-0.5 text-muted-foreground">
-                Move <span className="font-mono text-foreground">TE-38</span>{" "}
-                → <span className="text-foreground">In Progress</span>
+                Move <span className="font-mono text-foreground">TE-38</span> →{" "}
+                <span className="text-foreground">In Progress</span>
               </p>
               <div className="mt-2 flex gap-1.5">
                 <span className="rounded bg-primary px-2 py-0.5 text-[9px] font-medium text-primary-foreground">
@@ -499,7 +505,8 @@ function AssistantPreviewPanel() {
             Smart triage
           </div>
           <p className="text-[9px] text-muted-foreground">
-            Suggested: <span className="text-foreground">Bug</span> · High · Todo
+            Suggested: <span className="text-foreground">Bug</span> · High ·
+            Todo
           </p>
         </div>
         <div className="rounded-lg border border-border bg-card p-2.5">
@@ -507,7 +514,9 @@ function AssistantPreviewPanel() {
             <Search className="h-3 w-3 text-primary" />
             Similar issues
           </div>
-          <p className="font-mono text-[9px] text-muted-foreground">TE-12 · 89% match</p>
+          <p className="font-mono text-[9px] text-muted-foreground">
+            TE-12 · 89% match
+          </p>
         </div>
         <div className="rounded-lg border border-border bg-card p-2.5">
           <div className="mb-1 flex items-center gap-1.5 text-[9px] font-semibold text-foreground">
@@ -556,7 +565,7 @@ export function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="fixed top-0 z-10 w-full border-b border-border bg-background/40 backdrop-blur-xl">
+      <header className="fixed top-0 z-50 w-full border-b border-border bg-background/40 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <Logo />
 
@@ -623,7 +632,7 @@ export function LandingPage() {
         </div>
 
         {mobileOpen && (
-          <div className="border-t border-border bg-background px-4 py-4 md:hidden">
+          <div className="border-border bg-background/10 backdrop-blur-2xl px-4 py-4 md:hidden">
             <nav className="flex flex-col gap-1">
               {NAV_LINKS.map((link) => (
                 <button
@@ -652,12 +661,14 @@ export function LandingPage() {
                 </DashboardLink>
               ) : (
                 <>
-                  <Link
-                    href="/login"
-                    className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    Sign in
+                  <Link href="/login" onClick={() => setMobileOpen(false)}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="mt-2 w-full"
+                    >
+                      Sign in
+                    </Button>
                   </Link>
                   <Link href="/register" onClick={() => setMobileOpen(false)}>
                     <Button size="sm" className="mt-2 w-full">
@@ -679,7 +690,9 @@ export function LandingPage() {
             <div className="mx-auto max-w-4xl text-center">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-gradient-to-r from-violet-500/15 to-primary/15 px-3 py-1 text-xs font-semibold text-primary animate-fade-in">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>Project management - Now with AI built into every project</span>
+                <span>
+                  Project management - Now with AI built into every project
+                </span>
               </div>
               <h1 className="mb-6 text-4xl font-extrabold tracking-tight md:text-6xl lg:text-7xl animate-fade-in">
                 Plan sprints. Track issues.{" "}
@@ -692,8 +705,8 @@ export function LandingPage() {
                 style={{ animationDelay: "0.1s" }}
               >
                 TrackEzz combines issues, kanban, and sprints with a project
-                assistant that knows your real data — plus smart triage, duplicate
-                detection, and comment AI so your team ships faster.
+                assistant that knows your real data — plus smart triage,
+                duplicate detection, and comment AI so your team ships faster.
               </p>
               <div
                 className="flex flex-col items-center justify-center gap-3 sm:flex-row animate-fade-in"
@@ -773,7 +786,9 @@ export function LandingPage() {
               </div>
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl">
                 Ask your project anything.{" "}
-                <span className="gradient-text">Get answers you can act on.</span>
+                <span className="gradient-text">
+                  Get answers you can act on.
+                </span>
               </h2>
               <p className="mx-auto max-w-2xl text-muted-foreground md:text-lg">
                 Not a generic chatbot — TrackEzz AI is grounded in your issues,
@@ -981,8 +996,8 @@ export function LandingPage() {
                 </h2>
                 <p className="mx-auto mb-8 max-w-lg text-primary-foreground/80">
                   Create your workspace in minutes. Open the project assistant,
-                  triage your first issue, and see how much faster your team
-                  can move.
+                  triage your first issue, and see how much faster your team can
+                  move.
                 </p>
                 {isLoading ? (
                   <CtaButtonSkeleton className="mx-auto h-12 w-44" />

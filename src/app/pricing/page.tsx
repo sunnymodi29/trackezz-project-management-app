@@ -4,11 +4,16 @@ import { AuthLogo } from "@/components/auth/auth-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PricingSection } from "@/components/landing/pricing-section";
 import { MARKETING_FOOTER_LINKS } from "@/components/landing/marketing-footer-links";
+import {
+  PRO_PRICE_ANNUAL_TOTAL_USD,
+  PRO_PRICE_MONTHLY_USD,
+  PRO_TRIAL_DAYS,
+  formatUsd,
+} from "@/lib/billing/plans";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description:
-    "TrackEzz pricing: Free for small teams. Pro for larger teams is coming soon.",
+  description: `TrackEzz pricing: Free for small teams. Pro from ${formatUsd(PRO_PRICE_MONTHLY_USD)}/month with a ${PRO_TRIAL_DAYS}-day trial.`,
 };
 
 const PRICING_FAQ = [
@@ -17,8 +22,8 @@ const PRICING_FAQ = [
     a: "Yes. The Free plan has no time limit. Upgrade to Pro only when you need unlimited members, unlimited AI messages, full analytics, or more storage.",
   },
   {
-    q: "When will Pro be available?",
-    a: "We're finishing Pro for teams that need unlimited members, AI, and advanced analytics. Pricing will be announced before launch.",
+    q: "How much does Pro cost?",
+    a: `Pro is ${formatUsd(PRO_PRICE_MONTHLY_USD)}/month or ${formatUsd(PRO_PRICE_ANNUAL_TOTAL_USD)}/year, with a ${PRO_TRIAL_DAYS}-day free trial. You won't be charged until the trial ends.`,
   },
   {
     q: "Do you offer refunds?",
@@ -51,8 +56,9 @@ export default function PricingPage() {
               Pricing built for growing teams
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
-              Start free with unlimited projects. Pro for larger teams is coming
-              soon.
+              Start free with unlimited projects. Pro from{" "}
+              {formatUsd(PRO_PRICE_MONTHLY_USD)}/month with a {PRO_TRIAL_DAYS}
+              -day trial.
             </p>
           </div>
         </section>

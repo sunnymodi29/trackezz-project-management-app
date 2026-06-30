@@ -25,6 +25,7 @@ import {
   uiMessagesToStoredRows,
 } from "@/lib/ai/ui-message-text";
 import { rateLimit } from "@/lib/rate-limit";
+import { recordAiUsageForProject } from "@/lib/billing/record-ai-usage";
 
 /** Titles we replace with the first user message (ChatGPT-style). */
 const PLACEHOLDER_CHAT_TITLES = new Set(["New chat", "Project assistant"]);
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
     const projectId = body.projectId;
 
     await requireProjectAccess(user.id!, projectId);
+    await recordAiUsageForProject(projectId);
 
     const projectAssistantTools = {
       proposeIssueStatusChange: tool({

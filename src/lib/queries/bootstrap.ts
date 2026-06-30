@@ -27,6 +27,13 @@ import {
 } from "@/lib/serializers";
 import { getIssues, issueInclude } from "@/lib/queries/issues";
 import { ACTIVE_ORG_COOKIE, ACTIVE_PROJECT_COOKIE } from "@/lib/org/cookies";
+import { resolveOrganizationForUser } from "@/lib/org/resolve-active-org";
+import {
+  getOrgBillingSnapshot,
+  getEffectivePlanId,
+  type OrgBillingSnapshot,
+} from "@/lib/billing/entitlements";
+import { PLAN_LIMITS, type PlanId } from "@/lib/billing/plans";
 import type {
   User,
   Organization,
@@ -45,6 +52,15 @@ import type {
   WorkflowStatus,
 } from "@/types";
 
+export type BillingSnapshot = {
+  plan: PlanId;
+  status: string;
+  isPro: boolean;
+  currentPeriodEnd: string | null;
+  usage: OrgBillingSnapshot["usage"];
+  limits: (typeof PLAN_LIMITS)[PlanId];
+};
+
 export interface BootstrapData {
   hasWorkspace: boolean;
   currentUser: User;
@@ -62,6 +78,21 @@ export interface BootstrapData {
   invitations: Invitation[];
   aiConversations: AIConversation[];
   workflowStatuses: WorkflowStatus[];
+  billing: BillingSnapshot | null;
+}
+
+function serializeBillingSnapshot(
+  snapshot: OrgBillingSnapshot,
+): BillingSnapshot {
+  const planId = getEffectivePlanId(snapshot);
+  return {
+    plan: planId,
+    status: snapshot.status,
+    isPro: snapshot.isPro,
+    currentPeriodEnd: snapshot.currentPeriodEnd?.toISOString() ?? null,
+    usage: snapshot.usage,
+    limits: PLAN_LIMITS[planId],
+  };
 }
 
 export type WorkspaceBootstrapData = BootstrapData & {
@@ -112,6 +143,7 @@ async function buildNoWorkspaceBootstrap(
     invitations: [],
     aiConversations: [],
     workflowStatuses: [],
+    billing: null,
   };
 }
 
@@ -129,32 +161,6 @@ export async function requireWorkspaceBootstrap(
     hasWorkspace: true as const,
     organization: data.organization,
   };
-}
-
-/**
- * Default org when no active-org cookie is set.
- * Owners always land on their own org first; invite-only users use membership/project access.
- */
-async function resolveOrganizationForUser(userId: string) {
-  const owned = await prisma.organization.findFirst({
-    where: { ownerId: userId },
-    orderBy: { createdAt: "asc" },
-  });
-  if (owned) return owned;
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { userId },
-    include: { organization: true },
-    orderBy: { createdAt: "desc" },
-  });
-  if (membership) return membership.organization;
-
-  const projectOnly = await prisma.projectMember.findFirst({
-    where: { userId },
-    include: { project: { include: { organization: true } } },
-    orderBy: { createdAt: "desc" },
-  });
-  return projectOnly?.project.organization ?? null;
 }
 
 export async function getBootstrapData(
@@ -309,7 +315,7 @@ export async function getBootstrapData(
     }),
   ]);
 
-  const [activityLogs, invitations, aiConversations, workflowStatuses] =
+  const [activityLogs, invitations, aiConversations, workflowStatuses, billingSnapshot] =
     await Promise.all([
       projectIds.length > 0
         ? prisma.activityLog.findMany({
@@ -345,6 +351,7 @@ export async function getBootstrapData(
             orderBy: { position: "asc" },
           })
         : Promise.resolve([]),
+      getOrgBillingSnapshot(org.id),
     ]);
 
   const owner = isOrgOwner(resolvedUserId, org);
@@ -398,6 +405,7 @@ export async function getBootstrapData(
     invitations: invitations.map((inv) => serializeInvitation(inv)),
     aiConversations: aiConversations.map(serializeAIConversation),
     workflowStatuses: workflowStatuses.map(serializeWorkflowStatus),
+    billing: serializeBillingSnapshot(billingSnapshot),
   };
 
   await cacheSet(cacheKey, result, 120);
@@ -408,6 +416,14 @@ export async function getAnalyticsData() {
   const { computeOrgAnalytics, toLegacyAnalytics } = await import(
     "@/lib/analytics/compute"
   );
+  const { applyAnalyticsPlanGate } = await import(
+    "@/lib/analytics/apply-plan-gate"
+  );
   const data = await getBootstrapData();
-  return toLegacyAnalytics(computeOrgAnalytics(data));
+  const isPro = data.billing?.isPro ?? false;
+  const analytics = applyAnalyticsPlanGate(
+    computeOrgAnalytics(data),
+    isPro,
+  );
+  return toLegacyAnalytics(analytics);
 }

@@ -326,7 +326,24 @@ export function NewIssueModal() {
               options={projects.map((p) => ({
                 value: p.id,
                 label: p.name,
-                icon: <span>{p.icon}</span>,
+                icon: (
+                  <span
+                    className={cn(
+                      "px-1.5 py-0.5 rounded-sm flex items-center gap-1.5 text-[10px] font-semibold",
+                      !p.color && "bg-muted/20 text-muted-foreground",
+                    )}
+                    style={
+                      p.color
+                        ? {
+                            backgroundColor: `${p.color}20`,
+                            color: p.color,
+                          }
+                        : undefined
+                    }
+                  >
+                    {p.icon}
+                  </span>
+                ),
               }))}
               value={currentProject.id}
               onChange={(val) => {

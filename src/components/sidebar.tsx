@@ -74,6 +74,7 @@ export function Sidebar() {
   const {
     projects,
     organization,
+    billing,
     permissions,
     projectMembers,
     currentUser,
@@ -108,6 +109,7 @@ export function Sidebar() {
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
   const unread = getUnreadNotificationCount();
+  const planLabel = billing?.isPro ? "Pro" : "Free";
 
   const filteredProjects = projects.filter(
     (project) =>
@@ -165,8 +167,20 @@ export function Sidebar() {
               <Zap className="h-4 w-4 text-white" />
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-bold text-foreground truncate">
-                TrackEzz
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="text-sm font-bold text-foreground truncate">
+                  TrackEzz
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold uppercase leading-none tracking-wide",
+                    billing?.isPro
+                      ? "border-primary/25 bg-primary/10 text-primary"
+                      : "border-border bg-muted/40 text-muted-foreground",
+                  )}
+                >
+                  {planLabel}
+                </span>
               </div>
               <div className="text-[10px] text-muted-foreground truncate">
                 {organization?.name ? (
