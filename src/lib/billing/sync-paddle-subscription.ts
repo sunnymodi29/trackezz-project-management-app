@@ -1,8 +1,13 @@
 import type { Subscription as PaddleSubscription } from "@paddle/paddle-node-sdk";
 import { prisma } from "@/lib/db";
 
+type PaddleSubscriptionLike = Pick<
+  PaddleSubscription,
+  "id" | "status" | "customerId" | "customData" | "currentBillingPeriod"
+>;
+
 export function mapPaddleSubscriptionStatus(
-  status: PaddleSubscription["status"],
+  status: PaddleSubscriptionLike["status"],
 ): "active" | "trialing" | "past_due" | "canceled" {
   switch (status) {
     case "active":
@@ -21,7 +26,7 @@ export function mapPaddleSubscriptionStatus(
 }
 
 function subscriptionPeriodEnd(
-  paddleSubscription: PaddleSubscription,
+  paddleSubscription: PaddleSubscriptionLike,
 ): Date | null {
   const endsAt = paddleSubscription.currentBillingPeriod?.endsAt;
   if (!endsAt) return null;
@@ -37,7 +42,7 @@ function organizationIdFromCustomData(
 }
 
 export async function syncPaddleSubscriptionToOrg(
-  paddleSubscription: PaddleSubscription,
+  paddleSubscription: PaddleSubscriptionLike,
   organizationId: string,
 ) {
   const status = mapPaddleSubscriptionStatus(paddleSubscription.status);
@@ -77,7 +82,7 @@ export async function syncPaddleSubscriptionById(
 }
 
 export function resolveOrganizationIdFromPaddleSubscription(
-  paddleSubscription: PaddleSubscription,
+  paddleSubscription: PaddleSubscriptionLike,
 ): string | null {
   return organizationIdFromCustomData(
     paddleSubscription.customData as Record<string, unknown> | undefined,
