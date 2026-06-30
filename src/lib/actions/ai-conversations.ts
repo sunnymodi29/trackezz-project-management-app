@@ -22,13 +22,18 @@ export async function listAiConversations(projectId: string) {
   });
 }
 
-export async function createAiConversation(projectId: string, title?: string) {
+export async function createAiConversation(
+  projectId: string,
+  title?: string,
+  id?: string,
+) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
   await requireProjectAccess(session.user.id, projectId);
 
   return prisma.aIConversation.create({
     data: {
+      ...(id ? { id } : {}),
       projectId,
       userId: session.user.id,
       title: title?.trim() || "New chat",

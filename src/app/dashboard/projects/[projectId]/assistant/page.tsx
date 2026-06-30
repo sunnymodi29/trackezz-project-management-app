@@ -95,6 +95,29 @@ function textFromMessage(m: UIMessage) {
     .join("\n");
 }
 
+function latestAssistantTextLength(messages: UIMessage[]) {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message?.role === "assistant") return textFromMessage(message).length;
+  }
+  return 0;
+}
+
+function latestAssistantMessage(messages: UIMessage[]) {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message?.role === "assistant") return message;
+  }
+  return null;
+}
+
+function commonPrefixLength(a: string, b: string) {
+  const max = Math.min(a.length, b.length);
+  let i = 0;
+  while (i < max && a[i] === b[i]) i += 1;
+  return i;
+}
+
 const PROPOSE_ISSUE_STATUS_TOOL = "tool-proposeIssueStatusChange" as const;
 
 function hasRenderableAssistantContent(m: UIMessage) {
@@ -436,6 +459,7 @@ function ProjectAssistantContent() {
     { id: string; title: string; createdAt: Date }[]
   >([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const conversationIdRef = useRef<string | null>(null);
   const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(
     null,
   );
@@ -451,11 +475,16 @@ function ProjectAssistantContent() {
   const [deleteConversationLoading, setDeleteConversationLoading] =
     useState(false);
   const [copiedChatLinkId, setCopiedChatLinkId] = useState<string | null>(null);
+  const [creatingChat, setCreatingChat] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const urlChatId = searchParams.get(ASSISTANT_CHAT_QUERY)?.trim() ?? "";
+
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
 
   const refreshList = useCallback(async () => {
     if (!project?.id) return;
@@ -528,11 +557,37 @@ function ProjectAssistantContent() {
   }, []);
 
   const startNewChat = useCallback(async () => {
-    if (!project?.id) return;
-    const row = await createAiConversation(project.id);
-    await refreshList();
-    await selectConversation(row.id);
-  }, [project?.id, refreshList, selectConversation]);
+    if (!project?.id || creatingChat) return;
+
+    const row = {
+      id: crypto.randomUUID(),
+      title: "New chat",
+      createdAt: new Date(),
+    };
+
+    setCreatingChat(true);
+    setEditingConversationId(null);
+    setEditingTitle("");
+    setConversations((prev) => [row, ...prev.filter((c) => c.id !== row.id)]);
+    setConversationId(row.id);
+    setInitialMessages([]);
+    setLoadingMessages(false);
+
+    try {
+      await createAiConversation(project.id, row.title, row.id);
+      await refreshList();
+    } catch (err) {
+      console.error(err);
+      setConversations((prev) => prev.filter((c) => c.id !== row.id));
+      if (conversationIdRef.current === row.id) {
+        setConversationId(null);
+        setInitialMessages(null);
+      }
+      await refreshList();
+    } finally {
+      setCreatingChat(false);
+    }
+  }, [creatingChat, project?.id, refreshList]);
 
   const removeConversation = useCallback(
     async (id: string) => {
@@ -672,6 +727,7 @@ function ProjectAssistantContent() {
             size="sm"
             variant="outline"
             className="h-8 px-2"
+            disabled={creatingChat}
             onClick={() => void startNewChat()}
           >
             <Plus className="h-4 w-4" />
@@ -926,7 +982,29 @@ function AssistantChat({
   onAssistantTurnComplete?: () => void;
 }) {
   const [text, setText] = useState("");
+  const [assistantTextOverrides, setAssistantTextOverrides] = useState<
+    Record<string, string>
+  >({});
+  const revealTimersRef = useRef<number[]>([]);
+  const typedAssistantTextRef = useRef<Record<string, string>>({});
+  const assistantRevealTargetRef = useRef<Record<string, string>>({});
+  const activeAssistantMessageIdRef = useRef<string | null>(null);
   const { currentUser, patchIssue } = useDataStore();
+
+  const clearRevealTimers = useCallback(() => {
+    revealTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    revealTimersRef.current = [];
+  }, []);
+
+  useEffect(() => clearRevealTimers, [clearRevealTimers]);
+
+  useEffect(() => {
+    clearRevealTimers();
+    setAssistantTextOverrides({});
+    typedAssistantTextRef.current = {};
+    assistantRevealTargetRef.current = {};
+    activeAssistantMessageIdRef.current = null;
+  }, [clearRevealTimers, conversationId]);
 
   const { messages, sendMessage, status, stop, setMessages } = useChat({
     id: conversationId,
@@ -936,19 +1014,6 @@ function AssistantChat({
       credentials: "include",
       body: { projectId },
     }),
-    onFinish: ({ isAbort, isError }) => {
-      if (isAbort || isError) return;
-      setMessages((prev) => {
-        const next = supersedeOlderPendingProposals(prev);
-        if (next !== prev) {
-          void saveAiConversationSnapshot(conversationId, next).catch((e) => {
-            console.error("[assistant] persist after supersede (finish)", e);
-          });
-        }
-        return next === prev ? prev : next;
-      });
-      onAssistantTurnComplete?.();
-    },
   });
 
   /** Dedupe duplicate pending proposals when opening a thread (do not depend on `messages` — that loops with streaming). */
@@ -977,6 +1042,163 @@ function AssistantChat({
   }, [conversationId, initialMessages]);
 
   const busy = status === "submitted" || status === "streaming";
+
+  const wasBusyRef = useRef(false);
+
+  const queueAssistantTypewriter = useCallback(
+    (messageId: string, targetText: string) => {
+      if (assistantRevealTargetRef.current[messageId] === targetText) return;
+
+      clearRevealTimers();
+      assistantRevealTargetRef.current[messageId] = targetText;
+
+      const currentText = typedAssistantTextRef.current[messageId] ?? "";
+      if (currentText === targetText) return;
+
+      const prefixLength = commonPrefixLength(currentText, targetText);
+      const initialText = targetText.slice(0, prefixLength);
+      const suffix = targetText.slice(initialText.length);
+      const chunks = suffix.match(/\S+\s*|\s+/g) ?? (suffix ? [suffix] : []);
+
+      if (chunks.length === 0) {
+        setAssistantTextOverrides((prev) => {
+          const next = { ...prev };
+          delete next[messageId];
+          return next;
+        });
+        return;
+      }
+
+      typedAssistantTextRef.current[messageId] = initialText;
+      setAssistantTextOverrides((prev) => ({
+        ...prev,
+        [messageId]: initialText,
+      }));
+
+      let accumulated = initialText;
+      chunks.forEach((chunk, index) => {
+        const timer = window.setTimeout(() => {
+          accumulated += chunk;
+          typedAssistantTextRef.current[messageId] = accumulated;
+          setAssistantTextOverrides((prev) => ({
+            ...prev,
+            [messageId]: accumulated,
+          }));
+
+          if (index === chunks.length - 1) {
+            const cleanupTimer = window.setTimeout(() => {
+              setAssistantTextOverrides((prev) => {
+                const next = { ...prev };
+                delete next[messageId];
+                return next;
+              });
+            }, 100);
+            revealTimersRef.current.push(cleanupTimer);
+          }
+        }, index === 0 ? 0 : 75 * index);
+        revealTimersRef.current.push(timer);
+      });
+    },
+    [clearRevealTimers],
+  );
+
+  useEffect(() => {
+    if (busy) {
+      wasBusyRef.current = true;
+      return;
+    }
+
+    if (!wasBusyRef.current) return;
+    wasBusyRef.current = false;
+
+    let cancelled = false;
+    const retryDelays = [300, 1000, 2500, 5000];
+    const timers = retryDelays.map((delay, index) =>
+      window.setTimeout(() => {
+        void loadAiConversationMessages(conversationId)
+          .then((freshMessages) => {
+            if (cancelled) return;
+            setMessages((prev) => {
+              const freshAssistant = latestAssistantMessage(freshMessages);
+              const prevAssistant = latestAssistantMessage(prev);
+              const freshAssistantText = freshAssistant
+                ? textFromMessage(freshAssistant)
+                : "";
+              const prevAssistantText = prevAssistant
+                ? textFromMessage(prevAssistant)
+                : "";
+
+              if (freshAssistantText.length < prevAssistantText.length) {
+                return prev;
+              }
+
+              const next = supersedeOlderPendingProposals(freshMessages);
+
+              if (next !== freshMessages) {
+                void saveAiConversationSnapshot(conversationId, next).catch(
+                  (e) => {
+                    console.error(
+                      "[assistant] persist after supersede (idle reconcile)",
+                      e,
+                    );
+                  },
+                );
+              }
+              return next;
+            });
+          })
+          .catch((e) => {
+            if (!cancelled) {
+              console.error("[assistant] refresh after idle failed", e);
+            }
+          })
+          .finally(() => {
+            if (!cancelled && index === retryDelays.length - 1) {
+              onAssistantTurnComplete?.();
+            }
+          });
+      }, delay),
+    );
+
+    return () => {
+      cancelled = true;
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [
+    busy,
+    conversationId,
+    onAssistantTurnComplete,
+    setMessages,
+  ]);
+
+  useEffect(() => {
+    const assistant = latestAssistantMessage(messages);
+    if (!assistant) return;
+
+    const assistantText = textFromMessage(assistant);
+    if (assistantText.trim() === "" && !busy) return;
+
+    if (busy) {
+      activeAssistantMessageIdRef.current = assistant.id;
+    }
+
+    const shouldAnimate =
+      busy || activeAssistantMessageIdRef.current === assistant.id;
+
+    if (!shouldAnimate) {
+      typedAssistantTextRef.current[assistant.id] = assistantText;
+        assistantRevealTargetRef.current[assistant.id] = assistantText;
+      setAssistantTextOverrides((prev) => {
+        if (!(assistant.id in prev)) return prev;
+        const next = { ...prev };
+        delete next[assistant.id];
+        return next;
+      });
+      return;
+    }
+
+    queueAssistantTypewriter(assistant.id, assistantText);
+  }, [busy, messages, queueAssistantTypewriter]);
 
   const waitingForAssistantContent = useMemo(() => {
     const last = messages.length ? messages[messages.length - 1] : undefined;
@@ -1086,6 +1308,11 @@ function AssistantChat({
             )}
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
+              const assistantTextOverride = assistantTextOverrides[m.id];
+              const hasAssistantTextOverride = Object.hasOwn(
+                assistantTextOverrides,
+                m.id,
+              );
               if (
                 isLast &&
                 m.role === "assistant" &&
@@ -1129,8 +1356,12 @@ function AssistantChat({
                   </div>
                   {m.role === "assistant" ? (
                     <div className="space-y-2">
+                      {hasAssistantTextOverride && assistantTextOverride ? (
+                        <AssistantMarkdown>{assistantTextOverride}</AssistantMarkdown>
+                      ) : null}
                       {(m.parts ?? []).map((p, pi) => {
                         if (p.type === "text") {
+                          if (hasAssistantTextOverride) return null;
                           return p.text.trim() === "" &&
                             p.state !== "streaming" ? null : (
                             <AssistantMarkdown key={`${m.id}-t-${pi}`}>

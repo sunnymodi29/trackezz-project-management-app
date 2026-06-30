@@ -115,7 +115,7 @@ export async function POST(req: Request) {
 
 Rules:
 - Ground every factual claim only in the sections below (project workspace, issue catalog, workflow). If something is not listed there, say you do not know rather than guessing.
-- Lists may be truncated (e.g. capped issue count); say so if the user asks for exhaustive data.
+- Do not add generic notes about truncation or hidden data unless the user explicitly asks why something is missing.
 - When referencing an issue, cite its exact issue key and include a markdown link using the id from the catalog:
   [ISSUEKEY](${basePath}/ISSUE_ID)
   Replace ISSUEKEY and ISSUE_ID with values from the catalog line (id=...).
