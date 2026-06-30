@@ -107,7 +107,10 @@ export function BillingSettings() {
       })
         .catch((e) => {
           const message = e instanceof Error ? e.message : "Checkout failed";
-          if (message !== "Checkout canceled") {
+          if (message === "Checkout canceled") {
+            window.sessionStorage.removeItem("paddle_checkout_txn");
+            router.replace("/dashboard/settings?tab=billing");
+          } else {
             setError(message);
           }
           checkoutSyncedRef.current = false;
@@ -177,7 +180,9 @@ export function BillingSettings() {
     try {
       const session = await createProCheckoutSession(interval);
 
-      if (session.mode === "overlay") {
+      window.sessionStorage.setItem("paddle_checkout_txn", session.transactionId);
+
+      try {
         await openPaddleOverlayCheckout(session.transactionId, async (txnId) => {
           setLoading("sync");
           const updated = await confirmProCheckout(txnId);
@@ -194,11 +199,19 @@ export function BillingSettings() {
           router.refresh();
         });
         return;
+      } catch (overlayError) {
+        const message =
+          overlayError instanceof Error ? overlayError.message : "Checkout failed";
+        if (message === "Checkout canceled") {
+          window.sessionStorage.removeItem("paddle_checkout_txn");
+          throw overlayError;
+        }
+        if (session.url) {
+          window.location.assign(session.url);
+          return;
+        }
+        throw overlayError;
       }
-
-      window.sessionStorage.setItem("paddle_checkout_txn", session.transactionId);
-      window.location.assign(session.url!);
-      return;
     } catch (e) {
       const message = e instanceof Error ? e.message : "Checkout failed";
       if (message !== "Checkout canceled") {
