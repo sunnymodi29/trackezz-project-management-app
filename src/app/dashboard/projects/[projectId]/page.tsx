@@ -101,10 +101,10 @@ export default async function ProjectOverviewPage({
   ];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto animate-fade-in">
       {/* Project Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
           <div
             className="h-14 w-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg"
             style={{
@@ -114,9 +114,9 @@ export default async function ProjectOverviewPage({
           >
             {project.icon}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-foreground">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="min-w-0 text-2xl font-bold text-foreground">
                 {project.name}
               </h1>
               <span className="font-mono text-sm text-muted-foreground bg-muted rounded px-2 py-0.5">
@@ -130,7 +130,7 @@ export default async function ProjectOverviewPage({
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <DashboardLink href={`/dashboard/projects/${project.key}/board`}>
             <button className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors">
               View Board <ArrowUpRight className="h-3 w-3" />
@@ -145,7 +145,7 @@ export default async function ProjectOverviewPage({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
         {stats.map((s) => (
           <Card key={s.label}>
             <CardContent>

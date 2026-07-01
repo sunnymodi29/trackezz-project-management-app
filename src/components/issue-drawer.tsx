@@ -15,7 +15,7 @@ export default function IssueDrawer({
   onNavigateIssue,
 }: IssueDrawerProps) {
   return (
-    <div className="w-[520px] shrink-0 flex flex-col h-full absolute right-0 z-20 max-h-[calc(100vh-56px)] overflow-x-hidden">
+    <div className="fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col overflow-x-hidden bg-card shadow-2xl md:absolute md:bottom-auto md:left-auto md:top-0 md:h-full md:w-[520px] md:shrink-0 md:max-h-[calc(100vh-56px)]">
       <IssueDetailView
         issueId={issueId}
         variant="drawer"

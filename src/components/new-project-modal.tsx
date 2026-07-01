@@ -146,12 +146,12 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
   if (!permissions.canCreateProject) return null;
 
   return (
-    <div className="fixed inset-0 z-10000 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-10000 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={submitting ? undefined : onClose}
       />
-      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl overflow-hidden animate-scale-in">
+      <div className="relative flex h-dvh w-full max-w-lg flex-col overflow-hidden border border-border bg-card shadow-2xl animate-scale-in sm:h-auto sm:max-h-[90vh] sm:rounded-xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
             <h2 className="text-base font-semibold">New project</h2>
@@ -163,13 +163,13 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-md p-1 hover:bg-accent transition-colors"
+            className="rounded-lg p-2 hover:bg-accent transition-colors sm:p-1"
           >
             <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 sm:p-5">
           {error && (
             <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
               {error}
@@ -217,7 +217,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
               return (
                 <div
                   key={m.userId}
-                  className="flex items-center gap-2 rounded-lg border border-border p-2"
+                  className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center"
                 >
                   <Avatar src={user.avatarUrl} name={user.name} size="sm" />
                   <span className="text-sm flex-1 truncate">{user.name}</span>
@@ -233,8 +233,8 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                         ),
                       )
                     }
-                    className="w-36"
-                    triggerClassName="h-8 text-xs"
+                    className="w-full sm:w-36"
+                    triggerClassName="sm:h-8 sm:text-xs"
                     optionsClassName="z-10000!"
                   />
                   <button
@@ -244,7 +244,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                         prev.filter((row) => row.userId !== m.userId),
                       )
                     }
-                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                    className="self-end rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:self-auto sm:p-1"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -268,15 +268,15 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                       : "All org members added"
                   }
                   className="flex-1"
-                  triggerClassName="h-9"
+                  triggerClassName="sm:h-9"
                   optionsClassName="z-10000!"
                 />
                 <CustomSelect
                   options={PROJECT_ROLE_OPTIONS}
                   value={addRole}
                   onChange={(val) => setAddRole(val as ProjectRole)}
-                  className="w-36"
-                  triggerClassName="h-9 text-xs"
+                  className="w-full sm:w-36"
+                  triggerClassName="sm:h-9 sm:text-xs"
                   optionsClassName="z-10000!"
                 />
                 <Button
@@ -286,7 +286,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
                   onClick={addMember}
                   disabled={!addUserId}
                   title="Add to project"
-                  className="w-9 h-9"
+                  className="h-11 w-full sm:h-9 sm:w-9"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -295,7 +295,7 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
+        <div className="flex flex-col-reverse gap-2 border-t border-border px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:justify-end sm:px-5 sm:pb-4">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>

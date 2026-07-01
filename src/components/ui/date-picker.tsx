@@ -251,7 +251,7 @@ export function DatePicker({
       aria-label="Choose date"
       style={{ top: position.top, left: position.left, width: POPOVER_WIDTH }}
       className={cn(
-        "fixed z-10000 rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl transition-opacity duration-100",
+        "fixed z-10000 rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl transition-opacity duration-100 max-sm:left-3! max-sm:right-3! max-sm:top-auto! max-sm:bottom-[calc(0.75rem+env(safe-area-inset-bottom))]! max-sm:w-auto! max-sm:rounded-2xl",
         positioned
           ? "opacity-100 animate-scale-in"
           : "opacity-0 pointer-events-none",
@@ -260,7 +260,7 @@ export function DatePicker({
       <div className="flex items-center justify-between gap-1 border-b border-border px-2 py-2">
         <button
           type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
           onClick={() => setViewMonth((m) => subMonths(m, 1))}
           aria-label="Previous month"
         >
@@ -275,7 +275,7 @@ export function DatePicker({
               setViewMonth((m) => new Date(m.getFullYear(), Number(val), 1))
             }
             className="min-w-0 flex-1 max-w-[120px]"
-            triggerClassName="h-7 px-1.5 text-xs font-medium border-border bg-card/50 shadow-none"
+            triggerClassName="h-10 px-2 text-xs font-medium border-border bg-card/50 shadow-none sm:h-7"
             optionsClassName="max-h-48 !max-w-32 z-10000!"
           />
           <CustomSelect
@@ -285,14 +285,14 @@ export function DatePicker({
               setViewMonth((m) => new Date(Number(val), m.getMonth(), 1))
             }
             className="w-[76px] shrink-0"
-            triggerClassName="h-7 px-1.5 text-xs font-medium border-border bg-card/50 shadow-none"
+            triggerClassName="h-10 px-2 text-xs font-medium border-border bg-card/50 shadow-none sm:h-7"
             optionsClassName="max-h-48 !max-w-26 z-10000!"
           />
         </div>
 
         <button
           type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
           onClick={() => setViewMonth((m) => addMonths(m, 1))}
           aria-label="Next month"
         >
@@ -326,7 +326,7 @@ export function DatePicker({
               disabled={outOfRange}
               onClick={() => handleSelectDay(day)}
               className={cn(
-                "flex h-8 w-full items-center justify-center rounded-md text-xs transition-colors",
+                "flex h-10 w-full items-center justify-center rounded-md text-sm transition-colors sm:h-8 sm:text-xs",
                 !inMonth && "text-muted-foreground/50",
                 inMonth &&
                   !selected &&
@@ -351,7 +351,7 @@ export function DatePicker({
         <button
           type="button"
           onClick={handleToday}
-          className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+          className="min-h-10 rounded-md px-3 py-1 text-sm font-medium text-primary hover:bg-primary/10 sm:min-h-0 sm:px-2 sm:text-xs"
         >
           Today
         </button>
@@ -359,7 +359,7 @@ export function DatePicker({
           <button
             type="button"
             onClick={handleClear}
-            className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="min-h-10 rounded-md px-3 py-1 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground sm:min-h-0 sm:px-2 sm:text-xs"
           >
             Clear
           </button>
@@ -383,7 +383,7 @@ export function DatePicker({
           });
         }}
         className={cn(
-          "flex h-8 w-full items-center justify-between gap-2 rounded-md border border-input bg-card/50 px-3 py-1 text-xs shadow-sm transition-all hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 text-left",
+          "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-input bg-card/50 px-3 py-1 text-sm shadow-sm transition-all hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 text-left sm:h-8 sm:text-xs",
           triggerClassName,
         )}
       >

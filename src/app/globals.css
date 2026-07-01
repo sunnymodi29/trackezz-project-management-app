@@ -115,6 +115,14 @@ samp {
   --topbar-height: 56px;
 }
 
+.safe-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-pt {
+  padding-top: env(safe-area-inset-top);
+}
+
 /* ── Animations ──────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from {

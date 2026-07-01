@@ -26,7 +26,7 @@ export function RouteTransitionLoader() {
         inDashboardShell
           ? cn(
               "right-0 top-0 bottom-0",
-              sidebarCollapsed ? "left-14" : "left-60",
+              sidebarCollapsed ? "left-0 md:left-14" : "left-0 md:left-60",
             )
           : "inset-0",
       )}

@@ -253,12 +253,12 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
 
   return (
     <>
-      <div className="fixed inset-0 z-10000 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-10000 flex items-end justify-center p-0 sm:items-center sm:p-4">
         <div
           className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           onClick={saving || removeTarget ? undefined : onClose}
         />
-        <div className="relative w-full max-w-xl max-h-[90vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl overflow-hidden animate-scale-in">
+        <div className="relative flex h-dvh w-full max-w-xl flex-col overflow-hidden border border-border bg-card shadow-2xl animate-scale-in sm:h-auto sm:max-h-[90vh] sm:rounded-xl">
           <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
             <div
               className="h-10 w-10 rounded-lg flex items-center justify-center text-lg font-bold shrink-0"
@@ -277,7 +277,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1 hover:bg-accent transition-colors shrink-0"
+              className="shrink-0 rounded-lg p-2 transition-colors hover:bg-accent sm:p-1"
             >
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
@@ -292,7 +292,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
             </TabButton>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 sm:p-5">
             {error && (
               <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
                 {error}
@@ -350,7 +350,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                   {members.map((m) => (
                     <div
                       key={m.id}
-                      className="flex items-center gap-2 rounded-lg border border-border p-2.5"
+                      className="flex flex-col gap-2 rounded-lg border border-border p-2.5 sm:flex-row sm:items-center"
                     >
                       <Avatar src={m.user.avatarUrl} name={m.user.name} size="sm" />
                       <div className="flex-1 min-w-0">
@@ -364,8 +364,8 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                         value={m.role}
                         onChange={(val) => void handleRoleChange(m.userId, val as ProjectRole)}
                         disabled={memberBusy === m.userId}
-                        className="w-36"
-                        triggerClassName="h-8 text-xs"
+                        className="w-full sm:w-36"
+                        triggerClassName="sm:h-8 sm:text-xs"
                         optionsClassName="z-10000!"
                       />
                       <button
@@ -374,7 +374,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                           setRemoveTarget({ userId: m.userId, name: m.user.name })
                         }
                         disabled={memberBusy === m.userId}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                        className="self-end rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:self-auto sm:p-1.5"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -390,11 +390,11 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                 {canManage && (
                   <div className="pt-3 border-t border-border space-y-2">
                     <label className="text-sm font-medium">Invite by email</label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <div className="relative flex-1 min-w-[160px]">
                         <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
-                          className="pl-8 h-9"
+                          className="pl-8 sm:h-9"
                           type="email"
                           placeholder="teammate@company.com"
                           value={inviteEmail}
@@ -405,8 +405,8 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                         options={PROJECT_ROLE_OPTIONS}
                         value={inviteRole}
                         onChange={(val) => setInviteRole(val as ProjectRole)}
-                        className="w-36"
-                        triggerClassName="h-9 text-xs"
+                        className="w-full sm:w-36"
+                        triggerClassName="sm:h-9 sm:text-xs"
                         optionsClassName="z-10000!"
                       />
                       <Button
@@ -486,7 +486,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                 {canManage && availableToAdd.length > 0 && (
                   <div className="pt-3 border-t border-border space-y-2">
                     <label className="text-sm font-medium">Add existing org member</label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <CustomSelect
                         options={availableToAdd.map((wm) => ({
                           value: wm.userId,
@@ -497,16 +497,16 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                         value={addUserId}
                         onChange={setAddUserId}
                         placeholder="Select user..."
-                        className="flex-1 min-w-[160px]"
-                        triggerClassName="h-9"
+                        className="flex-1 min-w-0 sm:min-w-[160px]"
+                        triggerClassName="sm:h-9"
                         optionsClassName="z-10000!"
                       />
                       <CustomSelect
                         options={PROJECT_ROLE_OPTIONS}
                         value={addRole}
                         onChange={(val) => setAddRole(val as ProjectRole)}
-                        className="w-36"
-                        triggerClassName="h-9 text-xs"
+                        className="w-full sm:w-36"
+                        triggerClassName="sm:h-9 sm:text-xs"
                         optionsClassName="z-10000!"
                       />
                       <Button
@@ -524,7 +524,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
           </div>
 
           {tab === "general" && (
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
+            <div className="flex flex-col-reverse gap-2 border-t border-border px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:justify-end sm:px-5 sm:pb-4">
               <Button variant="outline" onClick={onClose} disabled={saving}>
                 Close
               </Button>
@@ -534,7 +534,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
             </div>
           )}
           {tab === "members" && (
-            <div className="flex justify-end px-5 py-4 border-t border-border">
+            <div className="flex justify-end border-t border-border px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-5 sm:pb-4">
               <Button variant="outline" onClick={onClose}>
                 Close
               </Button>
@@ -588,7 +588,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium rounded-t-md transition-colors",
+        "relative flex min-h-10 items-center gap-1.5 rounded-t-md px-3 py-2.5 text-xs font-medium transition-colors sm:min-h-0",
         active
           ? "z-10 bg-card text-primary shadow-[inset_0_-2px_0_0_var(--color-primary)]"
           : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"

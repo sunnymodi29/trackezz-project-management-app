@@ -158,23 +158,23 @@ function IssuesPageContent() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-56px)]">
+    <div className="flex h-[calc(100dvh-56px)] min-w-0 overflow-x-hidden">
       <div
         className={cn(
-          "flex-1 flex flex-col overflow-hidden",
-          selectedIssueId && "border-r border-border",
+          "flex-1 min-w-0 flex flex-col overflow-hidden",
+          selectedIssueId && "md:border-r md:border-border",
         )}
       >
-        <div className="px-6 py-4 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
-            <div>
+        <div className="border-b border-border px-4 py-4 sm:px-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h1 className="text-lg font-bold text-foreground">Issues</h1>
               <p className="text-xs text-muted-foreground">
                 {filteredIssueCount(filtered, projectIssues)} issues
                 {project ? ` · ${project.name}` : ""}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {project && <WorkflowStatusManager projectId={project.id} />}
               <Button
                 size="sm"
@@ -186,14 +186,14 @@ function IssuesPageContent() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <div className="relative col-span-2 sm:col-span-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Filter issues..."
-                className="pl-8 h-8 w-52 text-xs"
+                className="pl-8 sm:h-8 sm:w-52 sm:text-xs"
               />
             </div>
             <FilterSelect
@@ -250,8 +250,8 @@ function IssuesPageContent() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 z-10 flex items-center gap-2 px-6 py-2 bg-muted/60 backdrop-blur border-b border-border text-xs font-medium text-muted-foreground">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="sticky top-0 z-10 hidden items-center gap-2 border-b border-border bg-muted/60 px-6 py-2 text-xs font-medium text-muted-foreground backdrop-blur sm:flex">
             <div className="w-6" />
             <div className="w-20">ID</div>
             <div className="flex-1">Title</div>
@@ -317,8 +317,8 @@ function FilterSelect({
       options={options}
       value={value}
       onChange={onChange}
-      className="w-auto min-w-[125px]"
-      triggerClassName="h-8 border-border bg-card/40 hover:bg-accent/40 font-medium px-3 text-xs"
+      className="w-full min-w-0 sm:w-auto sm:min-w-[125px]"
+      triggerClassName="border-border bg-card/40 hover:bg-accent/40 font-medium px-3 sm:h-8 sm:text-xs"
       optionsClassName="w-36"
     />
   );
@@ -355,7 +355,7 @@ function IssueGroup({
     <div>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2 px-6 py-2 hover:bg-muted/50 transition-colors text-left"
+        className="w-full flex items-center gap-2 px-4 py-2 hover:bg-muted/50 transition-colors text-left sm:px-6"
       >
         <ChevronDown
           className={cn(
@@ -376,7 +376,7 @@ function IssueGroup({
               <div
                 onClick={() => onSelect(issue.id)}
                 className={cn(
-                  "group flex items-center gap-2 px-6 py-2.5 hover:bg-accent/50 cursor-pointer border-b border-border/50 transition-colors",
+                  "group flex min-w-0 items-start gap-2 border-b border-border/50 px-4 py-3 hover:bg-accent/50 cursor-pointer transition-colors sm:items-center sm:px-6 sm:py-2.5",
                   selectedId === issue.id &&
                     "bg-primary/5 border-l-2 border-l-primary",
                 )}
@@ -384,7 +384,7 @@ function IssueGroup({
                 <div className="w-6 flex justify-center shrink-0">
                   <IssueTypeIcon type={issue.type} />
                 </div>
-                <div className="w-20 shrink-0">
+                <div className="w-16 shrink-0 sm:w-20">
                   <DashboardLink
                     href={issuePath(projectKey, issue.id)}
                     onClick={(e) => e.stopPropagation()}
@@ -394,9 +394,9 @@ function IssueGroup({
                     </span>
                   </DashboardLink>
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1 overflow-hidden">
                   <div
-                    className="flex items-center gap-1.5 min-w-0"
+                    className="flex min-w-0 items-center gap-1.5"
                     style={{ paddingLeft: `${depth * 16}px` }}
                   >
                     <div
@@ -405,7 +405,7 @@ function IssueGroup({
                     >
                       {expandControl}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 overflow-hidden">
                       <span className="text-sm font-medium text-foreground hover:text-primary transition-colors line-clamp-1">
                         {issue.title}
                       </span>

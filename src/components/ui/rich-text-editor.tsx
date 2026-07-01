@@ -54,7 +54,7 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "rounded p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40",
+        "min-h-10 min-w-10 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 sm:min-h-0 sm:min-w-0 sm:rounded sm:p-1.5",
         active && "bg-accent text-foreground",
       )}
     >
@@ -161,7 +161,7 @@ export function RichTextEditor({
         <div
           className={cn(
             "flex flex-wrap items-center gap-0.5 border-b border-border",
-            compact ? "px-1.5 py-1" : "px-2 py-1.5",
+          compact ? "px-1.5 py-1" : "px-2 py-1.5",
           )}
         >
           <ToolbarButton
@@ -234,7 +234,7 @@ export function RichTextEditor({
       <EditorContent
         editor={editor}
         className={cn(
-          "text-sm overflow-y-auto max-h-[62vh]",
+          "text-base overflow-y-auto max-h-[42dvh] sm:max-h-[62vh] sm:text-sm",
           compact ? "px-2 py-1.5" : "px-3 py-2",
         )}
       />

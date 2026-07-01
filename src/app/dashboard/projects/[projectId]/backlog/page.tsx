@@ -145,21 +145,21 @@ export default function BacklogPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden">
+    <div className="flex h-[calc(100dvh-56px)] overflow-hidden">
       <div
         className={cn(
           "flex flex-col flex-1 overflow-hidden",
-          selectedIssueId && "border-r border-border"
+          selectedIssueId && "md:border-r md:border-border"
         )}
       >
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-card/50">
+        <div className="flex flex-col gap-3 border-b border-border bg-card/50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <h1 className="text-lg font-bold">Backlog</h1>
             <p className="text-xs text-muted-foreground">
               {projectIssues.length} issues · {backlogIssues.length} unscheduled
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canManage && (
               <Button size="sm" variant="outline" onClick={() => setSprintModalOpen(true)}>
                 Create Sprint
@@ -176,11 +176,11 @@ export default function BacklogPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        <div className="flex-1 overflow-y-auto p-4 space-y-8 sm:p-6">
           {projectSprints.map((sprint) => (
             <div key={sprint.id} className="space-y-3">
-              <div className="flex items-center justify-between group">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="group flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
                   <div className="flex items-center justify-center p-1 rounded hover:bg-muted cursor-pointer">
                     <ChevronDown className="h-4 w-4" />
                   </div>
@@ -207,7 +207,7 @@ export default function BacklogPage() {
                     {sprint.status}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                   <div className="text-[10px] text-muted-foreground">
                     {sprint.issueCount} issues
                   </div>
@@ -229,7 +229,7 @@ export default function BacklogPage() {
                   </DashboardLink>
                 </div>
               </div>
-              <div className="space-y-1 ml-6 border-l-2 border-border/50 pl-4">
+              <div className="ml-2 space-y-1 border-l-2 border-border/50 pl-3 sm:ml-6 sm:pl-4">
                 {(() => {
                   const st = sprintIssueTrees.find((x) => x.sprint.id === sprint.id);
                   const tree = st?.tree ?? [];

@@ -313,15 +313,15 @@ export function NewIssueModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-10000 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-10000 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={closeNewIssue}
       />
-      <div className="relative w-full max-w-3xl max-h-[90vh] min-h-[510px] flex flex-col animate-scale-in rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+      <div className="relative flex h-dvh w-full max-w-3xl animate-scale-in flex-col overflow-hidden border border-border bg-card shadow-2xl sm:h-auto sm:max-h-[90vh] sm:min-h-[510px] sm:rounded-xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
+          <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
             <CustomSelect
               options={projects.map((p) => ({
                 value: p.id,
@@ -350,25 +350,25 @@ export function NewIssueModal() {
                 const project = projects.find((p) => p.id === val);
                 if (project) setCurrentProject(project);
               }}
-              className="w-36 shrink-0"
-              triggerClassName="bg-muted border-border hover:bg-accent/40 h-7"
+              className="min-w-0 sm:w-36 sm:shrink-0"
+              triggerClassName="bg-muted border-border hover:bg-accent/40 sm:h-7"
               optionsClassName="z-10000!"
             />
             <CustomSelect
               options={TYPE_OPTIONS}
               value={type}
               onChange={(val) => setType(val as IssueType)}
-              className="w-36 shrink-0"
-              triggerClassName="bg-muted border-border hover:bg-accent/40 h-7"
+              className="min-w-0 sm:w-36 sm:shrink-0"
+              triggerClassName="bg-muted border-border hover:bg-accent/40 sm:h-7"
               optionsClassName="z-10000!"
             />
-            <span className="text-xs text-muted-foreground font-mono">
+            <span className="col-span-2 text-xs text-muted-foreground font-mono sm:col-span-1">
               {nextIssueKeyPreview}
             </span>
           </div>
           <button
             onClick={closeNewIssue}
-            className="rounded-md p-1 hover:bg-accent transition-colors"
+            className="rounded-lg p-2 hover:bg-accent transition-colors sm:p-1"
           >
             <X className="h-4 w-4 text-muted-foreground" />
           </button>
@@ -387,15 +387,15 @@ export function NewIssueModal() {
         )}
 
         {/* Body */}
-        <div className="overflow-y-auto p-5 space-y-4">
-          <div className="flex flex-1 gap-8">
-            <div className="space-y-2 w-4/5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 sm:p-5">
+          <div className="flex flex-1 flex-col gap-5 sm:flex-row sm:gap-8">
+            <div className="space-y-2 sm:w-4/5">
               <input
                 ref={titleRef}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Issue title..."
-                className="w-full bg-transparent text-lg font-semibold text-foreground placeholder:text-muted-foreground outline-none border-b border-border pb-1.5"
+                className="w-full bg-transparent text-xl font-semibold text-foreground placeholder:text-muted-foreground outline-none border-b border-border pb-2 sm:text-lg sm:pb-1.5"
               />
               <RichTextEditor
                 value={description}
@@ -434,7 +434,7 @@ export function NewIssueModal() {
             </div>
 
             {/* Meta row */}
-            <div className="gap-3 flex flex-col max-w-40 min-w-40">
+            <div className="grid gap-3 sm:flex sm:min-w-40 sm:max-w-40 sm:flex-col">
               <MetaField label="Assignees">
                 <CustomSelect
                   multiple
@@ -444,7 +444,7 @@ export function NewIssueModal() {
                   placeholder="Unassigned"
                   optionsClassName="z-10000!"
                   renderTrigger={() => (
-                    <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto w-full bg-transparent text-xs text-foreground outline-none cursor-pointer p-1 rounded hover:bg-accent/50 min-h-[24px]">
+                    <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto w-full bg-transparent text-sm text-foreground outline-none cursor-pointer p-1 rounded hover:bg-accent/50 min-h-10 sm:max-h-12 sm:text-xs sm:min-h-[24px]">
                       {selectedAssignees.length === 0 ? (
                         <span className="text-muted-foreground italic text-[10px]">
                           Unassigned
@@ -473,7 +473,7 @@ export function NewIssueModal() {
                   options={statusOptions}
                   value={status}
                   onChange={(val) => setStatus(val as IssueStatus)}
-                  triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
+                  triggerClassName="bg-transparent border-0 h-10 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium sm:h-6"
                   optionsClassName="z-10000!"
                 />
               </MetaField>
@@ -482,7 +482,7 @@ export function NewIssueModal() {
                   options={PRIORITY_OPTIONS}
                   value={priority}
                   onChange={(val) => setPriority(val as Priority)}
-                  triggerClassName="bg-transparent border-0 h-6 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium"
+                  triggerClassName="bg-transparent border-0 h-10 px-1 hover:bg-accent/30 shadow-none text-foreground font-medium sm:h-6"
                   optionsClassName="z-10000!"
                 />
               </MetaField>
@@ -527,7 +527,7 @@ export function NewIssueModal() {
                   type="number"
                   min="0"
                   placeholder="0"
-                  className="w-full bg-transparent text-xs text-foreground outline-none"
+                  className="h-10 w-full bg-transparent text-sm text-foreground outline-none sm:h-auto sm:text-xs"
                 />
               </MetaField>
               <MetaField label="Due date">
@@ -535,7 +535,7 @@ export function NewIssueModal() {
                   value={dueDate}
                   onChange={setDueDate}
                   placeholder="No due date"
-                  triggerClassName="h-6 border-0 bg-transparent px-1 shadow-none hover:bg-accent/30"
+                  triggerClassName="h-10 border-0 bg-transparent px-1 shadow-none hover:bg-accent/30 sm:h-6"
                 />
               </MetaField>
               {/* <MetaField label="Project">
@@ -546,7 +546,7 @@ export function NewIssueModal() {
 
           {/* Bug-specific fields */}
           {showBugFields && (
-            <div className="rounded-lg border !border-red-500/20 bg-red-500/5 p-4 space-y-3">
+            <div className="rounded-lg border border-red-500/20! bg-red-500/5 p-4 space-y-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-red-400 uppercase tracking-wider">
                 <AlertCircle className="h-3.5 w-3.5" /> Bug Report Fields
               </div>
@@ -559,7 +559,7 @@ export function NewIssueModal() {
                     value={env}
                     onChange={(e) => setEnv(e.target.value)}
                     placeholder="e.g. Production, Chrome 121, macOS 14"
-                    className="h-8 text-xs !border-white/20 focus-visible:ring-white/50"
+                    className="h-8 text-xs border-white/20! focus-visible:ring-white/50"
                   />
                 </div>
                 <div>
@@ -570,10 +570,10 @@ export function NewIssueModal() {
                     value={reproSteps}
                     onChange={(e) => setReproSteps(e.target.value)}
                     placeholder="1. Go to...\n2. Click...\n3. See error"
-                    className="min-h-[80px] text-xs !border-white/20 focus-visible:ring-white/50"
+                    className="min-h-[80px] text-xs border-white/20! focus-visible:ring-white/50"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">
                       Expected Result
@@ -582,7 +582,7 @@ export function NewIssueModal() {
                       value={expected}
                       onChange={(e) => setExpected(e.target.value)}
                       placeholder="What should happen?"
-                      className="min-h-[60px] text-xs !border-white/20 focus-visible:ring-white/50"
+                      className="min-h-[60px] text-xs border-white/20! focus-visible:ring-white/50"
                     />
                   </div>
                   <div>
@@ -593,7 +593,7 @@ export function NewIssueModal() {
                       value={actual}
                       onChange={(e) => setActual(e.target.value)}
                       placeholder="What actually happened?"
-                      className="min-h-[60px] text-xs !border-white/20 focus-visible:ring-white/50"
+                      className="min-h-[60px] text-xs border-white/20! focus-visible:ring-white/50"
                     />
                   </div>
                 </div>
@@ -603,11 +603,11 @@ export function NewIssueModal() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end px-5 py-3 border-t border-border bg-muted/30">
+        <div className="border-t border-border bg-muted/30 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-5 sm:pb-3">
           {/* <button className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
             <Paperclip className="h-3.5 w-3.5" /> Attach files
           </button> */}
-          <div className="flex gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="outline" size="sm" onClick={closeNewIssue}>
               Cancel
             </Button>

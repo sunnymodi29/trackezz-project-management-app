@@ -142,14 +142,14 @@ export function ProjectCalendar({
   };
 
   return (
-    <div className="flex h-[calc(100vh-56px)]">
+    <div className="flex h-[calc(100dvh-56px)] flex-col lg:flex-row">
       <div
         className={cn(
           "flex-1 flex flex-col min-w-0 overflow-hidden",
-          selectedIssueId && "border-r border-border"
+          selectedIssueId && "lg:border-r lg:border-border"
         )}
       >
-        <div className="px-6 py-4 border-b border-border flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 border-b border-border px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
           <div>
             <h1 className="text-lg font-bold flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" />
@@ -213,8 +213,8 @@ export function ProjectCalendar({
           onDragStart={(e: DragStartEvent) => setActiveDragId(String(e.active.id))}
           onDragEnd={(e) => void handleDragEnd(e)}
         >
-          <div className="flex-1 overflow-auto p-4">
-            <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden border border-border min-h-[480px]">
+          <div className="flex-1 overflow-auto p-3 sm:p-4">
+            <div className="grid min-w-[680px] grid-cols-7 gap-px overflow-hidden rounded-lg border border-border bg-border min-h-[480px] sm:min-w-0">
               {WEEKDAYS.map((label) => (
                 <div
                   key={label}
@@ -256,7 +256,7 @@ export function ProjectCalendar({
         </DndContext>
       </div>
 
-      <aside className="w-72 shrink-0 border-l border-border flex flex-col bg-card/50">
+      <aside className="max-h-56 shrink-0 border-t border-border bg-card/50 flex flex-col lg:max-h-none lg:w-72 lg:border-l lg:border-t-0">
         <div className="px-4 py-3 border-b border-border">
           <h2 className="text-sm font-semibold">Unscheduled</h2>
           <p className="text-[10px] text-muted-foreground mt-0.5">

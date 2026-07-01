@@ -30,10 +30,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       link: "underline-offset-4 hover:underline text-primary p-0 h-auto",
     };
     const sizes = {
-      sm: "h-8 px-3 text-xs rounded",
-      md: "h-9 px-4 text-sm",
-      lg: "h-10 px-6 text-sm",
-      icon: "h-8 w-8 p-0",
+      sm: "h-8 min-h-11 px-3 text-xs rounded sm:min-h-0",
+      md: "h-9 min-h-11 px-4 text-sm sm:min-h-0",
+      lg: "h-10 min-h-11 px-6 text-sm",
+      icon: "h-8 min-h-11 w-8 min-w-11 p-0 sm:min-h-0 sm:min-w-0",
     };
     return (
       <button
@@ -81,7 +81,7 @@ export const Input = React.forwardRef<
   <input
     ref={ref}
     className={cn(
-      "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50",
+      "flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:text-sm",
       className,
     )}
     {...props}
@@ -97,7 +97,7 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none",
+      "flex min-h-[96px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 resize-none sm:min-h-[80px] sm:text-sm",
       className,
     )}
     {...props}
@@ -235,14 +235,14 @@ export function Switch({ checked, onCheckedChange, id }: SwitchProps) {
       aria-checked={checked}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        "relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:h-5 sm:w-9",
         checked ? "bg-primary" : "bg-input",
       )}
     >
       <span
         className={cn(
-          "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform",
-          checked ? "translate-x-4" : "translate-x-0",
+          "pointer-events-none block h-6 w-6 rounded-full bg-white shadow-lg ring-0 transition-transform sm:h-4 sm:w-4",
+          checked ? "translate-x-5 sm:translate-x-4" : "translate-x-0",
         )}
       />
     </button>

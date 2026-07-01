@@ -63,7 +63,7 @@ export function InboxView() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3">
@@ -78,7 +78,7 @@ export function InboxView() {
             Assignments, comments, invitations, and updates.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex rounded-lg border border-border p-1">
             <FilterTab
               active={filter === "all"}
@@ -173,7 +173,7 @@ function FilterTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+        "min-h-10 px-3 py-1.5 text-xs font-medium rounded-md transition-colors sm:min-h-0",
         active
           ? "bg-accent text-foreground shadow-sm"
           : "text-muted-foreground hover:bg-accent/10 hover:text-foreground",

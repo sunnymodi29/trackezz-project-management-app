@@ -153,11 +153,11 @@ export function ProjectSwitcher() {
     <>
       <div
         ref={containerRef}
-        className="relative flex items-center gap-1 min-w-0 max-w-[min(100%,360px)] pr-1"
+        className="relative flex min-w-0 max-w-full items-center gap-0.5 pr-0 sm:gap-1 sm:pr-1"
       >
         <DashboardLink
           href={overviewHref}
-          className="flex items-center gap-2.5 min-w-0 flex-1 py-1.5 pl-2.5 pr-1 transition-colors"
+          className="flex min-w-0 items-center gap-2 py-1.5 pl-1 pr-0 transition-colors sm:gap-2.5 sm:pl-2.5 sm:pr-1"
         >
           <ProjectIcon project={currentProject} />
           <span className="min-w-0 text-sm font-medium text-foreground truncate">
@@ -186,7 +186,7 @@ export function ProjectSwitcher() {
         </Tooltip>
         {open && (
           <div
-            className="absolute left-0 top-full mt-0 w-[min(100vw-2rem,360px)] rounded-xl border border-border bg-card shadow-2xl z-50 animate-scale-in overflow-hidden"
+            className="fixed inset-x-3 top-16 z-50 animate-scale-in overflow-hidden rounded-2xl border border-border bg-card shadow-2xl md:absolute md:inset-auto md:left-0 md:top-full md:mt-0 md:w-[min(100vw-2rem,360px)] md:rounded-xl"
             role="listbox"
           >
             <div className="p-2 border-b border-border">
@@ -198,7 +198,7 @@ export function ProjectSwitcher() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Find Project..."
-                  className="w-full pl-8 pr-12 py-2 text-sm bg-muted/40 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+                  className="min-h-11 w-full rounded-xl border border-border bg-muted/40 py-2 pl-8 pr-12 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 md:min-h-0 md:rounded-lg md:text-sm"
                 />
                 <kbd className="absolute right-2.5 hidden sm:inline-flex h-5 select-none items-center rounded border border-border bg-background px-1.5 font-mono text-[10px] text-muted-foreground">
                   Esc
@@ -206,7 +206,7 @@ export function ProjectSwitcher() {
               </div>
             </div>
 
-            <div className="max-h-[280px] overflow-y-auto py-1">
+            <div className="max-h-[min(60dvh,420px)] overflow-y-auto py-1 md:max-h-[280px]">
               {filteredProjects.map((project) => {
                 const selected = project.id === currentProject.id;
                 return (
@@ -217,7 +217,7 @@ export function ProjectSwitcher() {
                     aria-selected={selected}
                     onClick={() => switchProject(project)}
                     className={cn(
-                      "w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                      "flex min-h-12 w-full items-center gap-2.5 px-3 py-2 text-left transition-colors md:min-h-0",
                       selected
                         ? "bg-accent text-foreground"
                         : "hover:bg-accent/50 text-foreground",

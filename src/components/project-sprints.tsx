@@ -190,8 +190,8 @@ export function ProjectSprints() {
 
   return (
     <>
-      <div className="p-6 space-y-8 max-w-6xl mx-auto animate-fade-in">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-6 space-y-8 max-w-6xl mx-auto animate-fade-in">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
               <Target className="h-6 w-6 text-primary" /> Sprint Planning
@@ -206,7 +206,7 @@ export function ProjectSprints() {
                 setEditingSprint(null);
                 setModalOpen(true);
               }}
-              className="shadow-lg shadow-primary/20"
+              className="w-full shadow-lg shadow-primary/20 sm:w-auto"
             >
               {activeSprint ? "New Sprint" : "Start New Sprint"}
             </Button>
@@ -214,9 +214,9 @@ export function ProjectSprints() {
         </div>
 
         {activeSprint && (
-          <Card className="bg-primary/[0.03] border-primary/20">
+          <Card className="bg-primary/3 border-primary/20">
             <CardHeader>
-              <div className="flex justify-between items-start gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <Badge className="mb-2">CURRENT SPRINT</Badge>
                   <CardTitle className="text-xl">
@@ -232,7 +232,7 @@ export function ProjectSprints() {
                       {activeSprint.goal}
                     </p>
                   )}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                  <div className="flex flex-col gap-1 text-xs text-muted-foreground mt-2 sm:flex-row sm:items-center sm:gap-4">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       {activeSprint.startDate.toLocaleDateString()} —{" "}
@@ -244,7 +244,7 @@ export function ProjectSprints() {
                     </span>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="shrink-0 sm:text-right">
                   <div className="text-sm font-bold text-primary">
                     {activeSprint.completedCount}/{activeSprint.issueCount} Done
                   </div>

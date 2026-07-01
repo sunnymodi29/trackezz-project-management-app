@@ -30,7 +30,7 @@ export function Checkbox({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        "inline-flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-[4px] border transition-all duration-150",
+        "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-md border transition-all duration-150 sm:h-[15px] sm:min-h-0 sm:w-[15px] sm:min-w-0 sm:rounded-[4px]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
         checked
           ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20"

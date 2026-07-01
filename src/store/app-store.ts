@@ -53,6 +53,11 @@ interface AppState {
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
 
+  mobileNavOpen: boolean;
+  openMobileNav: () => void;
+  closeMobileNav: () => void;
+  toggleMobileNav: () => void;
+
   commandPaletteOpen: boolean;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
@@ -114,6 +119,11 @@ export const useAppStore = create<AppState>((set) => ({
 
   sidebarCollapsed: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+
+  mobileNavOpen: false,
+  openMobileNav: () => set({ mobileNavOpen: true }),
+  closeMobileNav: () => set({ mobileNavOpen: false }),
+  toggleMobileNav: () => set((s) => ({ mobileNavOpen: !s.mobileNavOpen })),
 
   commandPaletteOpen: false,
   openCommandPalette: () => set({ commandPaletteOpen: true }),

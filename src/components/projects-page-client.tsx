@@ -115,7 +115,7 @@ export function ProjectsPageClient() {
 
   return (
     <>
-      <div className="w-full max-w-7xl mx-auto p-6 space-y-8 overflow-x-hidden animate-fade-in">
+      <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8 overflow-x-hidden animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Projects</h1>
@@ -124,13 +124,13 @@ export function ProjectsPageClient() {
             </p>
           </div>
           {permissions.canCreateProject && (
-            <Button className="gap-2" onClick={() => openNewProject()}>
+            <Button className="gap-2 w-full md:w-auto" onClick={() => openNewProject()}>
               <Plus className="h-4 w-4" /> New Project
             </Button>
           )}
         </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-2 border-y border-border">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 py-2 border-y border-border">
           <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -469,7 +469,7 @@ function CreateProjectCard({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 hover:border-primary/50 hover:bg-primary/[0.02] transition-all group min-h-[220px] w-full"
+      className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 hover:border-primary/50 hover:bg-primary/2 transition-all group min-h-[220px] w-full"
     >
       <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors">
         <Plus className="h-8 w-8" />

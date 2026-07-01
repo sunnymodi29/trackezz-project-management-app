@@ -47,6 +47,8 @@ import {
   Pencil,
   Plus,
   Trash2,
+  PanelLeft,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -476,6 +478,7 @@ function ProjectAssistantContent() {
     useState(false);
   const [copiedChatLinkId, setCopiedChatLinkId] = useState<string | null>(null);
   const [creatingChat, setCreatingChat] = useState(false);
+  const [chatListOpen, setChatListOpen] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -546,6 +549,7 @@ function ProjectAssistantContent() {
     setEditingConversationId(null);
     setEditingTitle("");
     setConversationId(id);
+    setChatListOpen(false);
     setLoadingMessages(true);
     setInitialMessages(null);
     try {
@@ -572,6 +576,7 @@ function ProjectAssistantContent() {
     setConversationId(row.id);
     setInitialMessages([]);
     setLoadingMessages(false);
+    setChatListOpen(false);
 
     try {
       await createAiConversation(project.id, row.title, row.id);
@@ -716,17 +721,40 @@ function ProjectAssistantContent() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-56px)] min-h-0 bg-background">
-      <aside className="w-56 border-r border-border flex flex-col shrink-0">
-        <div className="p-3 py-3.5 border-b border-border flex items-center justify-between gap-2">
+    <div className="flex h-[calc(100dvh-56px)] min-h-0 bg-background">
+      {chatListOpen && (
+        <button
+          type="button"
+          aria-label="Close chats"
+          className="fixed inset-0 top-14 z-30 bg-background/70 backdrop-blur-sm md:hidden"
+          onClick={() => setChatListOpen(false)}
+        />
+      )}
+      <aside
+        className={cn(
+          "fixed bottom-0 left-0 top-14 z-40 flex w-[min(82vw,18rem)] shrink-0 flex-col border-r border-border bg-card shadow-2xl transition-transform md:static md:z-auto md:w-56 md:translate-x-0 md:shadow-none",
+          chatListOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="p-3 py-2.5 md:py-3.5 border-b border-border flex items-center justify-between gap-2">
           <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Chats
           </span>
           <Button
             type="button"
+            size="icon"
+            variant="ghost"
+            className="md:hidden min-w-8 min-h-auto justify-end"
+            onClick={() => setChatListOpen(false)}
+            aria-label="Close chats"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
             size="sm"
             variant="outline"
-            className="h-8 px-2"
+            className="h-8 px-2 hidden md:block"
             disabled={creatingChat}
             onClick={() => void startNewChat()}
           >
@@ -792,7 +820,7 @@ function ProjectAssistantContent() {
                       <button
                         type="button"
                         className={cn(
-                          "p-1 rounded-sm shrink-0 hidden group-hover:block hover:bg-accent text-muted-foreground hover:text-foreground",
+                          "p-1 rounded-sm shrink-0 block md:hidden md:group-hover:block hover:bg-accent text-muted-foreground hover:text-foreground",
                           copiedChatLinkId === c.id && "block",
                         )}
                         aria-label={
@@ -813,14 +841,10 @@ function ProjectAssistantContent() {
                         )}
                       </button>
                     </Tooltip>
-                    <Tooltip
-                      content="Rename"
-                      side="top"
-                      className="shrink-0"
-                    >
+                    <Tooltip content="Rename" side="top" className="shrink-0">
                       <button
                         type="button"
-                        className="p-1 rounded-sm shrink-0 hidden group-hover:block hover:bg-accent text-muted-foreground hover:text-foreground"
+                        className="p-1 rounded-sm shrink-0 block md:hidden md:group-hover:block hover:bg-accent text-muted-foreground hover:text-foreground"
                         aria-label="Rename chat"
                         onClick={(e) => {
                           e.preventDefault();
@@ -831,14 +855,10 @@ function ProjectAssistantContent() {
                         <Pencil className="h-3 w-3" />
                       </button>
                     </Tooltip>
-                    <Tooltip
-                      content="Delete"
-                      side="top"
-                      className="shrink-0"
-                    >
+                    <Tooltip content="Delete" side="top" className="shrink-0">
                       <button
                         type="button"
-                        className="p-1 rounded-sm shrink-0 hidden group-hover:block hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                        className="p-1 rounded-sm shrink-0 block md:hidden md:group-hover:block hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                         aria-label="Delete chat"
                         onClick={(e) => {
                           e.preventDefault();
@@ -858,16 +878,38 @@ function ProjectAssistantContent() {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 min-h-0">
-        <div className="border-b border-border px-4 py-3 flex items-center gap-2 shrink-0">
-          <Bot className="h-4 w-4 text-primary" />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">
-              Project assistant
-            </div>
-            <div className="text-[11px] text-muted-foreground truncate">
-              {project.name} — grounded on your issue catalog
+        <div className="z-20 border-b border-border bg-background/95 px-4 py-3 flex min-w-0 items-center gap-3 shrink-0 justify-between backdrop-blur">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="md:hidden justify-start min-w-8"
+              onClick={() => setChatListOpen(true)}
+              aria-label="Open chats"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+            <Bot className="h-4 w-4 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold truncate">
+                Project assistant
+              </div>
+              <div className="text-[11px] text-muted-foreground truncate">
+                {project.name} — grounded on your issue catalog
+              </div>
             </div>
           </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 w-10 shrink-0 px-2 md:hidden"
+            disabled={creatingChat}
+            onClick={() => void startNewChat()}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
 
         {loadingMessages || !conversationId || initialMessages === null ? (
@@ -1077,25 +1119,28 @@ function AssistantChat({
 
       let accumulated = initialText;
       chunks.forEach((chunk, index) => {
-        const timer = window.setTimeout(() => {
-          accumulated += chunk;
-          typedAssistantTextRef.current[messageId] = accumulated;
-          setAssistantTextOverrides((prev) => ({
-            ...prev,
-            [messageId]: accumulated,
-          }));
+        const timer = window.setTimeout(
+          () => {
+            accumulated += chunk;
+            typedAssistantTextRef.current[messageId] = accumulated;
+            setAssistantTextOverrides((prev) => ({
+              ...prev,
+              [messageId]: accumulated,
+            }));
 
-          if (index === chunks.length - 1) {
-            const cleanupTimer = window.setTimeout(() => {
-              setAssistantTextOverrides((prev) => {
-                const next = { ...prev };
-                delete next[messageId];
-                return next;
-              });
-            }, 100);
-            revealTimersRef.current.push(cleanupTimer);
-          }
-        }, index === 0 ? 0 : 75 * index);
+            if (index === chunks.length - 1) {
+              const cleanupTimer = window.setTimeout(() => {
+                setAssistantTextOverrides((prev) => {
+                  const next = { ...prev };
+                  delete next[messageId];
+                  return next;
+                });
+              }, 100);
+              revealTimersRef.current.push(cleanupTimer);
+            }
+          },
+          index === 0 ? 0 : 75 * index,
+        );
         revealTimersRef.current.push(timer);
       });
     },
@@ -1164,12 +1209,7 @@ function AssistantChat({
       cancelled = true;
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [
-    busy,
-    conversationId,
-    onAssistantTurnComplete,
-    setMessages,
-  ]);
+  }, [busy, conversationId, onAssistantTurnComplete, setMessages]);
 
   useEffect(() => {
     const assistant = latestAssistantMessage(messages);
@@ -1187,7 +1227,7 @@ function AssistantChat({
 
     if (!shouldAnimate) {
       typedAssistantTextRef.current[assistant.id] = assistantText;
-        assistantRevealTargetRef.current[assistant.id] = assistantText;
+      assistantRevealTargetRef.current[assistant.id] = assistantText;
       setAssistantTextOverrides((prev) => {
         if (!(assistant.id in prev)) return prev;
         const next = { ...prev };
@@ -1297,7 +1337,7 @@ function AssistantChat({
           ref={scrollRef}
           className="absolute inset-0 overflow-y-auto overflow-x-hidden"
         >
-          <div className="px-4 py-4 space-y-3 max-w-5xl mx-auto">
+          <div className="mx-auto max-w-5xl space-y-3 px-4 py-4 pb-6 md:pb-4">
             {messages.length === 0 && (
               <div className="text-xs text-muted-foreground flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 opacity-50" />
@@ -1357,7 +1397,9 @@ function AssistantChat({
                   {m.role === "assistant" ? (
                     <div className="space-y-2">
                       {hasAssistantTextOverride && assistantTextOverride ? (
-                        <AssistantMarkdown>{assistantTextOverride}</AssistantMarkdown>
+                        <AssistantMarkdown>
+                          {assistantTextOverride}
+                        </AssistantMarkdown>
                       ) : null}
                       {(m.parts ?? []).map((p, pi) => {
                         if (p.type === "text") {
@@ -1431,7 +1473,7 @@ function AssistantChat({
         ) : null}
       </div>
       <form
-        className="border-t border-border p-3 flex gap-2 shrink-0 bg-card/30"
+        className="fixed w-full bottom-[calc(65px+env(safe-area-inset-bottom))] z-20 flex shrink-0 gap-2 border-t border-border bg-card/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:static md:bg-card/30 md:pb-3 md:backdrop-blur-none"
         onSubmit={(e) => {
           e.preventDefault();
           const t = text.trim();

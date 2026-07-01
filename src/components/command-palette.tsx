@@ -174,7 +174,7 @@ export function CommandPalette() {
   };
 
   return (
-    <div className="fixed inset-0 z-10000 flex items-start justify-center pt-24">
+    <div className="fixed inset-0 z-10000 flex items-start justify-center p-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:pt-24">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -182,17 +182,17 @@ export function CommandPalette() {
       />
 
       {/* Panel */}
-      <div className="relative w-full max-w-2xl animate-scale-in">
-        <div className="rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+      <div className="relative flex h-[min(86dvh,720px)] w-full max-w-2xl animate-scale-in sm:h-auto">
+        <div className="flex min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:rounded-xl">
           {/* Search Input */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search issues, projects, actions, or AI…"
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground sm:text-sm"
             />
             <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground">
               ESC
@@ -200,7 +200,7 @@ export function CommandPalette() {
           </div>
 
           {/* Results */}
-          <div className="max-h-[420px] overflow-y-auto p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:max-h-[420px]">
             {/* AI — always visible */}
             {aiActions.length > 0 && (
               <Group label="AI">
@@ -345,7 +345,7 @@ function ResultItem({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-accent transition-colors text-left"
+      className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-accent sm:min-h-0 sm:rounded-lg sm:px-2"
     >
       <span className="shrink-0 flex items-center justify-center h-7 w-7 rounded-md bg-muted">
         {icon}
