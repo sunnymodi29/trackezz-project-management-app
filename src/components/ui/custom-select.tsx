@@ -276,7 +276,7 @@ export function CustomSelect({
       ref={optionsRef}
       style={menuStyle}
       className={cn(
-        "custom-select-options max-h-[min(60dvh,320px)] overflow-y-auto rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl p-1 animate-scale-in focus:outline-none scrollbar sm:max-h-[220px] sm:rounded-lg",
+        "custom-select-options max-h-[min(60dvh,320px)] overflow-y-auto border border-border bg-popover text-popover-foreground shadow-2xl p-1 animate-scale-in focus:outline-none scrollbar sm:max-h-[220px] rounded-lg",
         optionsClassName,
       )}
     >
@@ -299,7 +299,7 @@ export function CustomSelect({
                 handleSelectOption(option.value);
               }}
               className={cn(
-                "mb-0.5 flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors sm:min-h-0 sm:rounded-md sm:px-2.5 sm:py-1.5 sm:text-xs",
+                "mb-0.5 flex cursor-pointer select-none items-center justify-between gap-2 transition-colors min-h-0 rounded-md px-2.5 py-1.5 text-sm md:text-xs",
                 isHighlighted
                   ? "bg-accent/80 text-foreground"
                   : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",

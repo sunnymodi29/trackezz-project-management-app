@@ -78,7 +78,7 @@ export function InboxView() {
             Assignments, comments, invitations, and updates.
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-border p-1">
             <FilterTab
               active={filter === "all"}

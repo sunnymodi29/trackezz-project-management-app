@@ -417,7 +417,7 @@ function SprintIssueRow({
             e.stopPropagation();
             onRemove();
           }}
-          className="text-[10px] text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 px-2 py-1 rounded hover:bg-destructive/10"
+          className="text-[10px] text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 px-1 py-1 rounded-sm hover:bg-destructive/10"
         >
           <Trash2 className="h-3.5 w-3.5 text-destructive" />
         </button>

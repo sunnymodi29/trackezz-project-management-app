@@ -36,6 +36,11 @@ function ProjectIcon({
           "rounded-md flex items-center justify-center shrink-0 bg-muted/60",
           dim,
         )}
+        style={{
+          backgroundColor: `${project.color}20`,
+          border: `1px solid ${project.color}30`,
+          color: project.color,
+        }}
       >
         <span className="leading-none">{project.icon}</span>
       </div>
@@ -49,8 +54,9 @@ function ProjectIcon({
         dim,
       )}
       style={{
-        backgroundColor: project.color,
-        backgroundImage: `linear-gradient(135deg, ${project.color}, ${project.color}cc)`,
+        backgroundColor: `${project.color}15`,
+        border: `1px solid ${project.color}30`,
+        color: project.color,
       }}
     >
       {project.name.charAt(0).toUpperCase()}

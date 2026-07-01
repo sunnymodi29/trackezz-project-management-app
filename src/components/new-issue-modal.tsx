@@ -335,8 +335,9 @@ export function NewIssueModal() {
                     style={
                       p.color
                         ? {
-                            backgroundColor: `${p.color}20`,
+                            backgroundColor: `${p.color}15`,
                             color: p.color,
+                            border: `1px solid ${p.color}30`,
                           }
                         : undefined
                     }

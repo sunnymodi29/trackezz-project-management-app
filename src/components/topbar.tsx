@@ -91,7 +91,7 @@ export function Topbar() {
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           onClick={openMobileNav}
-          className="rounded-xl p-2 hover:bg-accent transition-colors text-muted-foreground md:hidden"
+          className="rounded-md p-2 hover:bg-accent transition-colors text-muted-foreground md:hidden"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
