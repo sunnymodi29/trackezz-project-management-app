@@ -88,7 +88,7 @@ export function Topbar() {
   return (
     <header className={cn("fixed inset-x-0 top-0 h-14 border-b border-border bg-card/95 backdrop-blur-md flex min-w-0 items-center justify-between px-3 sm:px-4 gap-2 sm:gap-3 transition-all duration-200 md:sticky", mobileNavOpen ? "z-20" : "z-9999")}>
       {/* Left */}
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           onClick={openMobileNav}
           className="rounded-xl p-2 hover:bg-accent transition-colors text-muted-foreground md:hidden"

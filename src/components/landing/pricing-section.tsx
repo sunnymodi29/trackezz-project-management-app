@@ -381,7 +381,7 @@ function IntervalToggle({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "relative rounded-md px-3 py-1.5 text-xs font-medium transition-all sm:px-3.5 sm:text-sm",
+        "relative rounded-lg px-3 py-1.5 text-xs font-medium transition-all sm:px-3.5 sm:text-sm",
         billingIntervalToggleButtonClass(active, isDark),
       )}
     >
