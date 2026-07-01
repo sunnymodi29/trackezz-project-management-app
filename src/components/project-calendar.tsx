@@ -173,7 +173,7 @@ export function ProjectCalendar({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 rounded-[10px]"
                 onClick={() => setViewMonth((m) => subMonths(m, 1))}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -191,7 +191,7 @@ export function ProjectCalendar({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 rounded-[10px]"
                 onClick={() => setViewMonth((m) => addMonths(m, 1))}
               >
                 <ChevronRight className="h-4 w-4" />
