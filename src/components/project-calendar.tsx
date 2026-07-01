@@ -332,7 +332,8 @@ function CalendarDayCell({
             "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full",
             today && "bg-primary text-primary-foreground",
             !today && inMonth && "text-foreground",
-            !inMonth && "text-muted-foreground/50"
+            !inMonth && "text-muted-foreground/50",
+            !inMonth && today && "text-primary-foreground",
           )}
         >
           {format(day, "d")}
