@@ -88,9 +88,9 @@ export function CustomSelect({
     if (openUp) {
       setMenuStyle({
         position: "fixed",
-        left: rect.left,
-        width: Math.max(rect.width, 200),
-        maxWidth: 280,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - 288)),
+        width: Math.min(Math.max(rect.width, 220), window.innerWidth - 16),
+        maxWidth: window.innerWidth - 16,
         top: "auto",
         bottom: window.innerHeight - rect.top + MENU_GAP,
         zIndex: 999,
@@ -100,9 +100,9 @@ export function CustomSelect({
 
     setMenuStyle({
       position: "fixed",
-      left: rect.left,
-      width: Math.max(rect.width, 200),
-      maxWidth: 280,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 288)),
+      width: Math.min(Math.max(rect.width, 220), window.innerWidth - 16),
+      maxWidth: window.innerWidth - 16,
       top: rect.bottom + MENU_GAP,
       bottom: "auto",
       zIndex: 999,
@@ -276,7 +276,7 @@ export function CustomSelect({
       ref={optionsRef}
       style={menuStyle}
       className={cn(
-        "custom-select-options max-h-[220px] overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl p-1 animate-scale-in focus:outline-none scrollbar",
+        "custom-select-options max-h-[min(60dvh,320px)] overflow-y-auto rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl p-1 animate-scale-in focus:outline-none scrollbar sm:max-h-[220px] sm:rounded-lg",
         optionsClassName,
       )}
     >
@@ -299,7 +299,7 @@ export function CustomSelect({
                 handleSelectOption(option.value);
               }}
               className={cn(
-                "flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors cursor-pointer select-none gap-2 mb-0.5",
+                "mb-0.5 flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors sm:min-h-0 sm:rounded-md sm:px-2.5 sm:py-1.5 sm:text-xs",
                 isHighlighted
                   ? "bg-accent/80 text-foreground"
                   : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
@@ -354,7 +354,7 @@ export function CustomSelect({
           disabled={disabled}
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "flex h-8 w-full items-center justify-between rounded-md border border-input bg-card/50 px-3 py-1 text-xs shadow-sm transition-all hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 text-left",
+            "flex h-11 w-full items-center justify-between rounded-md border border-input bg-card/50 px-3 py-1 text-sm shadow-sm transition-all hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 text-left sm:h-8 sm:text-xs",
             triggerClassName,
           )}
         >

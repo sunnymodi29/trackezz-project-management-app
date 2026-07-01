@@ -47,7 +47,7 @@ export function ConfirmDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-10000 flex items-center justify-center p-4"
+      className="fixed inset-0 z-10000 flex items-end justify-center p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
@@ -58,8 +58,8 @@ export function ConfirmDialog({
       />
       <div
         className={cn(
-          "relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl",
-          "animate-scale-in p-5",
+          "relative w-full max-w-md rounded-t-2xl border border-border bg-card shadow-2xl sm:rounded-xl",
+          "animate-scale-in p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5",
         )}
       >
         <h2
@@ -73,7 +73,7 @@ export function ConfirmDialog({
             {description}
           </p>
         )}
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             variant="outline"
             size="sm"

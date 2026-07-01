@@ -16,6 +16,7 @@ export const DashboardLink = forwardRef<HTMLAnchorElement, DashboardLinkProps>(
   function DashboardLink({ href, onClick, ...rest }, ref) {
     const pathname = usePathname();
     const beginRouteTransition = useAppStore((s) => s.beginRouteTransition);
+    const closeMobileNav = useAppStore((s) => s.closeMobileNav);
 
     return (
       <Link
@@ -30,6 +31,7 @@ export const DashboardLink = forwardRef<HTMLAnchorElement, DashboardLinkProps>(
               : `${href.pathname ?? ""}${href.search ?? ""}`;
           if (!raw.startsWith("/dashboard")) return;
           const next = navigationTargetPath(raw);
+          closeMobileNav();
           if (next !== pathname) beginRouteTransition(next);
         }}
         {...rest}

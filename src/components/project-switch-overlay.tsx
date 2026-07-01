@@ -22,8 +22,8 @@ export function ProjectSwitchOverlay() {
         "fixed z-10000 flex items-center justify-center",
         "bg-background/55 backdrop-blur-md",
         "animate-in fade-in duration-200",
-        "right-0 top-0 bottom-0",
-        sidebarCollapsed ? "left-14" : "left-60",
+        "inset-0 md:right-0 md:top-0 md:bottom-0",
+        sidebarCollapsed ? "md:left-14" : "md:left-60",
       )}
     >
       {/* Top accent progress */}

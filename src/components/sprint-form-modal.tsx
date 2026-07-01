@@ -91,11 +91,11 @@ export function SprintFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-10000 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-10000 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={loading ? undefined : onClose} />
       <form
         onSubmit={(e) => void handleSubmit(e)}
-        className="relative w-full max-w-md rounded-xl border border-border bg-card shadow-2xl animate-fade-in"
+        className="relative flex max-h-dvh w-full max-w-md flex-col rounded-t-2xl border border-border bg-card shadow-2xl animate-fade-in sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -104,7 +104,7 @@ export function SprintFormModal({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="px-5 py-4 space-y-4">
+        <div className="min-h-0 overflow-y-auto px-5 py-4 space-y-4">
           {error && (
             <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
               {error}
@@ -112,7 +112,7 @@ export function SprintFormModal({
           )}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Sprint 12" disabled={loading} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New Sprint" disabled={loading} />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Goal (optional)</label>
@@ -124,7 +124,7 @@ export function SprintFormModal({
               disabled={loading}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Start</label>
               <DatePicker
@@ -163,7 +163,7 @@ export function SprintFormModal({
             </label>
           )}
         </div>
-        <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
+        <div className="flex flex-col-reverse gap-2 border-t border-border px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex-row sm:justify-end sm:pb-4">
           <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
             Cancel
           </Button>

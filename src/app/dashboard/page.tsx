@@ -36,8 +36,8 @@ export default async function DashboardPage() {
   const urgentBugs = openBugs.filter((b) => b.priority === "urgent").length;
 
   return (
-    <div className="p-6 space-y-6 mx-auto animate-fade-in">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto space-y-6 p-4 animate-fade-in sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
             Good day, {currentUser.name.split(" ")[0]} 👋
@@ -58,7 +58,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
         <StatCard
           title="Open Issues"
           value={openIssueCount}

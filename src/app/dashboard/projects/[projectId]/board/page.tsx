@@ -170,8 +170,8 @@ export default function BoardPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+    <div className="h-[calc(100dvh-56px)] flex flex-col">
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <h1 className="text-lg font-bold text-foreground">Board</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -179,11 +179,11 @@ export default function BoardPage() {
             {activeSprint ? ` · ${activeSprint.name}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <WorkflowStatusManager projectId={projectId} />
           <button
             onClick={() => openNewIssue()}
-            className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium px-3 py-1.5 transition-colors"
+            className="flex min-h-10 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 sm:min-h-0 sm:rounded-md"
           >
             <Plus className="h-3.5 w-3.5" /> Add Issue
           </button>
@@ -198,7 +198,7 @@ export default function BoardPage() {
       >
         <div className="flex-1 overflow-x-auto">
           <div
-            className="flex gap-4 p-6 h-full"
+            className="flex gap-4 p-4 sm:p-6 h-full"
             style={{ minWidth: `${Math.max(columns.length, 1) * 300}px` }}
           >
             {columns.map((col) => (
@@ -251,7 +251,7 @@ function KanbanColumn({
 
   return (
     <div
-      className="flex flex-col rounded-xl border bg-muted/30 w-72 shrink-0"
+      className="flex w-[min(82vw,18rem)] shrink-0 flex-col rounded-xl border bg-muted/30 sm:w-72"
       style={{ borderColor: `${column.color}50` }}
       data-column-id={column.id}
     >
@@ -266,7 +266,7 @@ function KanbanColumn({
           <button
             type="button"
             onClick={onAddIssue}
-            className="rounded-sm p-0.5 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+            className="rounded-lg p-2 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground sm:rounded-sm sm:p-0.5"
             aria-label={`Add issue to ${column.label}`}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -378,7 +378,7 @@ function IssueCard({
             <div
               {...listeners}
               {...attributes}
-              className="cursor-grab text-muted-foreground hover:text-foreground transition-colors p-0.5"
+              className="cursor-grab rounded-lg p-2 text-muted-foreground transition-colors hover:text-foreground sm:p-0.5"
               onClick={(e) => e.stopPropagation()}
               aria-label="Drag to move"
             >

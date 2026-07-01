@@ -278,12 +278,12 @@ function IssueDetailViewInner({
     <div
       className={cn(
         "flex flex-col h-full bg-card overflow-hidden",
-        variant === "drawer" && "animate-slide-right border-l border-border",
+        variant === "drawer" && "animate-slide-right border-l border-border max-md:border-l-0",
         className,
       )}
     >
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3.5 sm:px-5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <IssueTypeIcon type={issue.type} />
           <span className="text-xs font-mono text-muted-foreground">
             {issue.issueKey}
@@ -295,14 +295,14 @@ function IssueDetailViewInner({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           <Tooltip
             content={linkCopied ? "Copied!" : "Copy shareable link"}
             side="bottom"
           >
             <button
               className={cn(
-                "rounded-md p-1.5 hover:bg-accent transition-colors text-muted-foreground",
+                "rounded-lg p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5",
                 linkCopied && "p-0 hover:bg-transparent",
               )}
               aria-label="Copy shareable link"
@@ -324,7 +324,7 @@ function IssueDetailViewInner({
             <Tooltip content="Open full page" side="bottom">
               <DashboardLink
                 href={fullPageHref}
-                className="rounded-md p-1.5 hover:bg-accent transition-colors text-muted-foreground"
+                className="rounded-lg p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5"
                 aria-label="Open full page"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -335,7 +335,7 @@ function IssueDetailViewInner({
             <button
               onClick={() => setDeleteConfirmOpen(true)}
               disabled={deleting}
-              className="rounded-md p-1.5 hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive disabled:opacity-50"
+              className="rounded-lg p-2 hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive disabled:opacity-50 sm:p-1.5"
               aria-label="Delete issue"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -348,7 +348,7 @@ function IssueDetailViewInner({
             <button
               onClick={() => setIsEditing(!isEditing)}
               className={cn(
-                "rounded-md p-1.5 transition-colors",
+                "rounded-lg p-2 transition-colors sm:p-1.5",
                 isEditing
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-accent text-muted-foreground",
@@ -362,7 +362,7 @@ function IssueDetailViewInner({
             <Tooltip content="Close" side="bottom">
               <button
                 onClick={onClose}
-                className="rounded-md p-1.5 hover:bg-accent transition-colors text-muted-foreground"
+                className="rounded-lg p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5"
                 aria-label="Close"
               >
                 <X className="h-3.5 w-3.5" />
@@ -390,7 +390,7 @@ function IssueDetailViewInner({
             activeTab === "comments" ? "overflow-y-auto" : "",
           )}
         >
-          <div className="px-5 py-4 border-b border-border">
+          <div className="border-b border-border px-4 py-4 sm:px-5">
             {isEditing ? (
               <div className="space-y-4 animate-fade-in">
                 <input
@@ -405,7 +405,7 @@ function IssueDetailViewInner({
                   placeholder="Issue description"
                   minHeight="120px"
                 />
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -486,7 +486,7 @@ function IssueDetailViewInner({
           {(issue.reproductionSteps ||
             issue.expectedResult ||
             issue.actualResult) && (
-            <div className="px-5 py-4 border-b border-border space-y-3">
+            <div className="border-b border-border px-4 py-4 space-y-3 sm:px-5">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Bug Details
               </div>
@@ -517,7 +517,7 @@ function IssueDetailViewInner({
           )}
 
           {parentIssue && (
-            <div className="px-5 py-3 border-b border-border bg-muted/10">
+            <div className="border-b border-border bg-muted/10 px-4 py-3 sm:px-5">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1">
                 <GitBranch className="h-3 w-3" /> Parent
               </div>
@@ -548,8 +548,8 @@ function IssueDetailViewInner({
             </div>
           )}
 
-          <div className="px-5 py-4 border-b border-border">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="border-b border-border px-4 py-4 sm:px-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <MetaRow
                 label="Assignees"
                 icon={<User className="h-3.5 w-3.5" />}
@@ -656,7 +656,7 @@ function IssueDetailViewInner({
                   }}
                   placeholder="No parent"
                   className="w-full"
-                  triggerClassName="h-auto min-h-[24px] text-xs py-1"
+                  triggerClassName="h-auto min-h-10 text-sm py-1 sm:min-h-[24px] sm:text-xs"
                 />
               </MetaRow>
               <MetaRow
@@ -682,7 +682,7 @@ function IssueDetailViewInner({
                     });
                   }}
                   placeholder="No due date"
-                  triggerClassName="h-6 border-0 bg-transparent px-0 shadow-none hover:bg-accent/30"
+                  triggerClassName="h-10 border-0 bg-transparent px-0 shadow-none hover:bg-accent/30 sm:h-6"
                 />
               </MetaRow>
             </div>

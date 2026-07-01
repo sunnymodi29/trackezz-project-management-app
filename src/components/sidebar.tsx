@@ -39,6 +39,7 @@ import {
   LogOut,
   SquareKanban,
   ChevronsRight,
+  X,
 } from "lucide-react";
 
 const MAIN_NAV = [
@@ -70,6 +71,8 @@ export function Sidebar() {
     beginProjectSwitch,
     openNewIssue,
     openCommandPalette,
+    mobileNavOpen,
+    closeMobileNav,
   } = useAppStore();
   const {
     projects,
@@ -110,6 +113,7 @@ export function Sidebar() {
   const [projectSearch, setProjectSearch] = useState("");
   const unread = getUnreadNotificationCount();
   const planLabel = billing?.isPro ? "Pro" : "Free";
+  const compact = sidebarCollapsed && !mobileNavOpen;
 
   const filteredProjects = projects.filter(
     (project) =>
@@ -153,15 +157,27 @@ export function Sidebar() {
   const projectBase = hasActiveProject ? projectPath(currentProject.key) : "";
 
   return (
+    <>
+      {mobileNavOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm md:hidden"
+          onClick={closeMobileNav}
+        />
+      )}
     <aside
       className={cn(
         "fixed left-0 top-0 bottom-0 z-40 flex flex-col border-r border-border bg-card transition-all duration-200",
-        sidebarCollapsed ? "w-14" : "w-60",
+        "w-[min(86vw,20rem)] shadow-2xl md:shadow-none",
+        mobileNavOpen ? "translate-x-0 z-10000" : "-translate-x-full",
+        "md:translate-x-0",
+        compact ? "md:w-14" : "md:w-60",
       )}
     >
       {/* Logo / Workspace */}
       <div className="flex items-center justify-between h-14 px-3 border-b border-border">
-        {!sidebarCollapsed && (
+        {!compact && (
           <DashboardLink href="/dashboard" className="flex items-center gap-2.5 min-w-0">
             <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <Zap className="h-4 w-4 text-white" />
@@ -192,7 +208,15 @@ export function Sidebar() {
             </div>
           </DashboardLink>
         )}
-        {sidebarCollapsed && (
+        <button
+          type="button"
+          onClick={closeMobileNav}
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+          aria-label="Close navigation"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        {compact && (
           <Tooltip content={organization?.name || ""} side="right">
             <DashboardLink
               href="/dashboard"
@@ -204,10 +228,10 @@ export function Sidebar() {
             </DashboardLink>
           </Tooltip>
         )}
-        {!sidebarCollapsed && (
+        {!compact && (
           <button
             onClick={toggleSidebar}
-            className="rounded-md p-1 hover:bg-accent transition-colors text-muted-foreground"
+            className="rounded-md p-1 hover:bg-accent transition-colors text-muted-foreground md:block hidden"
           >
             <ChevronsLeft className="h-4 w-4" />
           </button>
@@ -218,7 +242,7 @@ export function Sidebar() {
       <div
         className={cn(
           "flex-1 overflow-y-auto py-3 px-2 space-y-0.5",
-          sidebarCollapsed && "items-center flex flex-col gap-1",
+          compact && "items-center flex flex-col gap-1",
         )}
       >
         {/* Active Project Context Switcher */}
@@ -250,12 +274,13 @@ export function Sidebar() {
             label={item.label}
             icon={<item.icon className="h-4 w-4 shrink-0" />}
             active={isMainNavActive(item.href)}
-            collapsed={sidebarCollapsed}
+            collapsed={compact}
             badge={
               item.href === "/dashboard/inbox" && unread > 0
                 ? unread
                 : undefined
             }
+            onNavigate={closeMobileNav}
           />
         ))}
 
@@ -263,12 +288,12 @@ export function Sidebar() {
         {hasActiveProject && (
           <div
             className={cn(
-              sidebarCollapsed
+              compact
                 ? "mt-1 flex w-full flex-col items-center gap-1"
                 : "mt-4",
             )}
           >
-            {sidebarCollapsed ? (
+            {compact ? (
               <div
                 className="mx-0 my-1 w-full shrink-0 border-t border-border"
                 aria-hidden
@@ -295,7 +320,8 @@ export function Sidebar() {
                   label={item.label}
                   icon={<item.icon className="h-4 w-4 shrink-0" />}
                   active={active}
-                  collapsed={sidebarCollapsed}
+                  collapsed={compact}
+                  onNavigate={closeMobileNav}
                 />
               );
             })}
@@ -307,12 +333,12 @@ export function Sidebar() {
       <div
         className={cn(
           "border-t border-border p-3 flex gap-2.5",
-          sidebarCollapsed
+          compact
             ? "flex-col items-center gap-2"
             : "flex-row items-center",
         )}
       >
-        {sidebarCollapsed ? (
+        {compact ? (
           <Tooltip content={currentUser.name || "Account"} side="right">
             <span className="inline-flex">
               <Avatar
@@ -330,7 +356,7 @@ export function Sidebar() {
           />
         )}
 
-        {!sidebarCollapsed && (
+        {!compact && (
           <div className="min-w-0 flex-1">
             <div className="text-xs font-medium text-foreground truncate">
               {currentUser.name ? (
@@ -352,23 +378,24 @@ export function Sidebar() {
         <div
           className={cn(
             "flex shrink-0 gap-0.5",
-            sidebarCollapsed
+            compact
               ? "flex-col items-center gap-2"
               : "flex-row items-center",
           )}
         >
-          <Tooltip content="Settings" side={sidebarCollapsed ? "right" : "top"}>
+          <Tooltip content="Settings" side={compact ? "right" : "top"}>
             <Link
               href="/dashboard/settings"
               aria-label="Settings"
+              onClick={closeMobileNav}
               className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <Settings
-                className={cn(sidebarCollapsed ? "h-4 w-4" : "h-3.5 w-3.5")}
+                className={cn(compact ? "h-4 w-4" : "h-3.5 w-3.5")}
               />
             </Link>
           </Tooltip>
-          <Tooltip content="Sign out" side={sidebarCollapsed ? "right" : "top"}>
+          <Tooltip content="Sign out" side={compact ? "right" : "top"}>
             <button
               type="button"
               onClick={() => void handleSignOut()}
@@ -376,11 +403,11 @@ export function Sidebar() {
               className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <LogOut
-                className={cn(sidebarCollapsed ? "h-4 w-4" : "h-3.5 w-3.5")}
+                className={cn(compact ? "h-4 w-4" : "h-3.5 w-3.5")}
               />
             </button>
           </Tooltip>
-          {sidebarCollapsed && (
+          {compact && (
             <Tooltip content="Expand sidebar" side="right">
               <button
                 type="button"
@@ -395,6 +422,7 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }
 
@@ -405,6 +433,7 @@ function NavItem({
   active,
   collapsed,
   badge,
+  onNavigate,
 }: {
   href: string;
   label: string;
@@ -412,6 +441,7 @@ function NavItem({
   active: boolean;
   collapsed: boolean;
   badge?: number;
+  onNavigate?: () => void;
 }) {
   const beginRouteTransition = useAppStore((s) => s.beginRouteTransition);
 
@@ -420,6 +450,7 @@ function NavItem({
       href={href}
       aria-label={collapsed ? label : undefined}
       onClick={() => {
+        onNavigate?.();
         if (!active) beginRouteTransition(href);
       }}
       className={cn(

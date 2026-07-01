@@ -54,7 +54,7 @@ export function AnalyticsDashboard({ bootstrap }: AnalyticsDashboardProps) {
   const { summary } = analytics;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
@@ -69,7 +69,7 @@ export function AnalyticsDashboard({ bootstrap }: AnalyticsDashboardProps) {
             setProjectFilter(typeof val === "string" && val ? val : null)
           }
           placeholder="All projects"
-          className="min-w-52 max-w-52"
+          className="w-full sm:min-w-52 sm:max-w-52"
         />
       </div>
 
@@ -118,7 +118,7 @@ export function AnalyticsDashboard({ bootstrap }: AnalyticsDashboardProps) {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="Completion rate"
           value={`${summary.completionRate}%`}
@@ -159,7 +159,7 @@ export function AnalyticsDashboard({ bootstrap }: AnalyticsDashboardProps) {
 
       {fullAnalytics && (
         <>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="In progress"
           value={summary.inProgressCount}

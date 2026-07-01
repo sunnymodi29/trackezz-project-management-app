@@ -238,12 +238,12 @@ export function IssueCommentSection({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="px-5 py-2 border-b border-border/60 flex flex-wrap items-center gap-2 shrink-0 bg-muted/10">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-muted/10 px-4 py-2 sm:px-5">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-7 text-xs"
+          className="text-xs sm:h-7"
           disabled={aiBusy}
           onClick={() => void runAiSummarize()}
         >
@@ -254,7 +254,7 @@ export function IssueCommentSection({
           type="button"
           variant="outline"
           size="sm"
-          className="h-7 text-xs"
+          className="text-xs sm:h-7"
           disabled={aiBusy}
           onClick={() => void runAiDraftReply()}
         >
@@ -287,7 +287,7 @@ export function IssueCommentSection({
           Draft inserted into the composer — edit before sending.
         </div>
       )}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 comments-container">
+      <div className="comments-container flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
         {commentTree.length === 0 && (
           <div className="text-center py-8 text-xs text-muted-foreground">
             <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -332,7 +332,7 @@ export function IssueCommentSection({
 
       <div
         ref={composerRef}
-        className="border-t border-border p-4 shrink-0 scroll-mt-4"
+        className="shrink-0 scroll-mt-4 border-t border-border p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4"
       >
         {replyTo && (
           <div className="flex items-center justify-between mb-2 px-2 py-1.5 rounded-md bg-muted/50 text-xs">
@@ -364,7 +364,7 @@ export function IssueCommentSection({
             </button>
           </div>
         )}
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <Avatar
             src={currentUser.avatarUrl}
             name={currentUser.name}
@@ -386,13 +386,13 @@ export function IssueCommentSection({
               }
               onCtrlEnter={() => void submitComment(commentText, pendingFile)}
             />
-            <div className="flex items-center justify-between p-2 border-t border-border/60">
+            <div className="flex items-center justify-between gap-2 border-t border-border/60 p-2">
               <div className="flex items-center gap-1 relative">
                 <Tooltip content="Add emoji" side="top">
                   <button
                     type="button"
                     onClick={() => setEmojiOpen((o) => !o)}
-                    className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
+                    className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted sm:p-1"
                     aria-label="Add emoji"
                   >
                     <Smile className="h-3.5 w-3.5" />
@@ -414,7 +414,7 @@ export function IssueCommentSection({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
+                    className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted sm:p-1"
                     aria-label="Attach file"
                   >
                     <Paperclip className="h-3.5 w-3.5" />
@@ -438,7 +438,7 @@ export function IssueCommentSection({
                   (!hasRichTextContent(commentText) && !pendingFile) ||
                   submitting
                 }
-                className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:rounded-md"
               >
                 <Send className="h-3 w-3" /> {submitting ? "Sending…" : "Send"}
               </button>
@@ -525,7 +525,7 @@ function CommentItem({
   };
 
   return (
-    <div className={cn(depth > 0 && "ml-8 mt-3")}>
+    <div className={cn(depth > 0 && "ml-4 mt-3 sm:ml-8")}>
       <div
         id={commentDomId(comment.id)}
         className={cn(
@@ -564,10 +564,10 @@ function CommentItem({
                 onClick={() => void handleCopyLink()}
                 aria-label={linkCopied ? "Link copied" : "Copy comment link"}
                 className={cn(
-                  "ml-auto rounded p-1 text-muted-foreground transition-all duration-200 ease-out hover:bg-accent hover:text-foreground",
+                  "ml-auto rounded-lg p-2 text-muted-foreground transition-all duration-200 ease-out hover:bg-accent hover:text-foreground sm:p-1",
                   linkCopied || hovered
                     ? "translate-x-0 opacity-100 pointer-events-auto"
-                    : "-translate-x-2 opacity-0 pointer-events-none",
+                    : "translate-x-0 opacity-100 pointer-events-auto sm:-translate-x-2 sm:opacity-0 sm:pointer-events-none",
                 )}
               >
                 {linkCopied ? (
@@ -589,7 +589,7 @@ function CommentItem({
               minHeight="72px"
               onCtrlEnter={() => void saveEdit()}
             />
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button
                 size="sm"
                 variant="ghost"
@@ -627,7 +627,7 @@ function CommentItem({
                 type="button"
                 onClick={() => void onReaction(comment.id, emoji)}
                 className={cn(
-                  "flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs transition-colors",
+                  "flex min-h-8 items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs transition-colors sm:min-h-0",
                   reacted
                     ? "border-primary/40 bg-primary/10 text-foreground"
                     : "border-border bg-muted hover:bg-accent",
@@ -640,7 +640,7 @@ function CommentItem({
               <button
                 type="button"
                 onClick={() => setReactPickerOpen((o) => !o)}
-                className="flex items-center gap-0.5 rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent transition-colors"
+                className="flex min-h-8 items-center gap-0.5 rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent sm:min-h-0"
                 aria-label="Add reaction"
               >
                 <Smile className="h-3 w-3" />
@@ -656,7 +656,7 @@ function CommentItem({
             <button
               type="button"
               onClick={() => onReply(comment)}
-              className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded hover:bg-accent transition-colors"
+              className="flex min-h-8 items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-0 sm:px-1.5 sm:text-[10px]"
             >
               <Reply className="h-3 w-3" /> Reply
             </button>
@@ -668,14 +668,14 @@ function CommentItem({
                     setEditText(comment.content);
                     setIsEditing(true);
                   }}
-                  className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded hover:bg-accent transition-colors"
+                  className="flex min-h-8 items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-0 sm:px-1.5 sm:text-[10px]"
                 >
                   <Pencil className="h-3 w-3" /> Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => onDeleteRequest(comment.id)}
-                  className="flex items-center gap-1 text-[10px] font-medium text-destructive/80 hover:text-destructive px-1.5 py-0.5 rounded hover:bg-destructive/10 transition-colors"
+                  className="flex min-h-8 items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium text-destructive/80 transition-colors hover:bg-destructive/10 hover:text-destructive sm:min-h-0 sm:px-1.5 sm:text-[10px]"
                 >
                   <Trash2 className="h-3 w-3" /> Delete
                 </button>
@@ -771,7 +771,7 @@ function PlainCommentText({ text }: { text: string }) {
   if (!hasLinks && !text.trim()) return null;
 
   return (
-    <p className="break-words">
+    <p className="wrap-break-word">
       {parts.map((part, i) => {
         if (part.type === "plain") {
           return <span key={i}>{part.value}</span>;

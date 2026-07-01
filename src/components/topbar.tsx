@@ -46,7 +46,7 @@ export function Topbar() {
     setKeyboardShortcut(getKeyboardShortcut());
   }, [keyboardShortcut]);
 
-  const { toggleSidebar, openCommandPalette, openNewIssue, currentProject } =
+  const { openMobileNav, openCommandPalette, openNewIssue, currentProject, mobileNavOpen } =
     useAppStore();
   const {
     notifications,
@@ -86,17 +86,17 @@ export function Topbar() {
   };
 
   return (
-    <header className="sticky top-0 right-0 left-0 z-30 h-14 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 gap-3 transition-all duration-200 z-[9999]">
+    <header className={cn("fixed inset-x-0 top-0 h-14 border-b border-border bg-card/95 backdrop-blur-md flex min-w-0 items-center justify-between px-3 sm:px-4 gap-2 sm:gap-3 transition-all duration-200 md:sticky", mobileNavOpen ? "z-20" : "z-9999")}>
       {/* Left */}
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <button
-          onClick={toggleSidebar}
-          className="rounded-md p-1.5 hover:bg-accent transition-colors text-muted-foreground md:hidden"
+          onClick={openMobileNav}
+          className="rounded-xl p-2 hover:bg-accent transition-colors text-muted-foreground md:hidden"
           aria-label="Open menu"
         >
-          <Menu className="h-4 w-4" />
+          <Menu className="h-5 w-5" />
         </button>
-        <div className="min-w-0 flex-1 max-w-[min(100%,360px)]">
+        <div className="min-w-0 flex-1">
           <ProjectSwitcher />
         </div>
       </div>
@@ -118,30 +118,42 @@ export function Topbar() {
       </button>
 
       {/* Right */}
-      <div className="flex items-center gap-1.5 min-w-72 justify-end">
+      <div className="flex shrink-0 items-center justify-end gap-0.5 sm:gap-1.5 md:min-w-72">
+        <Tooltip content="Search or jump" side="bottom">
+          <button
+            type="button"
+            onClick={openCommandPalette}
+            className="hidden rounded-xl p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:inline-flex md:hidden"
+            aria-label="Search or jump"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+        </Tooltip>
         {assistantHref && (
           <Tooltip content="Open project assistant" side="bottom">
             <DashboardLink
               href={assistantHref}
               className={cn(
-                "hidden sm:flex items-center gap-1.5 rounded-md border text-xs font-medium px-3 py-1.5",
+                "flex items-center gap-1.5 rounded-xl border p-2 text-xs font-medium sm:px-3 sm:py-1.5 text-white",
                 assistantActive
                   ? "bg-linear-to-l from-violet-600 to-primary"
                   : "transition-colors whitespace-nowrap bg-linear-to-r from-violet-600 to-primary text-primary-foreground shadow-sm",
               )}
               aria-label="Open project assistant"
             >
-              <Sparkles className="h-4 w-4" /> Ask AI
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">Ask AI</span>
             </DashboardLink>
           </Tooltip>
         )}
         <Tooltip content="Create new issue" side="bottom">
           <button
             onClick={() => openNewIssue()}
-            className="hidden sm:flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium px-3 py-1.5 transition-colors"
+            className="hidden items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 p-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20 sm:flex sm:px-3 sm:py-1.5"
             aria-label="Create new issue"
           >
-            <Plus className="h-3.5 w-3.5" /> New
+            <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">New</span>
           </button>
         </Tooltip>
 
