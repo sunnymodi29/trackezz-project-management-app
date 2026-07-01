@@ -213,7 +213,7 @@ function IssueDetailViewInner({
             </div>
           </div>
           <Skeleton className="h-7 w-4/5" />
-          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-sm" />
           <div className="grid grid-cols-2 gap-3">
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-9 w-full" />
@@ -302,7 +302,7 @@ function IssueDetailViewInner({
           >
             <button
               className={cn(
-                "rounded-lg p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5",
+                "rounded-sm p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5",
                 linkCopied && "p-0 hover:bg-transparent",
               )}
               aria-label="Copy shareable link"
@@ -324,7 +324,7 @@ function IssueDetailViewInner({
             <Tooltip content="Open full page" side="bottom">
               <DashboardLink
                 href={fullPageHref}
-                className="rounded-lg p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5"
+                className="rounded-sm p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5"
                 aria-label="Open full page"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -335,7 +335,7 @@ function IssueDetailViewInner({
             <button
               onClick={() => setDeleteConfirmOpen(true)}
               disabled={deleting}
-              className="rounded-lg p-2 hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive disabled:opacity-50 sm:p-1.5"
+              className="rounded-sm p-2 hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive disabled:opacity-50 sm:p-1.5"
               aria-label="Delete issue"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -348,7 +348,7 @@ function IssueDetailViewInner({
             <button
               onClick={() => setIsEditing(!isEditing)}
               className={cn(
-                "rounded-lg p-2 transition-colors sm:p-1.5",
+                "rounded-sm p-2 transition-colors sm:p-1.5",
                 isEditing
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-accent text-muted-foreground",
@@ -362,7 +362,7 @@ function IssueDetailViewInner({
             <Tooltip content="Close" side="bottom">
               <button
                 onClick={onClose}
-                className="rounded-lg p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5"
+                className="rounded-sm p-2 hover:bg-accent transition-colors text-muted-foreground sm:p-1.5"
                 aria-label="Close"
               >
                 <X className="h-3.5 w-3.5" />
@@ -498,7 +498,7 @@ function IssueDetailViewInner({
                   <div className="text-xs font-medium text-muted-foreground mb-1">
                     Reproduction Steps
                   </div>
-                  <pre className="text-xs text-foreground bg-muted rounded-lg p-3 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed">
+                  <pre className="text-xs text-foreground bg-muted rounded-sm p-3 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed">
                     {issue.reproductionSteps}
                   </pre>
                 </div>
@@ -713,7 +713,7 @@ function IssueDetailViewInner({
                     href={att.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-2.5 hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-3 rounded-sm border border-border bg-muted/30 p-2.5 hover:bg-muted/50 transition-colors"
                   >
                     <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">

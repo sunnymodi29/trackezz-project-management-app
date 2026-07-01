@@ -29,7 +29,7 @@ import {
   completeSprint,
   deleteSprint,
 } from "@/lib/actions/sprints";
-import { updateIssue } from "@/lib/actions/issues";
+import { patchIssueFields } from "@/lib/actions/issues";
 import { dateFromKey } from "@/lib/issues/dates";
 import { cn } from "@/lib/utils";
 import type { Issue, Sprint, SprintStatus } from "@/types";
@@ -71,6 +71,9 @@ export function SprintDetailView() {
   const [completeOpen, setCompleteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [pendingIssueIds, setPendingIssueIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const canManage = project
     ? canManageProjectIssues(
@@ -179,39 +182,107 @@ export function SprintDetailView() {
     }
   };
 
+  const isIssueDone = (issue: Issue) =>
+    issue.status === "done" || issue.status === "cancelled";
+
+  const markIssuePending = (issueId: string, pending: boolean) => {
+    setPendingIssueIds((prev) => {
+      const next = new Set(prev);
+      if (pending) next.add(issueId);
+      else next.delete(issueId);
+      return next;
+    });
+  };
+
   const assignToSprint = async (issue: Issue) => {
-    if (sprint.status === "completed") return;
-    const updated = await updateIssue(issue.id, { sprintId: sprint.id });
-    upsertIssue(updated);
-    router.refresh();
+    if (sprint.status === "completed" || pendingIssueIds.has(issue.id)) return;
+
+    const previousIssue = issue;
+    const previousSprint = sprint;
+    const optimisticIssue = { ...issue, sprintId: sprint.id, sprint };
+    const completedDelta = isIssueDone(issue) ? 1 : 0;
+
+    markIssuePending(issue.id, true);
+    upsertIssue(optimisticIssue);
+    upsertSprint({
+      ...sprint,
+      issueCount: sprint.issueCount + 1,
+      completedCount: sprint.completedCount + completedDelta,
+    });
+
+    try {
+      const patch = await patchIssueFields(issue.id, { sprintId: sprint.id });
+      upsertIssue({
+        ...optimisticIssue,
+        sprintId: patch.sprintId ?? sprint.id,
+        updatedAt: patch.updatedAt,
+      });
+    } catch (error) {
+      upsertIssue(previousIssue);
+      upsertSprint(previousSprint);
+      console.error(error instanceof Error ? error.message : "Failed to add issue to sprint");
+    } finally {
+      markIssuePending(issue.id, false);
+    }
   };
 
   const removeFromSprint = async (issue: Issue) => {
-    const updated = await updateIssue(issue.id, { sprintId: null });
-    upsertIssue(updated);
-    router.refresh();
+    if (pendingIssueIds.has(issue.id)) return;
+
+    const previousIssue = issue;
+    const previousSprint = sprint;
+    const optimisticIssue = {
+      ...issue,
+      sprintId: undefined,
+      sprint: undefined,
+    };
+    const completedDelta = isIssueDone(issue) ? 1 : 0;
+
+    markIssuePending(issue.id, true);
+    upsertIssue(optimisticIssue);
+    upsertSprint({
+      ...sprint,
+      issueCount: Math.max(0, sprint.issueCount - 1),
+      completedCount: Math.max(0, sprint.completedCount - completedDelta),
+    });
+
+    try {
+      const patch = await patchIssueFields(issue.id, { sprintId: null });
+      upsertIssue({
+        ...optimisticIssue,
+        sprintId: patch.sprintId ?? undefined,
+        sprint: undefined,
+        updatedAt: patch.updatedAt,
+      });
+    } catch (error) {
+      upsertIssue(previousIssue);
+      upsertSprint(previousSprint);
+      console.error(error instanceof Error ? error.message : "Failed to remove issue from sprint");
+    } finally {
+      markIssuePending(issue.id, false);
+    }
   };
 
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden">
+    <div className="flex h-[calc(100dvh-56px)] flex-col overflow-y-auto overflow-x-hidden lg:flex-row lg:overflow-hidden">
       <div
         className={cn(
-          "flex flex-col flex-1 overflow-hidden",
-          selectedIssueId && "border-r border-border"
+          "flex min-w-0 flex-none flex-col overflow-visible lg:flex-1 lg:overflow-hidden",
+          selectedIssueId && "lg:border-r lg:border-border"
         )}
       >
-        <div className="px-6 py-4 border-b border-border bg-card/50 space-y-3">
+        <div className="space-y-3 border-b border-border bg-card/50 px-4 py-4 sm:px-6">
           <DashboardLink
             href={projectPath(project.key, "/sprints")}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> All sprints
           </DashboardLink>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-col items-start justify-between gap-4">
+            <div className="flex flex-col w-full">
+              <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
                 <Target className="h-5 w-5 text-primary" />
-                <h1 className="text-lg font-bold">{sprint.name}</h1>
+                <h1 className="min-w-0 text-lg font-bold">{sprint.name}</h1>
                 <span
                   className={cn(
                     "text-[10px] px-2 py-0.5 rounded-full uppercase font-bold",
@@ -224,7 +295,7 @@ export function SprintDetailView() {
               {sprint.goal && (
                 <p className="text-sm text-muted-foreground max-w-2xl">{sprint.goal}</p>
               )}
-              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
+              <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
                   {sprint.startDate.toLocaleDateString()} — {sprint.endDate.toLocaleDateString()}
@@ -233,12 +304,12 @@ export function SprintDetailView() {
                   {sprint.completedCount}/{sprint.issueCount} done ({progressPct}%)
                 </span>
               </div>
-              <div className="mt-3 max-w-md">
+              <div className="mt-3 max-w-md w-full">
                 <ProgressBar value={sprint.completedCount} max={Math.max(sprint.issueCount, 1)} />
               </div>
             </div>
             {canManage && (
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2">
                 {sprint.status === "planning" && (
                   <Button size="sm" onClick={() => void handleStart()} disabled={actionLoading}>
                     <Play className="h-3.5 w-3.5" /> Start
@@ -247,27 +318,26 @@ export function SprintDetailView() {
                 {sprint.status === "active" && (
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="default"
                     onClick={() => setCompleteOpen(true)}
                     disabled={actionLoading}
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" /> Complete
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
+                <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
                   <Pencil className="h-3.5 w-3.5" /> Edit Sprint
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  variant="destructive"
                   onClick={() => setDeleteOpen(true)}
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Delete Sprint
                 </Button>
                 {sprint.status === "active" && (
                   <DashboardLink href={projectPath(project.key, "/board")}>
-                    <Button size="sm" variant="secondary">
+                    <Button size="sm" variant="secondary" className="w-full sm:w-auto">
                       Open Board
                     </Button>
                   </DashboardLink>
@@ -277,12 +347,12 @@ export function SprintDetailView() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="overflow-visible p-4 lg:flex-1 lg:overflow-y-auto lg:p-6">
           <h2 className="text-sm font-bold mb-3">
             Sprint issues ({sprintIssues.length})
           </h2>
           {sprintIssues.length === 0 ? (
-            <div className="py-12 text-center border-2 border-dashed border-border rounded-xl text-sm text-muted-foreground">
+              <div className="rounded-xl border-2 border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
               No issues in this sprint. Add items from the backlog panel.
             </div>
           ) : (
@@ -292,6 +362,7 @@ export function SprintDetailView() {
                   key={issue.id}
                   issue={issue}
                   canManage={canManage && sprint.status !== "completed"}
+                  pending={pendingIssueIds.has(issue.id)}
                   onSelect={() => setSelectedIssueId(issue.id)}
                   onRemove={() => void removeFromSprint(issue)}
                 />
@@ -302,7 +373,7 @@ export function SprintDetailView() {
       </div>
 
       {canManage && sprint.status !== "completed" && (
-        <aside className="w-80 shrink-0 border-l border-border bg-card/30 flex flex-col overflow-hidden">
+        <aside className="flex w-full shrink-0 flex-col border-t border-border bg-card/30 lg:w-80 lg:border-l lg:border-t-0 lg:overflow-hidden">
           <div className="px-4 py-3 border-b border-border">
             <h3 className="text-sm font-bold flex items-center gap-2">
               <Layers className="h-4 w-4 text-muted-foreground" />
@@ -312,7 +383,7 @@ export function SprintDetailView() {
               {backlogIssues.length} issues without a sprint
             </p>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-1">
+          <div className="max-h-[52dvh] flex-1 space-y-2 overflow-y-auto p-3 lg:max-h-none lg:space-y-1">
             {backlogIssues.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8">
                 Backlog is empty.
@@ -321,7 +392,7 @@ export function SprintDetailView() {
               backlogIssues.map((issue) => (
                 <div
                   key={issue.id}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent/50 border border-transparent hover:border-border group"
+                  className="group flex items-center gap-2 rounded-2xl border border-border bg-card/40 p-3 transition-colors hover:bg-accent/50 lg:rounded-lg lg:border-transparent lg:bg-transparent lg:p-2 lg:hover:border-border"
                 >
                   <button
                     type="button"
@@ -331,13 +402,14 @@ export function SprintDetailView() {
                     <div className="text-[10px] font-mono text-muted-foreground">
                       {issue.issueKey}
                     </div>
-                    <div className="text-xs font-medium truncate">{issue.title}</div>
+                    <div className="truncate text-sm font-semibold lg:text-xs lg:font-medium">{issue.title}</div>
                   </button>
                   <button
                     type="button"
                     title="Add to sprint"
+                    disabled={pendingIssueIds.has(issue.id)}
                     onClick={() => void assignToSprint(issue)}
-                    className="shrink-0 p-1 rounded opacity-100 hover:bg-primary/10 text-primary transition-opacity"
+                    className="shrink-0 rounded-lg p-2 text-primary opacity-100 transition-opacity hover:bg-primary/10 disabled:opacity-40 lg:p-1"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -390,26 +462,34 @@ export function SprintDetailView() {
 function SprintIssueRow({
   issue,
   canManage,
+  pending,
   onSelect,
   onRemove,
 }: {
   issue: Issue;
   canManage: boolean;
+  pending: boolean;
   onSelect: () => void;
   onRemove: () => void;
 }) {
   return (
     <div
       onClick={onSelect}
-      className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/50 cursor-pointer border border-transparent hover:border-border"
+      className="group flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-border bg-card/40 px-3 py-3 hover:bg-accent/50 sm:rounded-lg sm:border-transparent sm:bg-transparent sm:py-2 sm:hover:border-border"
     >
-      <IssueTypeIcon type={issue.type} />
-      <span className="text-[10px] font-mono text-muted-foreground w-14 shrink-0">
+      <span className="shrink-0">
+        <IssueTypeIcon type={issue.type} />
+      </span>
+      <span className="text-[10px] font-mono text-muted-foreground w-auto sm:w-14 shrink-0">
         {issue.issueKey}
       </span>
-      <span className="flex-1 min-w-0 text-xs font-medium truncate">{issue.title}</span>
-      <PriorityBadge priority={issue.priority} />
-      <StatusBadge status={issue.status} />
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-xs sm:font-medium">{issue.title}</span>
+      <span className="hidden sm:inline-flex">
+        <PriorityBadge priority={issue.priority} />
+      </span>
+      <span className="hidden sm:inline-flex">
+        <StatusBadge status={issue.status} />
+      </span>
       {canManage && (
         <button
           type="button"
@@ -417,7 +497,9 @@ function SprintIssueRow({
             e.stopPropagation();
             onRemove();
           }}
-          className="text-[10px] text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 px-1 py-1 rounded-sm hover:bg-destructive/10"
+          disabled={pending}
+          className="rounded-lg px-2 py-2 text-[10px] text-muted-foreground opacity-100 hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 sm:rounded-sm sm:px-1 sm:py-1 sm:opacity-0 sm:group-hover:opacity-100 sm:disabled:opacity-0 sm:hover:disabled:opacity-40"
+          aria-label="Remove from sprint"
         >
           <Trash2 className="h-3.5 w-3.5 text-destructive" />
         </button>

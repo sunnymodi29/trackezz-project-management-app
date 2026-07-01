@@ -239,7 +239,8 @@ export function ProjectSprints() {
                       {activeSprint.endDate.toLocaleDateString()}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {daysRemaining} days
+                      <Clock className="h-3 w-3" /> {daysRemaining}{" "}
+                      {daysRemaining === 1 ? "day " : "days "}
                       remaining
                     </span>
                   </div>
@@ -332,12 +333,24 @@ export function ProjectSprints() {
                 </div>
               </div>
 
-              <DashboardLink
-                href={projectPath(project.key, "/board")}
-                className="inline-flex items-center text-sm font-bold text-primary hover:underline gap-1 pt-2"
+              <div className="flex justify-end items-center gap-2 flex-col sm:flex-row">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push(projectPath(project.key, "/board"))}
+                className="inline-flex items-center gap-2 sm:w-auto w-full"
               >
                 Go to Active Board <ArrowRight className="h-4 w-4" />
-              </DashboardLink>
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => router.push(sprintPath(project.key, activeSprint.id))}
+                className="inline-flex items-center gap-2 sm:w-auto w-full"
+              >
+                Go to Active Sprint <ArrowRight className="h-4 w-4" />
+              </Button>
+              </div>
             </CardContent>
           </Card>
         )}
