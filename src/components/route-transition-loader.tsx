@@ -15,7 +15,9 @@ export function RouteTransitionLoader() {
   if (!routeTransition.active || projectSwitch.active) return null;
 
   if (routeTransition.fullScreen) {
-    return <Loader className="inset-0" aria-label="Loading page" />;
+    return (
+      <Loader className="inset-0" aria-label="Loading page" />
+    );
   }
 
   const inDashboardShell = pathname.startsWith("/dashboard");

@@ -389,7 +389,7 @@ function IssueGroup({
                     href={issuePath(projectKey, issue.id)}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <span className="text-[11px] font-mono text-muted-foreground group-hover:text-primary hover:underline transition-colors">
+                    <span className="text-[15px] font-mono text-muted-foreground group-hover:text-primary hover:underline transition-colors">
                       {issue.issueKey}
                     </span>
                   </DashboardLink>
@@ -406,7 +406,7 @@ function IssueGroup({
                       {expandControl}
                     </div>
                     <div className="min-w-0 flex-1 overflow-hidden">
-                      <span className="text-sm font-medium text-foreground hover:text-primary transition-colors line-clamp-1">
+                      <span className="text-sm font-medium text-foreground transition-colors line-clamp-1">
                         {issue.title}
                       </span>
                       {issue.labels.length > 0 && (

@@ -253,10 +253,12 @@ export function Switch({ checked, onCheckedChange, id }: SwitchProps) {
 export function Loader({
   className,
   accentColor,
+  solid = false,
   "aria-label": ariaLabel = "Loading",
 }: {
   className?: string;
   accentColor?: string | null;
+  solid?: boolean;
   "aria-label"?: string;
 }) {
   return (
@@ -270,7 +272,12 @@ export function Loader({
         className,
       )}
     >
-      <div className="absolute inset-0 bg-background/55 backdrop-blur-md" />
+      <div
+        className={cn(
+          "absolute inset-0",
+          solid ? "bg-background" : "bg-background/55 backdrop-blur-md",
+        )}
+      />
       <div className="absolute top-0 left-0 right-0 h-[2px] overflow-hidden bg-border/40">
         <div
           className="h-full w-1/2 rounded-full animate-project-switch-progress"
