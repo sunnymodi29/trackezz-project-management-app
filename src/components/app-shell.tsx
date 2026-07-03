@@ -16,7 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { sidebarCollapsed, newProjectModalOpen, closeNewProject } = useAppStore();
 
   return (
-    <div className="min-h-screen bg-background flex w-full overflow-x-hidden">
+    <div className="flex min-h-screen w-full bg-background">
       <ProjectRouteSync />
       <ProjectSwitchSync />
       <Sidebar />
@@ -24,12 +24,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <main
         className={cn(
-          "min-w-0 transition-all duration-200 w-full overflow-x-hidden",
+          "flex min-h-screen min-w-0 flex-col transition-all duration-200 w-full",
           sidebarCollapsed ? "md:pl-14" : "md:pl-60"
         )}
       >
         <Topbar />
-        <div className="relative min-h-[calc(100dvh-56px)] overflow-x-hidden pt-14 pb-[calc(72px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
+        <div className="relative min-h-0 flex-1 overflow-x-hidden pt-14 pb-[calc(72px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
           {children}
         </div>
       </main>

@@ -86,7 +86,14 @@ export function Topbar() {
   };
 
   return (
-    <header className={cn("fixed inset-x-0 top-0 h-14 border-b border-border bg-card/95 backdrop-blur-md flex min-w-0 items-center justify-between px-3 sm:px-4 gap-2 sm:gap-3 transition-all duration-200 md:sticky", mobileNavOpen ? "z-20" : "z-9999")}>
+    <header
+      className={cn(
+        "flex h-14 min-w-0 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/60 backdrop-blur-2xl px-3 transition-all duration-200 sm:gap-3 sm:px-4",
+        "fixed inset-x-0 top-0 z-9999",
+        "md:sticky md:inset-x-auto md:top-0 md:z-40 md:w-full",
+        mobileNavOpen && "z-20",
+      )}
+    >
       {/* Left */}
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
