@@ -29,8 +29,8 @@ import {
   projectKeyForId,
   projectPath,
   issuePath,
-  getIssueShareUrl,
 } from "@/lib/projects/route";
+import { copyIssueShareLink } from "@/lib/issues/copy-share-link";
 import { pushWithDashboardRouteTransition } from "@/lib/navigation/dashboard-navigation";
 import { usePersistIssue } from "@/lib/issues/use-persist-issue";
 import { deleteIssue } from "@/lib/actions/issues";
@@ -248,9 +248,14 @@ function IssueDetailViewInner({
   const fullPageHref = issuePath(projectKey, issue.id);
 
   const handleCopyLink = async () => {
-    const url = getIssueShareUrl(window.location.origin, projectKey, issue.id);
     try {
-      await navigator.clipboard.writeText(url);
+      await copyIssueShareLink(
+        window.location.origin,
+        projectKey,
+        issue.id,
+        issue.issueKey,
+        issue.title,
+      );
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 1500);
     } catch {
