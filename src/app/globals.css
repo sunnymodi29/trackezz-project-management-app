@@ -463,3 +463,13 @@ samp {
   scroll-margin-bottom: 2rem;
   animation: none;
 }
+
+[data-testid="product-icon"] {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+[data-testid="product-icon"] img {
+  width: 44px !important;
+  height: 44px !important;
+}
