@@ -7,15 +7,13 @@ import { Card, CardHeader, CardTitle, CardContent, Button, Input } from "@/compo
 import { OrganizationMembersSettings } from "@/components/organization-members-settings";
 import { useDataStore } from "@/store/data-store";
 import { updateOrganization } from "@/lib/actions/organization";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 export function OrganizationSettings() {
   const router = useRouter();
   const { organization, permissions, patchOrganization } = useDataStore();
   const [name, setName] = useState(organization?.name ?? "");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  
 
   const canEditOrg = permissions.isOrgOwner;
 
@@ -24,18 +22,16 @@ export function OrganizationSettings() {
   const handleSave = async () => {
     if (!canEditOrg) return;
     setSaving(true);
-    setError(null);
-    setSuccess(false);
     try {
       const updated = await updateOrganization({
         organizationId: organization.id,
         name,
       });
       patchOrganization({ name: updated.name });
-      setSuccess(true);
+      toastSuccess("Organization updated.");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update organization");
+      toastError(e, "Failed to update organization");
     } finally {
       setSaving(false);
     }
@@ -68,17 +64,6 @@ export function OrganizationSettings() {
             <label className="text-sm font-medium text-muted-foreground">Slug</label>
             <Input value={organization.slug} disabled className="font-mono text-xs" />
           </div>
-
-          {error && (
-            <p className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">
-              {error}
-            </p>
-          )}
-          {success && (
-            <p className="text-xs text-emerald-400 bg-emerald-500/10 rounded-md px-3 py-2">
-              Organization updated.
-            </p>
-          )}
 
           {canEditOrg && (
             <Button

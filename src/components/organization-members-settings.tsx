@@ -23,6 +23,7 @@ import {
   getProjectOnlyCollaborators,
   orgMemberRoleLabel,
 } from "@/lib/org/member-display";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 export function OrganizationMembersSettings() {
   const router = useRouter();
@@ -50,8 +51,6 @@ export function OrganizationMembersSettings() {
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -62,20 +61,18 @@ export function OrganizationMembersSettings() {
   const handleInvite = async () => {
     if (!email.trim() || !organization) return;
     setSending(true);
-    setError(null);
-    setSuccess(null);
     try {
       const result = await sendOrganizationProjectAdminInvitation({
         organizationId: organization.id,
         email: email.trim(),
       });
-      setSuccess(`Invitation email sent to ${email.trim()}`);
+      toastSuccess(`Invitation email sent to ${email.trim()}`);
       setLastInviteUrl(result.inviteUrl);
       setLinkCopied(false);
       setEmail("");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to send invitation");
+      toastError(e, "Failed to send invitation");
     } finally {
       setSending(false);
     }
@@ -88,22 +85,20 @@ export function OrganizationMembersSettings() {
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
-      setError("Could not copy link");
+      toastError("Could not copy link");
     }
   };
 
   const handleResendInvite = async (id: string) => {
     setResendingId(id);
-    setError(null);
-    setSuccess(null);
     try {
       const { inviteUrl } = await resendInvitationEmail(id);
-      setSuccess("Invitation email resent.");
+      toastSuccess("Invitation email resent.");
       setLastInviteUrl(inviteUrl);
       setLinkCopied(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to resend email");
+      toastError(e, "Failed to resend email");
     } finally {
       setResendingId(null);
     }
@@ -114,7 +109,7 @@ export function OrganizationMembersSettings() {
       await cancelInvitation(id);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to cancel");
+      toastError(e, "Failed to cancel");
     }
   };
 
@@ -152,29 +147,23 @@ export function OrganizationMembersSettings() {
           </div>
         )}
 
-        {error && (
-          <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5">{error}</p>
-        )}
-        {success && (
-          <div className="text-xs text-green-600 bg-green-500/10 rounded p-2 space-y-1 flex justify-between gap-4">
-            <p className="m-0 truncate">{success}</p>
-            {lastInviteUrl && (
-              <button
-                type="button"
-                onClick={() => void copyInviteLink(lastInviteUrl)}
-                className="inline-flex items-center gap-1 text-green-700 hover:underline font-medium shrink-0"
-              >
-                {linkCopied ? (
-                  <>
-                    <Check className="h-3 w-3" /> Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3 w-3" /> Copy invite link
-                  </>
-                )}
-              </button>
-            )}
+        {lastInviteUrl && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => void copyInviteLink(lastInviteUrl)}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline font-medium"
+            >
+              {linkCopied ? (
+                <>
+                  <Check className="h-3 w-3" /> Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" /> Copy invite link
+                </>
+              )}
+            </button>
           </div>
         )}
 

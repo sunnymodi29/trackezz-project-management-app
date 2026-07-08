@@ -68,6 +68,7 @@ import { coerceDate, dateFromKey, toDateKey } from "@/lib/issues/dates";
 import { useProjectAssigneeSelect } from "@/hooks/use-project-assignee-select";
 import { cn } from "@/lib/utils";
 import { RichTextContent } from "@/components/ui/rich-text-content";
+import { toastError } from "@/lib/ui/toast";
 
 interface IssueDetailViewProps {
   issueId: string;
@@ -124,6 +125,11 @@ function IssueDetailViewInner({
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(issue?.title ?? "");
   const [description, setDescription] = useState(issue?.description ?? "");
+
+  useEffect(() => {
+    if (!error) return;
+    toastError(error);
+  }, [error]);
 
   const activityLogs = useMemo(
     () => (issue ? getActivityLogsForIssue(issue.id) : []),
@@ -376,12 +382,6 @@ function IssueDetailViewInner({
           )}
         </div>
       </div>
-
-      {error && (
-        <div className="px-5 py-2 text-xs text-destructive bg-destructive/10 border-b border-destructive/20">
-          {error}
-        </div>
-      )}
 
       <div
         className={cn(

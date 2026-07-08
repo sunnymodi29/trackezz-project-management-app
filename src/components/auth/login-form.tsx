@@ -14,6 +14,7 @@ import {
 } from "@/components/auth/auth-shell";
 import { AuthField } from "@/components/auth/auth-field";
 import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
+import { toastError } from "@/lib/ui/toast";
 
 export function LoginForm({ googleAuthEnabled = false }: { googleAuthEnabled?: boolean }) {
   const router = useRouter();
@@ -22,13 +23,11 @@ export function LoginForm({ googleAuthEnabled = false }: { googleAuthEnabled?: b
   const prefilledEmail = searchParams.get("email") ?? "";
   const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     const result = await signIn("credentials", {
       email,
@@ -38,7 +37,7 @@ export function LoginForm({ googleAuthEnabled = false }: { googleAuthEnabled?: b
 
     if (result?.error) {
       setLoading(false);
-      setError("Invalid email or password. Please try again.");
+      toastError("Invalid email or password. Please try again.");
       return;
     }
 
@@ -97,15 +96,6 @@ export function LoginForm({ googleAuthEnabled = false }: { googleAuthEnabled?: b
             required
             autoComplete="current-password"
           />
-
-          {error ? (
-            <p
-              role="alert"
-              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
-            >
-              {error}
-            </p>
-          ) : null}
 
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? (

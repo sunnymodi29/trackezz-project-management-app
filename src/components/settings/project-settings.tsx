@@ -23,6 +23,7 @@ import {
 } from "@/lib/navigation/dashboard-navigation";
 import { updateProject, deleteProject } from "@/lib/actions/projects";
 import { canManageProject } from "@/lib/permissions/client";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 export function ProjectSettings() {
   const params = useParams();
@@ -48,8 +49,6 @@ export function ProjectSettings() {
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -82,8 +81,6 @@ export function ProjectSettings() {
 
   const handleSave = async () => {
     setSaving(true);
-    setError(null);
-    setSuccess(false);
     try {
       const updated = await updateProject(project.id, {
         name: name.trim(),
@@ -93,7 +90,7 @@ export function ProjectSettings() {
       upsertProject(updated);
       setCurrentProject(updated);
       setKey(updated.key);
-      setSuccess(true);
+      toastSuccess("Project saved.");
       router.refresh();
       if (updated.key !== routeParam) {
         replaceWithDashboardRouteTransition(
@@ -102,7 +99,7 @@ export function ProjectSettings() {
         );
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update project");
+      toastError(e, "Failed to update project");
     } finally {
       setSaving(false);
     }
@@ -117,7 +114,7 @@ export function ProjectSettings() {
       pushWithDashboardRouteTransition(router, "/dashboard/projects");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete project");
+      toastError(e, "Failed to delete project");
       setDeleting(false);
     }
   };
@@ -180,17 +177,6 @@ export function ProjectSettings() {
                 placeholder="Optional project summary"
               />
             </div>
-
-            {error && (
-              <p className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">
-                {error}
-              </p>
-            )}
-            {success && (
-              <p className="text-xs text-emerald-400 bg-emerald-500/10 rounded-md px-3 py-2">
-                Project saved.
-              </p>
-            )}
 
             {canManage && (
               <Button

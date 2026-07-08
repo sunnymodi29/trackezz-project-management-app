@@ -23,6 +23,7 @@ import {
   removeUserAvatar,
   deleteUserAccount,
 } from "@/lib/actions/user";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 export function UserProfileSettings() {
   const router = useRouter();
@@ -31,26 +32,20 @@ export function UserProfileSettings() {
 
   const [name, setName] = useState(currentUser.name);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [profileSuccess, setProfileSuccess] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl);
   const [avatarBusy, setAvatarBusy] = useState(false);
-  const [avatarError, setAvatarError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const emailMatches =
     deleteConfirmEmail.trim().toLowerCase() ===
@@ -62,28 +57,22 @@ export function UserProfileSettings() {
 
   const handleSaveProfile = async () => {
     setSavingProfile(true);
-    setProfileError(null);
-    setProfileSuccess(false);
     try {
       const updated = await updateUserProfile({ name });
       patchCurrentUser({ name: updated.name });
       await updateSession({ name: updated.name });
-      setProfileSuccess(true);
+      toastSuccess("Profile saved.");
       router.refresh();
     } catch (e) {
-      setProfileError(
-        e instanceof Error ? e.message : "Failed to save profile",
-      );
+      toastError(e, "Failed to save profile");
     } finally {
       setSavingProfile(false);
     }
   };
 
   const handleChangePassword = async () => {
-    setPasswordError(null);
-    setPasswordSuccess(false);
     if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match");
+      toastError("New passwords do not match");
       return;
     }
     setSavingPassword(true);
@@ -92,11 +81,9 @@ export function UserProfileSettings() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordSuccess(true);
+      toastSuccess("Password updated.");
     } catch (e) {
-      setPasswordError(
-        e instanceof Error ? e.message : "Failed to change password",
-      );
+      toastError(e, "Failed to change password");
     } finally {
       setSavingPassword(false);
     }
@@ -112,16 +99,14 @@ export function UserProfileSettings() {
   const handleAvatarFile = async (file: File | null) => {
     if (!file) return;
     setAvatarBusy(true);
-    setAvatarError(null);
-    setProfileSuccess(false);
     try {
       const formData = new FormData();
       formData.set("avatar", file);
       const updated = await uploadUserAvatar(formData);
       await applyAvatarUpdate(updated);
-      setProfileSuccess(true);
+      toastSuccess("Profile saved.");
     } catch (e) {
-      setAvatarError(e instanceof Error ? e.message : "Failed to upload avatar");
+      toastError(e, "Failed to upload avatar");
     } finally {
       setAvatarBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -130,14 +115,12 @@ export function UserProfileSettings() {
 
   const handleRemoveAvatar = async () => {
     setAvatarBusy(true);
-    setAvatarError(null);
-    setProfileSuccess(false);
     try {
       const updated = await removeUserAvatar();
       await applyAvatarUpdate(updated);
-      setProfileSuccess(true);
+      toastSuccess("Profile saved.");
     } catch (e) {
-      setAvatarError(e instanceof Error ? e.message : "Failed to remove avatar");
+      toastError(e, "Failed to remove avatar");
     } finally {
       setAvatarBusy(false);
     }
@@ -145,7 +128,6 @@ export function UserProfileSettings() {
 
   const handleDeleteAccount = async () => {
     setDeletingAccount(true);
-    setDeleteError(null);
     try {
       await deleteUserAccount({
         confirmEmail: deleteConfirmEmail,
@@ -154,9 +136,7 @@ export function UserProfileSettings() {
       setDeleteDialogOpen(false);
       await signOutWithLoader("/login");
     } catch (e) {
-      setDeleteError(
-        e instanceof Error ? e.message : "Failed to delete account"
-      );
+      toastError(e, "Failed to delete account");
     } finally {
       setDeletingAccount(false);
     }
@@ -215,12 +195,6 @@ export function UserProfileSettings() {
             </div>
           </div>
 
-          {avatarError && (
-            <p className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">
-              {avatarError}
-            </p>
-          )}
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Display name</label>
@@ -236,17 +210,6 @@ export function UserProfileSettings() {
               <Input value={currentUser.email} disabled />
             </div>
           </div>
-
-          {profileError && (
-            <p className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">
-              {profileError}
-            </p>
-          )}
-          {profileSuccess && (
-            <p className="text-xs text-emerald-400 bg-emerald-500/10 rounded-md px-3 py-2">
-              Profile saved.
-            </p>
-          )}
 
           <Button
             onClick={() => void handleSaveProfile()}
@@ -302,17 +265,6 @@ export function UserProfileSettings() {
               />
             </div>
           </div>
-
-          {passwordError && (
-            <p className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">
-              {passwordError}
-            </p>
-          )}
-          {passwordSuccess && (
-            <p className="text-xs text-emerald-400 bg-emerald-500/10 rounded-md px-3 py-2">
-              Password updated.
-            </p>
-          )}
 
           <Button
             variant="outline"
@@ -372,17 +324,11 @@ export function UserProfileSettings() {
               />
             </div>
           </div>
-          {deleteError && (
-            <p className="text-xs text-destructive bg-destructive/10 rounded-md px-3 py-2">
-              {deleteError}
-            </p>
-          )}
           <Button
             variant="destructive"
             className="gap-2"
             disabled={!emailMatches || deletingAccount}
             onClick={() => {
-              setDeleteError(null);
               setDeleteDialogOpen(true);
             }}
           >

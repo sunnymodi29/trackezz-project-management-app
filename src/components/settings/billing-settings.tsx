@@ -42,6 +42,7 @@ import {
 } from "@/lib/billing/interval-toggle-styles";
 import { useIsDarkTheme } from "@/hooks/use-is-dark-theme";
 import { cn } from "@/lib/utils";
+import { toastError, toastSuccess, toastInfo } from "@/lib/ui/toast";
 
 type BillingInterval = "month" | "year";
 
@@ -53,8 +54,6 @@ export function BillingSettings() {
   const [loading, setLoading] = useState<"checkout" | "portal" | "sync" | null>(
     null,
   );
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [proPricing, setProPricing] = useState<ProPlanPricing>(
     DEFAULT_PRO_PLAN_PRICING,
   );
@@ -98,19 +97,20 @@ export function BillingSettings() {
         window.sessionStorage.removeItem("paddle_checkout_txn");
       }
       patchBilling(updated);
-      setNotice(
-        updated.checkoutPending
-          ? (updated.checkoutMessage ??
-              "Payment is still processing. Refresh subscription status in a moment.")
-          : "Pro subscription is active.",
-      );
+      if (updated.checkoutPending) {
+        toastInfo(
+          updated.checkoutMessage ??
+            "Payment is still processing. Refresh subscription status in a moment.",
+        );
+      } else {
+        toastSuccess("Pro subscription is active.");
+      }
     };
 
     if (shouldOpenCheckout) {
       checkoutSyncedRef.current = true;
       window.sessionStorage.setItem("paddle_checkout_txn", transactionId!);
       setLoading("checkout");
-      setError(null);
 
       void openPaddleOverlayCheckout(transactionId!, async (txnId) => {
         setLoading("sync");
@@ -125,7 +125,7 @@ export function BillingSettings() {
             window.sessionStorage.removeItem("paddle_checkout_txn");
             router.replace("/dashboard/settings?tab=billing");
           } else {
-            setError(message);
+            toastError(message);
           }
           checkoutSyncedRef.current = false;
         })
@@ -138,7 +138,6 @@ export function BillingSettings() {
     if (shouldSyncCheckout) {
       checkoutSyncedRef.current = true;
       setLoading("sync");
-      setError(null);
 
       void confirmProCheckout(transactionId!)
         .then((updated) => {
@@ -153,10 +152,10 @@ export function BillingSettings() {
               : "Payment succeeded but sync failed. Try refreshing status below.";
           if (message.includes("not complete yet")) {
             checkoutSyncedRef.current = false;
-            setError(message);
+            toastInfo(message);
             return;
           }
-          setError(message);
+          toastError(message);
           checkoutSyncedRef.current = false;
         })
         .finally(() => {
@@ -166,7 +165,7 @@ export function BillingSettings() {
     }
 
     if (checkout === "success" && !transactionId) {
-      setNotice(
+      toastInfo(
         "Payment received. Click “Refresh subscription status” below if your plan has not updated.",
       );
       router.replace("/dashboard/settings?tab=billing");
@@ -175,7 +174,7 @@ export function BillingSettings() {
 
     if (checkout === "cancel") {
       window.sessionStorage.removeItem("paddle_checkout_txn");
-      setNotice("Checkout canceled — no changes were made.");
+      toastInfo("Checkout canceled — no changes were made.");
       router.replace("/dashboard/settings?tab=billing");
     }
   }, [searchParams, router, patchBilling]);
@@ -193,7 +192,6 @@ export function BillingSettings() {
 
   const startCheckout = async () => {
     setLoading("checkout");
-    setError(null);
     try {
       const session = await createProCheckoutSession(interval);
 
@@ -207,12 +205,14 @@ export function BillingSettings() {
             window.sessionStorage.removeItem("paddle_checkout_txn");
           }
           patchBilling(updated);
-          setNotice(
-            updated.checkoutPending
-              ? (updated.checkoutMessage ??
-                  "Payment is still processing. Refresh subscription status in a moment.")
-              : "Pro subscription is active.",
-          );
+          if (updated.checkoutPending) {
+            toastInfo(
+              updated.checkoutMessage ??
+                "Payment is still processing. Refresh subscription status in a moment.",
+            );
+          } else {
+            toastSuccess("Pro subscription is active.");
+          }
           router.refresh();
         });
         return;
@@ -232,7 +232,7 @@ export function BillingSettings() {
     } catch (e) {
       const message = e instanceof Error ? e.message : "Checkout failed";
       if (message !== "Checkout canceled") {
-        setError(message);
+        toastError(message);
       }
     } finally {
       setLoading(null);
@@ -241,32 +241,28 @@ export function BillingSettings() {
 
   const openPortal = async () => {
     setLoading("portal");
-    setError(null);
     try {
       const { url } = await createBillingPortalSession();
       window.location.href = url;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not open billing portal");
+      toastError(e, "Could not open billing portal");
       setLoading(null);
     }
   };
 
   const refreshStatus = async () => {
     setLoading("sync");
-    setError(null);
     try {
       const updated = await refreshBillingFromPaddle();
       patchBilling(updated);
-      setNotice(
-        updated.isPro
-          ? "Subscription synced from Paddle."
-          : "No active Pro subscription found in Paddle.",
-      );
+      if (updated.isPro) {
+        toastSuccess("Subscription synced from Paddle.");
+      } else {
+        toastInfo("No active Pro subscription found in Paddle.");
+      }
       router.refresh();
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Could not refresh subscription status",
-      );
+      toastError(e, "Could not refresh subscription status");
     } finally {
       setLoading(null);
     }
@@ -274,25 +270,10 @@ export function BillingSettings() {
 
   return (
     <div className="space-y-6">
-      {(loading === "sync" || notice || error) && (
+      {loading === "sync" && (
         <BillingAlert
-          variant={
-            error ? "error" : loading === "sync" ? "loading" : "success"
-          }
-          message={
-            error ??
-            (loading === "sync"
-              ? "Activating your Pro subscription…"
-              : (notice ?? ""))
-          }
-          onDismiss={
-            notice || error
-              ? () => {
-                  setNotice(null);
-                  setError(null);
-                }
-              : undefined
-          }
+          variant="loading"
+          message="Activating your Pro subscription…"
         />
       )}
 

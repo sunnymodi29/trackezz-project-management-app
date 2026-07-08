@@ -24,6 +24,7 @@ import {
   isPasswordValid,
   passwordsMatch,
 } from "@/lib/auth/password-policy";
+import { toastError, toastInfo } from "@/lib/ui/toast";
 
 export function RegisterForm({
   googleAuthEnabled = false,
@@ -38,7 +39,6 @@ export function RegisterForm({
   const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const passwordValid = isPasswordValid(password);
@@ -57,16 +57,15 @@ export function RegisterForm({
     e.preventDefault();
     const passwordError = getPasswordValidationError(password);
     if (passwordError) {
-      setError(passwordError);
+      toastError(passwordError);
       return;
     }
     if (!passwordsMatch(password, confirmPassword)) {
-      setError("Passwords do not match.");
+      toastError("Passwords do not match.");
       return;
     }
 
     setLoading(true);
-    setError("");
 
     const result = await registerUser({
       name,
@@ -75,7 +74,7 @@ export function RegisterForm({
       inviteToken: inviteToken ?? undefined,
     });
     if ("error" in result && result.error) {
-      setError(result.error);
+      toastError(result.error);
       setLoading(false);
       return;
     }
@@ -88,7 +87,7 @@ export function RegisterForm({
 
     setLoading(false);
     if (signInResult?.error) {
-      setError("Account created. Please sign in.");
+      toastInfo("Account created. Please sign in.");
       router.push("/login");
       return;
     }
@@ -185,15 +184,6 @@ export function RegisterForm({
               confirmPassword={confirmPassword}
             />
           </div>
-
-          {error ? (
-            <p
-              role="alert"
-              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
-            >
-              {error}
-            </p>
-          ) : null}
 
           <Button
             type="submit"

@@ -32,6 +32,7 @@ import {
   updateApiToken,
   type ApiTokenListItem,
 } from "@/lib/actions/api-tokens";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 const MCP_PACKAGE = "@trackezz/mcp@0.1.1";
 
@@ -130,7 +131,6 @@ function formatUsed(date: Date | null) {
 export function ApiTokensSettings() {
   const [tokens, setTokens] = useState<ApiTokenListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [revokeId, setRevokeId] = useState<string | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [apiUrl, setApiUrl] = useState("");
@@ -146,7 +146,6 @@ export function ApiTokensSettings() {
   const [editToken, setEditToken] = useState<ApiTokenListItem | null>(null);
   const [editName, setEditName] = useState("");
   const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
 
   const createMcpConfigJson = useMemo(
     () =>
@@ -160,9 +159,8 @@ export function ApiTokensSettings() {
     setLoading(true);
     try {
       setTokens(await listApiTokens());
-      setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load PATs");
+      toastError(e, "Failed to load PATs");
     } finally {
       setLoading(false);
     }
@@ -187,7 +185,6 @@ export function ApiTokensSettings() {
 
   const handleCreateNewToken = async () => {
     setCreating(true);
-    setError(null);
     try {
       const { token, record } = await createApiToken({ name: "New PAT" });
       setCreatedToken(token);
@@ -195,8 +192,9 @@ export function ApiTokensSettings() {
       setCreateName(record.name);
       setTokens((prev) => [record, ...prev.filter((t) => t.id !== record.id)]);
       setCreateOpen(true);
+      toastSuccess("Personal access token created.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create PAT");
+      toastError(e, "Failed to create PAT");
     } finally {
       setCreating(false);
     }
@@ -213,7 +211,7 @@ export function ApiTokensSettings() {
           prev.map((t) => (t.id === updated.id ? updated : t)),
         );
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to save PAT name");
+        toastError(e, "Failed to save PAT name");
       }
     }
     resetCreateModal();
@@ -235,20 +233,17 @@ export function ApiTokensSettings() {
   const openEditModal = (token: ApiTokenListItem) => {
     setEditToken(token);
     setEditName(token.name);
-    setEditError(null);
   };
 
   const closeEditModal = () => {
     if (editSaving) return;
     setEditToken(null);
     setEditName("");
-    setEditError(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editToken || !editName.trim()) return;
     setEditSaving(true);
-    setEditError(null);
     try {
       const updated = await updateApiToken({
         id: editToken.id,
@@ -257,9 +252,9 @@ export function ApiTokensSettings() {
       setTokens((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setEditToken(null);
       setEditName("");
-      setEditError(null);
+      toastSuccess("PAT updated.");
     } catch (e) {
-      setEditError(e instanceof Error ? e.message : "Failed to update PAT");
+      toastError(e, "Failed to update PAT");
     } finally {
       setEditSaving(false);
     }
@@ -272,8 +267,9 @@ export function ApiTokensSettings() {
       await revokeApiToken(revokeId);
       setTokens((prev) => prev.filter((t) => t.id !== revokeId));
       setRevokeId(null);
+      toastSuccess("PAT revoked.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to revoke PAT");
+      toastError(e, "Failed to revoke PAT");
     } finally {
       setRevoking(false);
     }
@@ -311,7 +307,6 @@ export function ApiTokensSettings() {
               </code>
               .
             </p>
-            {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
         </Card>
 
@@ -419,7 +414,6 @@ export function ApiTokensSettings() {
         name={editName}
         tokenPrefix={editToken?.tokenPrefix ?? ""}
         saving={editSaving}
-        error={editError}
         onNameChange={setEditName}
         onClose={closeEditModal}
         onSave={() => void handleSaveEdit()}
@@ -674,7 +668,6 @@ function EditTokenModal({
   name,
   tokenPrefix,
   saving,
-  error,
   onNameChange,
   onClose,
   onSave,
@@ -683,7 +676,6 @@ function EditTokenModal({
   name: string;
   tokenPrefix: string;
   saving: boolean;
-  error: string | null;
   onNameChange: (value: string) => void;
   onClose: () => void;
   onSave: () => void;
@@ -738,7 +730,6 @@ function EditTokenModal({
           </button>
         </div>
         <div className="px-5 py-4 space-y-4">
-          {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
               PAT Name

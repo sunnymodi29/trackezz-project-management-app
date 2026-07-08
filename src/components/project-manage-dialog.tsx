@@ -29,6 +29,7 @@ import { PROJECT_ROLE_OPTIONS } from "@/lib/projects/constants";
 import { projectIconFromName } from "@/lib/projects/project-utils";
 import type { Project, ProjectRole } from "@/types";
 import { cn, formatRelativeTime } from "@/lib/utils";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 interface ProjectManageDialogProps {
   project: Project | null;
@@ -58,12 +59,10 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
   const [saving, setSaving] = useState(false);
   const [memberBusy, setMemberBusy] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<ProjectRole>("member");
   const [inviting, setInviting] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [deleteProjectOpen, setDeleteProjectOpen] = useState(false);
@@ -85,7 +84,6 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
     setKey(project.key);
     setDescription(project.description ?? "");
     setTab("general");
-    setError(null);
   }, [project]);
 
   useEffect(() => {
@@ -108,7 +106,6 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
   const saveGeneral = async () => {
     if (!project || !name.trim()) return;
     setSaving(true);
-    setError(null);
     try {
       const updated = await updateProject(project.id, {
         name: name.trim(),
@@ -119,9 +116,10 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
         ...updated,
         icon: projectIconFromName(name),
       });
+      toastSuccess("Project updated.");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update project");
+      toastError(e, "Failed to update project");
     } finally {
       setSaving(false);
     }
@@ -130,15 +128,15 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
   const handleAddMember = async () => {
     if (!project || !addUserId) return;
     setMemberBusy(addUserId);
-    setError(null);
     try {
       const member = await addProjectMember(project.id, addUserId, addRole);
       upsertProjectMember(member);
       setAddUserId("");
       setAddRole("member");
+      toastSuccess("Member added.");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add member");
+      toastError(e, "Failed to add member");
     } finally {
       setMemberBusy(null);
     }
@@ -150,9 +148,10 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
     try {
       const member = await updateProjectMemberRole(project.id, userId, role);
       upsertProjectMember(member);
+      toastSuccess("Member role updated.");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update role");
+      toastError(e, "Failed to update role");
     } finally {
       setMemberBusy(null);
     }
@@ -165,7 +164,7 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
-      setError("Could not copy link");
+      toastError("Could not copy link");
     }
   };
 
@@ -173,25 +172,23 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
     if (!project || !inviteEmail.trim()) return;
     const normalizedEmail = inviteEmail.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setError("Enter a valid email address");
+      toastError("Enter a valid email address");
       return;
     }
     setInviting(true);
-    setError(null);
-    setInviteSuccess(null);
     try {
       const result = await sendProjectInvitation({
         projectId: project.id,
         email: normalizedEmail,
         role: inviteRole,
       });
-      setInviteSuccess(`Invitation email sent to ${normalizedEmail}`);
+      toastSuccess(`Invitation email sent to ${normalizedEmail}`);
       setLastInviteUrl(result.inviteUrl);
       setLinkCopied(false);
       setInviteEmail("");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to send invitation");
+      toastError(e, "Failed to send invitation");
     } finally {
       setInviting(false);
     }
@@ -199,16 +196,14 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
 
   const handleResendInvite = async (invitationId: string) => {
     setResendingId(invitationId);
-    setError(null);
-    setInviteSuccess(null);
     try {
       const { inviteUrl } = await resendInvitationEmail(invitationId);
-      setInviteSuccess("Invitation email resent.");
+      toastSuccess("Invitation email resent.");
       setLastInviteUrl(inviteUrl);
       setLinkCopied(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to resend email");
+      toastError(e, "Failed to resend email");
     } finally {
       setResendingId(null);
     }
@@ -217,14 +212,14 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
   const handleDeleteProject = async () => {
     if (!project) return;
     setDeleting(true);
-    setError(null);
     try {
       await deleteProject(project.id);
+      toastSuccess("Project deleted.");
       onClose();
       pushWithDashboardRouteTransition(router, "/dashboard/projects");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete project");
+      toastError(e, "Failed to delete project");
     } finally {
       setDeleting(false);
       setDeleteProjectOpen(false);
@@ -241,9 +236,10 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
         memberCount: Math.max(0, project.memberCount - 1),
       });
       setRemoveTarget(null);
+      toastSuccess("Member removed.");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove member");
+      toastError(e, "Failed to remove member");
     } finally {
       setMemberBusy(null);
     }
@@ -293,12 +289,6 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 sm:p-5">
-            {error && (
-              <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                {error}
-              </p>
-            )}
-
             {tab === "general" && (
               <>
                 <div className="space-y-2">
@@ -417,26 +407,23 @@ export function ProjectManageDialog({ project, onClose }: ProjectManageDialogPro
                         {inviting ? "Sending…" : "Invite"}
                       </Button>
                     </div>
-                    {inviteSuccess && (
-                      <div className="text-xs text-green-600 bg-green-500/10 rounded p-2 space-y-1 flex justify-between gap-4">
-                        <p className="m-0 truncate">{inviteSuccess}</p>
-                        {lastInviteUrl && (
-                          <button
-                            type="button"
-                            onClick={() => void copyInviteLink(lastInviteUrl)}
-                            className="inline-flex items-center gap-1 text-green-700 hover:underline font-medium shrink-0"
-                          >
-                            {linkCopied ? (
-                              <>
-                                <Check className="h-3 w-3" /> Copied
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3 w-3" /> Copy invite link
-                              </>
-                            )}
-                          </button>
-                        )}
+                    {lastInviteUrl && (
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => void copyInviteLink(lastInviteUrl)}
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline font-medium"
+                        >
+                          {linkCopied ? (
+                            <>
+                              <Check className="h-3 w-3" /> Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" /> Copy invite link
+                            </>
+                          )}
+                        </button>
                       </div>
                     )}
                   </div>

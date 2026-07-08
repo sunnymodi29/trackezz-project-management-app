@@ -6,6 +6,7 @@ import { Button, Input, Textarea, DatePicker, Checkbox } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { toDateKey } from "@/lib/issues/dates";
 import type { Sprint } from "@/types";
+import { toastError } from "@/lib/ui/toast";
 
 function defaultEndDate(start: Date): Date {
   const end = new Date(start);
@@ -42,7 +43,6 @@ export function SprintFormModal({
   const [startDate, setStartDate] = useState(toDateKey(new Date()));
   const [endDate, setEndDate] = useState(toDateKey(defaultEndDate(new Date())));
   const [startImmediately, setStartImmediately] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -60,20 +60,18 @@ export function SprintFormModal({
       setEndDate(toDateKey(defaultEndDate(start)));
       setStartImmediately(false);
     }
-    setError(null);
   }, [open, sprint]);
 
   if (!open) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     if (!name.trim()) {
-      setError("Sprint name is required");
+      toastError("Sprint name is required");
       return;
     }
     if (endDate < startDate) {
-      setError("End date must be on or after start date");
+      toastError("End date must be on or after start date");
       return;
     }
     try {
@@ -86,7 +84,7 @@ export function SprintFormModal({
       });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save sprint");
+      toastError(err, "Failed to save sprint");
     }
   };
 
@@ -105,11 +103,6 @@ export function SprintFormModal({
           </button>
         </div>
         <div className="min-h-0 overflow-y-auto px-5 py-4 space-y-4">
-          {error && (
-            <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-              {error}
-            </p>
-          )}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New Sprint" disabled={loading} />

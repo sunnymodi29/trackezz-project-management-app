@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Button } from "@/components/ui";
@@ -9,6 +9,7 @@ import {
   acceptInvitationAction,
   type AcceptInviteState,
 } from "@/lib/actions/invitations";
+import { toastError } from "@/lib/ui/toast";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -34,6 +35,11 @@ export function AcceptInviteButton({
   const emailMismatchError =
     state?.error?.toLowerCase().includes("invited email") ?? false;
 
+  useEffect(() => {
+    if (!state?.error) return;
+    toastError(state.error);
+  }, [state?.error]);
+
   const handleSwitchAccount = async () => {
     const callbackUrl = `/login?email=${encodeURIComponent(inviteEmail)}&callbackUrl=${encodeURIComponent(`/invite/${token}/join`)}`;
     await signOutWithLoader(callbackUrl);
@@ -43,9 +49,6 @@ export function AcceptInviteButton({
     <form action={formAction} className="space-y-2">
       {state?.error && (
         <div className="space-y-2">
-          <p className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5">
-            {state.error}
-          </p>
           {emailMismatchError && (
             <div className="flex flex-col gap-2">
               <Button

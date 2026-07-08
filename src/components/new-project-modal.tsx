@@ -10,6 +10,7 @@ import { deriveProjectKey } from "@/lib/projects/project-utils";
 import { PROJECT_ROLE_OPTIONS } from "@/lib/projects/constants";
 import { getAssignableOrgUsers } from "@/lib/org/member-display";
 import type { ProjectRole } from "@/types";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 interface DraftMember {
   userId: string;
@@ -40,7 +41,6 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
   const [addUserId, setAddUserId] = useState("");
   const [addRole, setAddRole] = useState<ProjectRole>("member");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
 
   const suggestedKey = useMemo(
@@ -81,7 +81,6 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
 
   useEffect(() => {
     if (!open) return;
-    setError(null);
     setMembers([]);
     setAddUserId("");
     setAddRole("member");
@@ -114,11 +113,10 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
       return;
     }
     if (!organization) {
-      setError("No organization workspace available");
+      toastError("No organization workspace available");
       return;
     }
     setSubmitting(true);
-    setError(null);
     try {
       const { project, members: createdMembers } = await createProject({
         organizationId: organization.id,
@@ -135,8 +133,9 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
       setDescription("");
       setKeyOverride("");
       setMembers([]);
+      toastSuccess("Project created.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create project");
+      toastError(e, "Failed to create project");
     } finally {
       setSubmitting(false);
     }
@@ -170,11 +169,6 @@ export function NewProjectModal({ open, onClose }: NewProjectModalProps) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 sm:p-5">
-          {error && (
-            <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-              {error}
-            </p>
-          )}
           <div className="space-y-2">
             <label className="text-sm font-medium">Project name</label>
             <Input
