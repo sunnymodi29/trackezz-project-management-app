@@ -118,6 +118,7 @@ export function ManageSubscriptionSettings({
     try {
       const { url } = await createBillingPortalSession();
       window.open(url, "_blank");
+      setLoading(null);
     } catch (e) {
       toastError(e, "Could not open payment settings");
       setLoading(null);

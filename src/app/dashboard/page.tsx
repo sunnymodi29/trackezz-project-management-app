@@ -133,12 +133,14 @@ export default async function DashboardPage() {
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" /> My Tasks
                 </CardTitle>
-                <DashboardLink
-                  href="/dashboard/my-tasks"
-                  className="text-xs text-primary hover:underline flex items-center gap-1"
-                >
-                  View all <ArrowUpRight className="h-3 w-3" />
-                </DashboardLink>
+                {myIssues.length > 0 && (
+                  <DashboardLink
+                    href="/dashboard/my-tasks"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    View all <ArrowUpRight className="h-3 w-3" />
+                  </DashboardLink>
+                )}
               </div>
             </CardHeader>
             <CardContent>
