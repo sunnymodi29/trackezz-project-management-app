@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Bot,
-  Check,
-  Sparkles,
-  SquareKanban,
-} from "lucide-react";
+import { ArrowLeft, Bot, Check, Sparkles, SquareKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AuthLogo } from "@/components/auth/auth-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -16,7 +10,8 @@ const BRAND_POINTS = [
   {
     icon: Bot,
     title: "AI project assistant",
-    description: "Grounded answers from your real backlog, sprints, and workflow.",
+    description:
+      "Grounded answers from your real backlog, sprints, and workflow.",
   },
   {
     icon: SquareKanban,
@@ -26,7 +21,8 @@ const BRAND_POINTS = [
   {
     icon: Sparkles,
     title: "Smart triage & MCP",
-    description: "AI suggestions on create — connect Cursor and your IDE via PAT.",
+    description:
+      "AI suggestions on create — connect Cursor and your IDE via PAT.",
   },
 ] as const;
 
@@ -55,12 +51,12 @@ export function AuthShell({
                 AI-powered project management
               </p>
               <h2 className="text-3xl font-bold leading-tight tracking-tight xl:text-4xl">
-                Ship faster with{" "}
-                <span className="gradient-text">clarity</span>, not chaos.
+                Ship faster with <span className="gradient-text">clarity,</span>{" "}
+                not chaos.
               </h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Track issues, run sprints, and let AI help triage, summarize, and
-                connect your tools — all in one workspace.
+                Track issues, run sprints, and let AI help triage, summarize,
+                and connect your tools — all in one workspace.
               </p>
             </div>
 
@@ -121,14 +117,20 @@ export function AuthShell({
   );
 }
 
-export function AuthDivider({ label = "or continue with email" }: { label?: string }) {
+export function AuthDivider({
+  label = "or continue with email",
+}: {
+  label?: string;
+}) {
   return (
     <div className="relative py-1">
       <div className="absolute inset-0 flex items-center">
         <span className="w-full border-t border-border" />
       </div>
       <div className="relative flex justify-center text-[11px] uppercase tracking-wide">
-        <span className="bg-background px-3 text-muted-foreground">{label}</span>
+        <span className="bg-background px-3 text-muted-foreground">
+          {label}
+        </span>
       </div>
     </div>
   );

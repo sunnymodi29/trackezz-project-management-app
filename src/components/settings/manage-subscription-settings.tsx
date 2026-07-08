@@ -117,7 +117,7 @@ export function ManageSubscriptionSettings({
     setLoading("portal");
     try {
       const { url } = await createBillingPortalSession();
-      window.location.href = url;
+      window.open(url, "_blank");
     } catch (e) {
       toastError(e, "Could not open payment settings");
       setLoading(null);
@@ -285,7 +285,7 @@ export function ManageSubscriptionSettings({
       )}
 
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="h-4 w-4 text-primary" />
             Pro plan
@@ -337,7 +337,7 @@ export function ManageSubscriptionSettings({
 
       {!scheduledCancel && !isPaused && !scheduledPause && (
         <Card>
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-2">
             <CardTitle className="text-base">Billing cycle</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -359,7 +359,7 @@ export function ManageSubscriptionSettings({
                 price={proPricing.monthly.formatted}
                 period="/mo"
                 isDark={isDark}
-                disabled={loading !== null}
+                disabled={loading === "switch"}
               />
               <BillingCycleOption
                 active={details.interval === "year"}
@@ -370,7 +370,7 @@ export function ManageSubscriptionSettings({
                 badge={`Save ${proPricing.annualSavingsPercent}%`}
                 sub={`${proPricing.annual.formatted} billed yearly`}
                 isDark={isDark}
-                disabled={loading !== null}
+                disabled={loading === "switch"}
               />
             </div>
             {loading === "switch" && (
@@ -384,7 +384,7 @@ export function ManageSubscriptionSettings({
       )}
 
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <CreditCard className="h-4 w-4" />
             Payment method
@@ -401,7 +401,10 @@ export function ManageSubscriptionSettings({
             disabled={loading !== null}
           >
             {loading === "portal" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Opening payment portal…
+              </>
             ) : (
               <>
                 Update payment method
@@ -414,7 +417,7 @@ export function ManageSubscriptionSettings({
 
       {!scheduledCancel && !isPaused && initialBilling.isPro && (
         <Card className="border-destructive/20">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-0">
             <CardTitle className="text-base text-destructive">
               Cancel subscription
             </CardTitle>
