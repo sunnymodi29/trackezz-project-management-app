@@ -464,6 +464,7 @@ samp {
   animation: none;
 }
 
+/* ── Payment page - Product icon ────────────────────────────────────────────── */
 [data-testid="product-icon"] {
   width: 44px !important;
   height: 44px !important;
