@@ -95,10 +95,7 @@ export function ProjectsPageClient() {
 
   const canManageByProjectId = useCallback(
     (projectId: string) =>
-      canManageProject(
-        { permissions, projectMembers, currentUser },
-        projectId,
-      ),
+      canManageProject({ permissions, projectMembers, currentUser }, projectId),
     [permissions, projectMembers, currentUser],
   );
 
@@ -124,7 +121,10 @@ export function ProjectsPageClient() {
             </p>
           </div>
           {permissions.canCreateProject && (
-            <Button className="gap-2 w-full md:w-auto" onClick={() => openNewProject()}>
+            <Button
+              className="gap-2 w-full md:w-auto"
+              onClick={() => openNewProject()}
+            >
               <Plus className="h-4 w-4" /> New Project
             </Button>
           )}
@@ -142,38 +142,40 @@ export function ProjectsPageClient() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1 shrink-0">
-            <Tooltip content="Grid view" side="bottom">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "h-8 px-2 w-10 md:w-auto",
-                  view === "grid" &&
-                    "bg-background shadow-sm hover:bg-background",
-                )}
-                onClick={() => setView("grid")}
-                aria-label="Grid view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-            </Tooltip>
-            <Tooltip content="List view" side="bottom">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "h-8 px-2 w-10 md:w-auto",
-                  view === "list" &&
-                    "bg-background shadow-sm hover:bg-background",
-                )}
-                onClick={() => setView("list")}
-                aria-label="List view"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </Tooltip>
-          </div>
+          {projects.length > 0 && (
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-1 shrink-0">
+              <Tooltip content="Grid view" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-8 px-2 w-10 md:w-auto",
+                    view === "grid" &&
+                      "bg-background shadow-sm hover:bg-background",
+                  )}
+                  onClick={() => setView("grid")}
+                  aria-label="Grid view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="List view" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-8 px-2 w-10 md:w-auto",
+                    view === "list" &&
+                      "bg-background shadow-sm hover:bg-background",
+                  )}
+                  onClick={() => setView("list")}
+                  aria-label="List view"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </Tooltip>
+            </div>
+          )}
         </div>
 
         {view === "grid" ? (

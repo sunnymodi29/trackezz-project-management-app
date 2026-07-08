@@ -79,20 +79,22 @@ export function InboxView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-border p-1">
-            <FilterTab
-              active={filter === "all"}
-              onClick={() => setFilter("all")}
-            >
-              All
-            </FilterTab>
-            <FilterTab
-              active={filter === "unread"}
-              onClick={() => setFilter("unread")}
-            >
-              Unread
-            </FilterTab>
-          </div>
+          {notifications.length > 0 && (
+            <div className="flex rounded-lg border border-border p-1">
+              <FilterTab
+                active={filter === "all"}
+                onClick={() => setFilter("all")}
+              >
+                All
+              </FilterTab>
+              <FilterTab
+                active={filter === "unread"}
+                onClick={() => setFilter("unread")}
+              >
+                Unread
+              </FilterTab>
+            </div>
+          )}
           {unreadCount > 0 && (
             <Button
               variant="outline"
