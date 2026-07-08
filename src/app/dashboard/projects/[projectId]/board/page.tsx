@@ -35,6 +35,7 @@ import { Avatar, AvatarGroup, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { Plus, MessageSquare, Paperclip, GripVertical } from "lucide-react";
 import IssueDrawer from "@/components/issue-drawer";
+import { statusColorWithAlpha } from "@/lib/projects/workflow-status";
 
 interface BoardColumn {
   id: string;
@@ -252,7 +253,7 @@ function KanbanColumn({
   return (
     <div
       className="flex w-[min(82vw,18rem)] shrink-0 flex-col rounded-xl border bg-muted/30 sm:w-72"
-      style={{ borderColor: `${column.color}50` }}
+      style={{ borderColor: statusColorWithAlpha(column.color, 0.5) }}
       data-column-id={column.id}
     >
       <div className="flex items-center justify-between px-3 py-3">

@@ -67,10 +67,94 @@ export function workflowStatusSelectOptions(
   }));
 }
 
+export function statusColorWithAlpha(color: string, alpha = 0.082): string {
+  const trimmed = color.trim();
+
+  if (trimmed.startsWith("#")) {
+    const hex = trimmed.slice(1);
+    const normalized =
+      hex.length === 3
+        ? hex
+            .split("")
+            .map((char) => char + char)
+            .join("")
+        : hex.slice(0, 6);
+
+    if (normalized.length === 6) {
+      const r = Number.parseInt(normalized.slice(0, 2), 16);
+      const g = Number.parseInt(normalized.slice(2, 4), 16);
+      const b = Number.parseInt(normalized.slice(4, 6), 16);
+      if (!Number.isNaN(r) && !Number.isNaN(g) && !Number.isNaN(b)) {
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+    }
+  }
+
+  if (trimmed.startsWith("hsl(")) {
+    return trimmed.replace(/^hsl\((.+)\)$/, `hsla($1, ${alpha})`);
+  }
+
+  if (trimmed.startsWith("hsla(")) {
+    return trimmed;
+  }
+
+  return `color-mix(in srgb, ${trimmed} ${alpha * 100}%, transparent)`;
+}
+
 export function randomStatusColor(): string {
   const hue = Math.floor(Math.random() * 360);
   const saturation = 55 + Math.floor(Math.random() * 25);
   const lightness = 48 + Math.floor(Math.random() * 12);
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const saturation = s / 100;
+  const lightness = l / 100;
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const huePrime = h / 60;
+  const x = chroma * (1 - Math.abs((huePrime % 2) - 1));
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (huePrime >= 0 && huePrime < 1) [r, g, b] = [chroma, x, 0];
+  else if (huePrime < 2) [r, g, b] = [x, chroma, 0];
+  else if (huePrime < 3) [r, g, b] = [0, chroma, x];
+  else if (huePrime < 4) [r, g, b] = [0, x, chroma];
+  else if (huePrime < 5) [r, g, b] = [x, 0, chroma];
+  else [r, g, b] = [chroma, 0, x];
+
+  const m = lightness - chroma / 2;
+  const toHex = (value: number) =>
+    Math.round((value + m) * 255)
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+export function colorToHex(color: string): string {
+  const trimmed = color.trim();
+
+  if (trimmed.startsWith("#")) {
+    if (trimmed.length === 4) {
+      return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+    }
+    return trimmed.slice(0, 7);
+  }
+
+  const hslMatch = trimmed.match(
+    /^hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)$/,
+  );
+  if (hslMatch) {
+    return hslToHex(
+      Number(hslMatch[1]),
+      Number(hslMatch[2]),
+      Number(hslMatch[3]),
+    );
+  }
+
+  return "#71717a";
 }
 

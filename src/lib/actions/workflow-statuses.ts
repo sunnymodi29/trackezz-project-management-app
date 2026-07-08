@@ -100,25 +100,33 @@ export async function createWorkflowStatus(
 export async function updateWorkflowStatus(
   projectId: string,
   statusKey: string,
-  input: { label: string },
+  input: { label?: string; color?: string },
 ): Promise<WorkflowStatus> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  const label = input.label.trim();
-  if (!label) throw new Error("Status label is required");
+  const label = input.label?.trim();
+  const color = input.color?.trim();
+  if (!label && !color) throw new Error("Nothing to update");
 
-  await requireStatusManager(projectId, session.user.id);
+  const { orgSlug, projectKey } = await requireStatusManager(
+    projectId,
+    session.user.id,
+  );
 
   const existing = await prisma.workflowStatus.findUnique({
     where: { projectId_key: { projectId, key: statusKey } },
   });
   if (!existing) throw new Error("NOT_FOUND: Status not found");
-  if (existing.label === label) return serializeWorkflowStatus(existing);
+
+  const data: { label?: string; color?: string } = {};
+  if (label && label !== existing.label) data.label = label;
+  if (color && color !== existing.color) data.color = color;
+  if (Object.keys(data).length === 0) return serializeWorkflowStatus(existing);
 
   const row = await prisma.workflowStatus.update({
     where: { id: existing.id },
-    data: { label },
+    data,
     select: {
       id: true,
       projectId: true,
@@ -130,6 +138,7 @@ export async function updateWorkflowStatus(
     },
   });
 
+  after(() => revalidateWorkflowViews(projectKey, session.user.id, orgSlug));
   return serializeWorkflowStatus(row);
 }
 

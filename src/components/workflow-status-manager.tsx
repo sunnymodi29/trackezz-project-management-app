@@ -1,8 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X, Plus, Trash2, ListOrdered, Pencil, Check } from "lucide-react";
-import { Button, Input } from "@/components/ui";
+import {
+  X,
+  Plus,
+  Trash2,
+  ListOrdered,
+  Pencil,
+  Check,
+  Shuffle,
+} from "lucide-react";
+import { Button, Input, Tooltip } from "@/components/ui";
+import { StatusBadge } from "@/components/ui/issue-badges";
 import { useDataStore } from "@/store/data-store";
 import { canManageProject } from "@/lib/permissions/client";
 import {
@@ -11,7 +20,12 @@ import {
   updateWorkflowStatus,
 } from "@/lib/actions/workflow-statuses";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
-import { randomStatusColor, sortWorkflowStatuses } from "@/lib/projects/workflow-status";
+import {
+  colorToHex,
+  randomStatusColor,
+  sortWorkflowStatuses,
+  statusColorWithAlpha,
+} from "@/lib/projects/workflow-status";
 import { cn } from "@/lib/utils";
 import type { WorkflowStatus } from "@/types";
 
@@ -45,9 +59,12 @@ export function WorkflowStatusManager({
 
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState("");
+  const [addColor, setAddColor] = useState(() => randomStatusColor());
   const [adding, setAdding] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [colorEditingKey, setColorEditingKey] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
+  const [editColor, setEditColor] = useState("");
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   if (!canManage) return null;
@@ -62,12 +79,13 @@ export function WorkflowStatusManager({
       projectId,
       key: slugifyPreview(trimmed),
       label: trimmed,
-      color: randomStatusColor(),
+      color: addColor,
       position: statuses.length,
       createdAt: new Date(),
     };
     upsertWorkflowStatus(optimistic);
     setLabel("");
+    setAddColor(randomStatusColor());
     try {
       const created = await createWorkflowStatus(projectId, {
         label: trimmed,
@@ -82,15 +100,30 @@ export function WorkflowStatusManager({
     }
   };
 
-  const startEdit = (statusKey: string, currentLabel: string) => {
-    setEditingKey(statusKey);
-    setEditLabel(currentLabel);
+  const startEdit = (status: WorkflowStatus) => {
+    setEditingKey(status.key);
+    setEditLabel(status.label);
+    setEditColor(status.color);
+    setColorEditingKey(null);
+    setDeletingKey(null);
+  };
+
+  const startColorEdit = (status: WorkflowStatus) => {
+    setColorEditingKey(status.key);
+    setEditColor(status.color);
+    setEditingKey(null);
     setDeletingKey(null);
   };
 
   const cancelEdit = () => {
     setEditingKey(null);
     setEditLabel("");
+    setEditColor("");
+  };
+
+  const cancelColorEdit = () => {
+    setColorEditingKey(null);
+    setEditColor("");
   };
 
   const handleSaveEdit = async (statusKey: string) => {
@@ -99,23 +132,50 @@ export function WorkflowStatusManager({
 
     const current = statuses.find((s) => s.key === statusKey);
     if (!current) return;
-    if (current.label === trimmed) {
+    if (current.label === trimmed && current.color === editColor) {
       cancelEdit();
       return;
     }
 
-    upsertWorkflowStatus({ ...current, label: trimmed });
+    const optimistic = { ...current, label: trimmed, color: editColor };
+    upsertWorkflowStatus(optimistic);
     cancelEdit();
 
     try {
       const updated = await updateWorkflowStatus(projectId, statusKey, {
         label: trimmed,
+        color: editColor,
       });
       upsertWorkflowStatus(updated);
     } catch {
       upsertWorkflowStatus(current);
       setEditingKey(statusKey);
       setEditLabel(trimmed);
+      setEditColor(editColor);
+    }
+  };
+
+  const handleSaveColor = async (statusKey: string) => {
+    const current = statuses.find((s) => s.key === statusKey);
+    if (!current) return;
+    if (current.color === editColor) {
+      cancelColorEdit();
+      return;
+    }
+
+    const optimistic = { ...current, color: editColor };
+    upsertWorkflowStatus(optimistic);
+    cancelColorEdit();
+
+    try {
+      const updated = await updateWorkflowStatus(projectId, statusKey, {
+        color: editColor,
+      });
+      upsertWorkflowStatus(updated);
+    } catch {
+      upsertWorkflowStatus(current);
+      setColorEditingKey(statusKey);
+      setEditColor(editColor);
     }
   };
 
@@ -125,6 +185,7 @@ export function WorkflowStatusManager({
       patchIssueStatusBulk(projectId, statusKey, migrateToKey);
       removeWorkflowStatus(projectId, statusKey);
       if (editingKey === statusKey) cancelEdit();
+      if (colorEditingKey === statusKey) cancelColorEdit();
     } finally {
       setDeletingKey(null);
     }
@@ -149,7 +210,7 @@ export function WorkflowStatusManager({
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-2xl">
+          <div className="relative z-10 w-full max-w-md rounded-xl animate-scale-in border border-border bg-card shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">
@@ -176,18 +237,50 @@ export function WorkflowStatusManager({
                   className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
                 >
                   {editingKey === s.key ? (
-                    <Input
-                      value={editLabel}
-                      onChange={(e) => setEditLabel(e.target.value)}
-                      className="h-7 text-xs flex-1"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") void handleSaveEdit(s.key);
-                        if (e.key === "Escape") cancelEdit();
-                      }}
-                    />
+                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                      <StatusColorPicker
+                        value={editColor}
+                        onChange={setEditColor}
+                      />
+                      <Input
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        className="h-7 text-xs flex-1 min-w-0"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void handleSaveEdit(s.key);
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                      />
+                      <StatusBadge
+                        status={s.key}
+                        label={editLabel.trim() || s.label}
+                        color={editColor}
+                        backgroundColor={statusColorWithAlpha(editColor, 0.082)}
+                        borderColor={statusColorWithAlpha(editColor, 0.25)}
+                      />
+                    </div>
+                  ) : colorEditingKey === s.key ? (
+                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                      <StatusColorPicker
+                        value={editColor}
+                        onChange={setEditColor}
+                      />
+                      <StatusBadge
+                        status={s.key}
+                        label={s.label}
+                        color={editColor}
+                        backgroundColor={statusColorWithAlpha(editColor, 0.082)}
+                        borderColor={statusColorWithAlpha(editColor, 0.25)}
+                      />
+                    </div>
                   ) : (
-                    <ProjectStatusBadge projectId={projectId} status={s.key} />
+                    <ProjectStatusBadge
+                      projectId={projectId}
+                      status={s.key}
+                      backgroundColor={statusColorWithAlpha(s.color, 0.082)}
+                      borderColor={statusColorWithAlpha(s.color, 0.25)}
+                    />
                   )}
 
                   {statuses.length > 1 && (
@@ -208,6 +301,25 @@ export function WorkflowStatusManager({
                             className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                             aria-label="Cancel edit"
                             onClick={cancelEdit}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      ) : colorEditingKey === s.key ? (
+                        <>
+                          <button
+                            type="button"
+                            className="rounded p-1 text-muted-foreground hover:not-disabled:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                            aria-label="Save color"
+                            onClick={() => void handleSaveColor(s.key)}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                            aria-label="Cancel color edit"
+                            onClick={cancelColorEdit}
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -233,11 +345,26 @@ export function WorkflowStatusManager({
                         </>
                       ) : (
                         <>
+                          {/* <button
+                            type="button"
+                            className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border transition-opacity hover:opacity-80"
+                            style={{
+                              backgroundColor: statusColorWithAlpha(s.color, 0.082),
+                              borderColor: statusColorWithAlpha(s.color, 0.25),
+                            }}
+                            aria-label={`Change color for ${s.label}`}
+                            onClick={() => startColorEdit(s)}
+                          >
+                            <span
+                              className="absolute inset-1 rounded-full"
+                              style={{ backgroundColor: s.color }}
+                            />
+                          </button> */}
                           <button
                             type="button"
                             className="rounded p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                             aria-label={`Edit ${s.label}`}
-                            onClick={() => startEdit(s.key, s.label)}
+                            onClick={() => startEdit(s)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -248,6 +375,7 @@ export function WorkflowStatusManager({
                             onClick={() => {
                               setDeletingKey(s.key);
                               cancelEdit();
+                              cancelColorEdit();
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -264,15 +392,28 @@ export function WorkflowStatusManager({
               <p className="text-xs font-medium text-muted-foreground">
                 Add status
               </p>
-              <Input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder="e.g. QA, Blocked"
-                className="h-8 text-xs"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleAdd();
-                }}
-              />
+              <div className="flex items-center gap-2">
+                <StatusColorPicker value={addColor} onChange={setAddColor} />
+                <Input
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="e.g. QA, Blocked"
+                  className="h-8 text-xs flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleAdd();
+                  }}
+                />
+              </div>
+              {label.trim() && (
+                <StatusBadge
+                  status={slugifyPreview(label.trim())}
+                  label={label.trim()}
+                  color={addColor}
+                  backgroundColor={statusColorWithAlpha(addColor, 0.082)}
+                  borderColor={statusColorWithAlpha(addColor, 0.25)}
+                  className="break-all"
+                />
+              )}
               <Button
                 size="sm"
                 className="w-full gap-1.5"
@@ -287,6 +428,50 @@ export function WorkflowStatusManager({
         </div>
       )}
     </>
+  );
+}
+
+function StatusColorPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (color: string) => void;
+}) {
+  const hexValue = colorToHex(value);
+
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      <label
+        className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-full border border-border"
+        style={{
+          backgroundColor: statusColorWithAlpha(value, 0.082),
+          borderColor: statusColorWithAlpha(value, 0.25),
+        }}
+        aria-label="Choose status color"
+      >
+        <span
+          className="absolute inset-1 rounded-full"
+          style={{ backgroundColor: value }}
+        />
+        <input
+          type="color"
+          value={hexValue}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        />
+      </label>
+      <Tooltip content="Random color">
+        <button
+          type="button"
+          className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          aria-label="Random color"
+          onClick={() => onChange(randomStatusColor())}
+        >
+          <Shuffle className="h-3.5 w-3.5" />
+        </button>
+      </Tooltip>
+    </div>
   );
 }
 

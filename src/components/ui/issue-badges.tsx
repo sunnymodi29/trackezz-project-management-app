@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { statusColorWithAlpha } from "@/lib/projects/workflow-status";
 import type { Priority, IssueType, IssueStatus, Severity } from "@/types";
 import {
   AlertCircle, ArrowUp, ArrowDown, Minus, ChevronDown,
@@ -51,11 +52,15 @@ export function StatusBadge({
   status,
   label,
   color,
+  backgroundColor,
+  borderColor,
   className: customClass,
 }: {
   status: IssueStatus;
   label?: string;
   color?: string;
+  backgroundColor?: string;
+  borderColor?: string;
   className?: string;
 }) {
   const fallback = statusConfig[status] ?? statusConfig.backlog;
@@ -70,8 +75,8 @@ export function StatusBadge({
         )}
         style={{
           color,
-          borderColor: `${color}40`,
-          backgroundColor: `${color}15`,
+          borderColor: borderColor ?? statusColorWithAlpha(color, 0.25),
+          backgroundColor: backgroundColor ?? statusColorWithAlpha(color, 0.082),
         }}
       >
         <span
