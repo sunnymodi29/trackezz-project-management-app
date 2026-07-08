@@ -94,16 +94,16 @@ export function ManageSubscriptionSettings({
     setDetails(next);
   };
 
-  const applyBillingUpdate = (updated: BillingStatus) => {
+  const patchBillingState = (updated: BillingStatus) => {
     patchBilling(updated);
-    router.refresh();
   };
 
   const refreshStatus = async () => {
     setLoading("sync");
     try {
       const updated = await refreshBillingFromPaddle();
-      applyBillingUpdate(updated);
+      patchBillingState(updated);
+      router.refresh();
       await refreshDetails();
       toastSuccess("Subscription synced from Paddle.");
     } catch (e) {
@@ -128,7 +128,7 @@ export function ManageSubscriptionSettings({
     setLoading("cancel");
     try {
       const updated = await cancelProSubscription();
-      applyBillingUpdate(updated);
+      patchBillingState(updated);
       await refreshDetails();
       setConfirmCancelOpen(false);
       toastSuccess("Subscription will cancel at the end of the billing period.");
@@ -143,7 +143,7 @@ export function ManageSubscriptionSettings({
     setLoading("keep");
     try {
       const updated = await keepProSubscription();
-      applyBillingUpdate(updated);
+      patchBillingState(updated);
       await refreshDetails();
       toastSuccess("Your Pro subscription will continue.");
     } catch (e) {
@@ -157,7 +157,7 @@ export function ManageSubscriptionSettings({
     setLoading("resume");
     try {
       const updated = await resumeProSubscription();
-      applyBillingUpdate(updated);
+      patchBillingState(updated);
       await refreshDetails();
       toastSuccess("Subscription resumed.");
     } catch (e) {
@@ -172,12 +172,16 @@ export function ManageSubscriptionSettings({
     setLoading("switch");
     try {
       const updated = await switchProSubscriptionInterval(interval);
-      applyBillingUpdate(updated);
+      patchBillingState(updated);
       await refreshDetails();
       toastSuccess(
         interval === "year"
-          ? "Switched to yearly billing."
-          : "Switched to monthly billing.",
+          ? details.status === "trialing"
+            ? "Switched to yearly billing for the remainder of your trial."
+            : "Yearly billing will take effect on your next renewal."
+          : details.status === "trialing"
+            ? "Switched to monthly billing for the remainder of your trial."
+            : "Monthly billing will take effect on your next renewal.",
       );
     } catch (e) {
       toastError(e, "Could not change billing cycle");
@@ -338,8 +342,10 @@ export function ManageSubscriptionSettings({
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Switch between monthly and yearly billing. Proration is applied
-              immediately when you change plans.
+              Switch between monthly and yearly billing.
+              {details.status === "trialing"
+                ? " Changes apply immediately during your trial."
+                : " Changes take effect on your next renewal."}
             </p>
             <div
               className={billingIntervalToggleContainerClass(isDark)}

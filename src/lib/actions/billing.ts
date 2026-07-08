@@ -546,6 +546,36 @@ const ACTIVE_PADDLE_SUBSCRIPTION_STATUSES = new Set([
   "paused",
 ]);
 
+type PaddleProrationMode =
+  | "do_not_bill"
+  | "full_next_billing_period"
+  | "prorated_next_billing_period"
+  | "prorated_immediately";
+
+function formatPaddleActionError(error: unknown, fallback: string): Error {
+  if (error instanceof Error) {
+    const paddleError = error as Error & {
+      detail?: string;
+      errors?: Array<{ detail?: string; message?: string }>;
+    };
+    const detail =
+      paddleError.detail?.trim() ||
+      paddleError.errors?.find((entry) => entry.detail?.trim())?.detail?.trim() ||
+      paddleError.errors?.find((entry) => entry.message?.trim())?.message?.trim();
+    if (detail) return new Error(detail);
+    if (paddleError.message.trim()) return paddleError;
+  }
+
+  return new Error(fallback);
+}
+
+function prorationModeForIntervalSwitch(
+  status: PaddleSubscription["status"],
+): PaddleProrationMode {
+  if (status === "trialing") return "do_not_bill";
+  return "full_next_billing_period";
+}
+
 async function revalidateBillingContext(
   organizationId: string,
   userId: string,
@@ -688,30 +718,44 @@ export async function switchProSubscriptionInterval(
   interval: "month" | "year",
 ): Promise<BillingStatus> {
   const { session, org } = await requireOrgOwnerBillingContext();
-  const subscription = await getOrgPaddleSubscription(org);
-  const currentInterval = resolveSubscriptionInterval(subscription);
 
-  if (currentInterval === interval) {
-    throw new Error(
-      `This subscription is already on ${interval === "year" ? "yearly" : "monthly"} billing`,
+  try {
+    const subscription = await getOrgPaddleSubscription(org);
+    const currentInterval = resolveSubscriptionInterval(subscription);
+
+    if (currentInterval === interval) {
+      throw new Error(
+        `This subscription is already on ${interval === "year" ? "yearly" : "monthly"} billing`,
+      );
+    }
+
+    if (subscription.scheduledChange?.action === "cancel") {
+      throw new Error(
+        "Remove the scheduled cancellation before changing billing cycle.",
+      );
+    }
+
+    const activeItem =
+      subscription.items?.find((item) => item.status === "active") ??
+      subscription.items?.[0];
+    const paddle = getPaddle();
+
+    const updated = await paddle.subscriptions.update(subscription.id, {
+      items: [
+        {
+          priceId: proPriceId(interval),
+          quantity: activeItem?.quantity ?? 1,
+        },
+      ],
+      prorationBillingMode: prorationModeForIntervalSwitch(subscription.status),
+    });
+
+    await syncPaddleSubscriptionToOrg(updated, org.id);
+    return finalizeBillingMutation(org.id, session.user.id!, org.slug);
+  } catch (error) {
+    throw formatPaddleActionError(
+      error,
+      "Could not change billing cycle. Try again or refresh subscription status.",
     );
   }
-
-  const activeItem =
-    subscription.items?.find((item) => item.status === "active") ??
-    subscription.items?.[0];
-  const paddle = getPaddle();
-
-  const updated = await paddle.subscriptions.update(subscription.id, {
-    items: [
-      {
-        priceId: proPriceId(interval),
-        quantity: activeItem?.quantity ?? 1,
-      },
-    ],
-    prorationBillingMode: "prorated_immediately",
-  });
-
-  await syncPaddleSubscriptionToOrg(updated, org.id);
-  return finalizeBillingMutation(org.id, session.user.id!, org.slug);
 }
