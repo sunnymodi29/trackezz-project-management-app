@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Check,
+  ChevronRight,
   CreditCard,
-  ExternalLink,
   Loader2,
   RefreshCw,
   Sparkles,
   Zap,
 } from "lucide-react";
+import { DashboardLink } from "@/components/dashboard-link";
 import {
   Badge,
   Button,
@@ -22,7 +23,6 @@ import {
 import { useDataStore } from "@/store/data-store";
 import {
   confirmProCheckout,
-  createBillingPortalSession,
   createProCheckoutSession,
   getProPlanPricing,
   refreshBillingFromPaddle,
@@ -51,9 +51,7 @@ export function BillingSettings() {
   const searchParams = useSearchParams();
   const { billing, organization, patchBilling } = useDataStore();
   const [interval, setInterval] = useState<BillingInterval>("month");
-  const [loading, setLoading] = useState<"checkout" | "portal" | "sync" | null>(
-    null,
-  );
+  const [loading, setLoading] = useState<"checkout" | "sync" | null>(null);
   const [proPricing, setProPricing] = useState<ProPlanPricing>(
     DEFAULT_PRO_PLAN_PRICING,
   );
@@ -239,17 +237,6 @@ export function BillingSettings() {
     }
   };
 
-  const openPortal = async () => {
-    setLoading("portal");
-    try {
-      const { url } = await createBillingPortalSession();
-      window.location.href = url;
-    } catch (e) {
-      toastError(e, "Could not open billing portal");
-      setLoading(null);
-    }
-  };
-
   const refreshStatus = async () => {
     setLoading("sync");
     try {
@@ -329,22 +316,13 @@ export function BillingSettings() {
             </div>
 
             {isPro && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={openPortal}
-                disabled={loading !== null}
-                className="w-full sm:w-auto shrink-0"
+              <DashboardLink
+                href="/dashboard/settings/subscription"
+                className="inline-flex h-9 min-h-8 w-full sm:w-auto shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-border bg-transparent px-4 text-sm font-medium transition-all duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:min-h-0"
               >
-                {loading === "portal" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    Manage subscription
-                    <ExternalLink className="h-3.5 w-3.5 opacity-60" />
-                  </>
-                )}
-              </Button>
+                Manage subscription
+                <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+              </DashboardLink>
             )}
           </div>
 

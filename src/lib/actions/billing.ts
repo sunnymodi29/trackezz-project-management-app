@@ -32,6 +32,7 @@ import {
   syncPaddleSubscriptionById,
   syncPaddleSubscriptionToOrg,
 } from "@/lib/billing/sync-paddle-subscription";
+import type { Subscription as PaddleSubscription } from "@paddle/paddle-node-sdk";
 import { clearLegacyStripeBillingData } from "@/lib/billing/clear-legacy-stripe-billing";
 import {
   isPaddleCustomerId,
@@ -518,4 +519,199 @@ export async function redirectToProCheckout(interval: "month" | "year") {
 export async function redirectToBillingPortal() {
   const { url } = await createBillingPortalSession();
   redirect(url);
+}
+
+export type SubscriptionScheduledChange = {
+  action: "cancel" | "pause" | "resume";
+  effectiveAt: string;
+  resumeAt: string | null;
+};
+
+export type SubscriptionManagementDetails = {
+  interval: "month" | "year";
+  status: string;
+  currentPeriodEnd: string | null;
+  nextBilledAt: string | null;
+  priceFormatted: string;
+  currencyCode: string;
+  scheduledChange: SubscriptionScheduledChange | null;
+  canceledAt: string | null;
+  pausedAt: string | null;
+};
+
+const ACTIVE_PADDLE_SUBSCRIPTION_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+  "paused",
+]);
+
+async function revalidateBillingContext(
+  organizationId: string,
+  userId: string,
+  organizationSlug: string,
+) {
+  await invalidateBootstrapForOrganization(organizationId);
+  await invalidateBootstrapForUser(userId, organizationSlug);
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/settings/subscription");
+}
+
+async function finalizeBillingMutation(
+  organizationId: string,
+  userId: string,
+  organizationSlug: string,
+): Promise<BillingStatus> {
+  await revalidateBillingContext(organizationId, userId, organizationSlug);
+  const snapshot = await getOrgBillingSnapshot(organizationId);
+  return toBillingSnapshot(snapshot, true);
+}
+
+function resolveSubscriptionInterval(
+  subscription: PaddleSubscription,
+): "month" | "year" {
+  const activeItem =
+    subscription.items?.find((item) => item.status === "active") ??
+    subscription.items?.[0];
+  const priceId = activeItem?.price?.id;
+
+  if (priceId === proPriceId("year")) return "year";
+  if (priceId === proPriceId("month")) return "month";
+
+  return subscription.billingCycle?.interval === "year" ? "year" : "month";
+}
+
+function toScheduledChange(
+  subscription: PaddleSubscription,
+): SubscriptionScheduledChange | null {
+  const scheduled = subscription.scheduledChange;
+  if (!scheduled?.action || !scheduled.effectiveAt) return null;
+
+  return {
+    action: scheduled.action,
+    effectiveAt: scheduled.effectiveAt,
+    resumeAt: scheduled.resumeAt ?? null,
+  };
+}
+
+function toSubscriptionManagementDetails(
+  subscription: PaddleSubscription,
+): SubscriptionManagementDetails {
+  const activeItem =
+    subscription.items?.find((item) => item.status === "active") ??
+    subscription.items?.[0];
+  const unitPrice = activeItem?.price?.unitPrice;
+  const currencyCode = unitPrice?.currencyCode ?? "USD";
+  const amount = unitPrice?.amount;
+  const priceFormatted =
+    amount != null
+      ? formatMinorUnitMoney(amount, currencyCode).formatted
+      : "—";
+
+  return {
+    interval: resolveSubscriptionInterval(subscription),
+    status: subscription.status,
+    currentPeriodEnd: subscription.currentBillingPeriod?.endsAt ?? null,
+    nextBilledAt: subscription.nextBilledAt ?? null,
+    priceFormatted,
+    currencyCode,
+    scheduledChange: toScheduledChange(subscription),
+    canceledAt: subscription.canceledAt ?? null,
+    pausedAt: subscription.pausedAt ?? null,
+  };
+}
+
+async function getOrgPaddleSubscription(
+  org: NonNullable<Awaited<ReturnType<typeof getActiveOrganizationForBilling>>>,
+): Promise<PaddleSubscription> {
+  const paddle = getPaddle();
+  const subscriptionId = org.subscription?.paddleSubscriptionId;
+
+  if (!subscriptionId || !isPaddleSubscriptionId(subscriptionId)) {
+    throw new Error("No Pro subscription found for this organization");
+  }
+
+  const subscription = await paddle.subscriptions.get(subscriptionId);
+  if (!ACTIVE_PADDLE_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+    throw new Error("No active Pro subscription found");
+  }
+
+  return subscription;
+}
+
+export async function getSubscriptionManagementDetails(): Promise<SubscriptionManagementDetails> {
+  const { org } = await requireOrgOwnerBillingContext();
+  const subscription = await getOrgPaddleSubscription(org);
+  return toSubscriptionManagementDetails(subscription);
+}
+
+export async function cancelProSubscription(): Promise<BillingStatus> {
+  const { session, org } = await requireOrgOwnerBillingContext();
+  const subscription = await getOrgPaddleSubscription(org);
+  const paddle = getPaddle();
+
+  const updated = await paddle.subscriptions.cancel(subscription.id, {
+    effectiveFrom: "next_billing_period",
+  });
+
+  await syncPaddleSubscriptionToOrg(updated, org.id);
+  return finalizeBillingMutation(org.id, session.user.id!, org.slug);
+}
+
+export async function keepProSubscription(): Promise<BillingStatus> {
+  const { session, org } = await requireOrgOwnerBillingContext();
+  const subscription = await getOrgPaddleSubscription(org);
+  const paddle = getPaddle();
+
+  const updated = await paddle.subscriptions.update(subscription.id, {
+    scheduledChange: null,
+  });
+
+  await syncPaddleSubscriptionToOrg(updated, org.id);
+  return finalizeBillingMutation(org.id, session.user.id!, org.slug);
+}
+
+export async function resumeProSubscription(): Promise<BillingStatus> {
+  const { session, org } = await requireOrgOwnerBillingContext();
+  const subscription = await getOrgPaddleSubscription(org);
+  const paddle = getPaddle();
+
+  const updated = await paddle.subscriptions.resume(subscription.id, {
+    effectiveFrom: "immediately",
+  });
+
+  await syncPaddleSubscriptionToOrg(updated, org.id);
+  return finalizeBillingMutation(org.id, session.user.id!, org.slug);
+}
+
+export async function switchProSubscriptionInterval(
+  interval: "month" | "year",
+): Promise<BillingStatus> {
+  const { session, org } = await requireOrgOwnerBillingContext();
+  const subscription = await getOrgPaddleSubscription(org);
+  const currentInterval = resolveSubscriptionInterval(subscription);
+
+  if (currentInterval === interval) {
+    throw new Error(
+      `This subscription is already on ${interval === "year" ? "yearly" : "monthly"} billing`,
+    );
+  }
+
+  const activeItem =
+    subscription.items?.find((item) => item.status === "active") ??
+    subscription.items?.[0];
+  const paddle = getPaddle();
+
+  const updated = await paddle.subscriptions.update(subscription.id, {
+    items: [
+      {
+        priceId: proPriceId(interval),
+        quantity: activeItem?.quantity ?? 1,
+      },
+    ],
+    prorationBillingMode: "prorated_immediately",
+  });
+
+  await syncPaddleSubscriptionToOrg(updated, org.id);
+  return finalizeBillingMutation(org.id, session.user.id!, org.slug);
 }
