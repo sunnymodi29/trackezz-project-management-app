@@ -54,6 +54,22 @@ const POPOVER_ESTIMATED_HEIGHT = 340;
 const GAP = 8;
 const VIEWPORT_PAD = 8;
 
+function todayKey(): string {
+  return toDateKey(new Date());
+}
+
+function monthHasSelectableDay(year: number, monthIndex: number, min?: string): boolean {
+  if (!min) return true;
+  const lastDay = toDateKey(endOfMonth(new Date(year, monthIndex, 1)));
+  return lastDay >= min;
+}
+
+function clampViewMonth(month: Date, min?: string): Date {
+  if (!min) return month;
+  const minMonth = startOfMonth(dateFromKey(min));
+  return month.getTime() < minMonth.getTime() ? minMonth : month;
+}
+
 function yearRange(min?: string, max?: string): number[] {
   const current = new Date().getFullYear();
   let start = current - 20;
@@ -105,6 +121,7 @@ export interface DatePickerProps {
   clearable?: boolean;
   min?: string;
   max?: string;
+  disablePast?: boolean;
   className?: string;
   triggerClassName?: string;
   id?: string;
@@ -118,6 +135,7 @@ export function DatePicker({
   clearable = true,
   min,
   max,
+  disablePast = true,
   className,
   triggerClassName,
   id,
@@ -134,18 +152,39 @@ export function DatePicker({
   });
 
   const selectedDate = value ? dateFromKey(value) : null;
-  const years = useMemo(() => yearRange(min, max), [min, max]);
 
-  const monthOptions = useMemo(
-    () =>
-      MONTHS.map((month, index) => ({ value: String(index), label: month })),
-    [],
-  );
+  const effectiveMin = useMemo(() => {
+    if (!disablePast) return min;
+    const today = todayKey();
+    if (!min || min < today) return today;
+    return min;
+  }, [disablePast, min]);
+
+  const years = useMemo(() => {
+    const list = yearRange(effectiveMin, max);
+    if (!effectiveMin) return list;
+    const minYear = dateFromKey(effectiveMin).getFullYear();
+    return list.filter((year) => year >= minYear);
+  }, [effectiveMin, max]);
+
+  const monthOptions = useMemo(() => {
+    const viewYear = viewMonth.getFullYear();
+    return MONTHS.map((month, index) => ({ value: String(index), label: month })).filter(
+      (_, index) => monthHasSelectableDay(viewYear, index, effectiveMin),
+    );
+  }, [effectiveMin, viewMonth]);
 
   const yearOptions = useMemo(
     () => years.map((year) => ({ value: String(year), label: String(year) })),
     [years],
   );
+
+  const minMonth = effectiveMin
+    ? startOfMonth(dateFromKey(effectiveMin))
+    : null;
+  const canGoToPreviousMonth =
+    !minMonth ||
+    startOfMonth(subMonths(viewMonth, 1)).getTime() >= minMonth.getTime();
 
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 });
@@ -220,15 +259,15 @@ export function DatePicker({
 
   const handleSelectDay = (day: Date) => {
     const key = toDateKey(day);
-    if (!isDateKeyInRange(key, min, max)) return;
+    if (!isDateKeyInRange(key, effectiveMin, max)) return;
     onChange(key);
     setIsOpen(false);
     setPositioned(false);
   };
 
   const handleToday = () => {
-    const key = toDateKey(new Date());
-    if (!isDateKeyInRange(key, min, max)) return;
+    const key = todayKey();
+    if (!isDateKeyInRange(key, effectiveMin, max)) return;
     onChange(key);
     setViewMonth(startOfMonth(new Date()));
     setIsOpen(false);
@@ -260,8 +299,11 @@ export function DatePicker({
       <div className="flex items-center justify-between gap-1 border-b border-border px-2 py-2">
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
-          onClick={() => setViewMonth((m) => subMonths(m, 1))}
+          className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent sm:h-7 sm:w-7"
+          onClick={() =>
+            setViewMonth((m) => clampViewMonth(subMonths(m, 1), effectiveMin))
+          }
+          disabled={!canGoToPreviousMonth}
           aria-label="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -272,7 +314,12 @@ export function DatePicker({
             options={monthOptions}
             value={String(viewMonth.getMonth())}
             onChange={(val) =>
-              setViewMonth((m) => new Date(m.getFullYear(), Number(val), 1))
+              setViewMonth((m) =>
+                clampViewMonth(
+                  new Date(m.getFullYear(), Number(val), 1),
+                  effectiveMin,
+                ),
+              )
             }
             className="min-w-0 flex-1 max-w-[120px]"
             triggerClassName="h-10 px-2 text-xs font-medium border-border bg-card/50 shadow-none sm:h-7"
@@ -282,7 +329,12 @@ export function DatePicker({
             options={yearOptions}
             value={String(viewMonth.getFullYear())}
             onChange={(val) =>
-              setViewMonth((m) => new Date(Number(val), m.getMonth(), 1))
+              setViewMonth((m) =>
+                clampViewMonth(
+                  new Date(Number(val), m.getMonth(), 1),
+                  effectiveMin,
+                ),
+              )
             }
             className="w-[76px] shrink-0"
             triggerClassName="h-10 px-2 text-xs font-medium border-border bg-card/50 shadow-none sm:h-7"
@@ -317,7 +369,7 @@ export function DatePicker({
           const inMonth = isSameMonth(day, viewMonth);
           const selected = selectedDate ? isSameDay(day, selectedDate) : false;
           const today = isToday(day);
-          const outOfRange = !isDateKeyInRange(key, min, max);
+          const outOfRange = !isDateKeyInRange(key, effectiveMin, max);
 
           return (
             <button
@@ -327,7 +379,7 @@ export function DatePicker({
               onClick={() => handleSelectDay(day)}
               className={cn(
                 "flex h-10 w-full items-center justify-center rounded-md text-sm transition-colors sm:h-8 sm:text-xs",
-                !inMonth && "text-muted-foreground/50",
+                !inMonth && "text-muted-foreground/80 hover:bg-accent",
                 inMonth &&
                   !selected &&
                   !today &&
@@ -338,7 +390,7 @@ export function DatePicker({
                 selected &&
                   "bg-primary font-semibold text-primary-foreground hover:bg-primary/90",
                 outOfRange &&
-                  "cursor-not-allowed opacity-30 hover:bg-transparent",
+                  "cursor-not-allowed opacity-15 hover:bg-transparent",
               )}
             >
               {format(day, "d")}
@@ -378,8 +430,12 @@ export function DatePicker({
         onClick={() => {
           if (disabled) return;
           setIsOpen((open) => {
-            if (!open) setPositioned(false);
-            return !open;
+            if (!open) {
+              setPositioned(false);
+              setViewMonth((m) => clampViewMonth(m, effectiveMin));
+              return true;
+            }
+            return false;
           });
         }}
         className={cn(

@@ -130,6 +130,7 @@ export function SprintFormModal({
                 }}
                 disabled={loading}
                 clearable={false}
+                disablePast={!isEdit}
                 max={endDate || undefined}
               />
             </div>
@@ -140,6 +141,7 @@ export function SprintFormModal({
                 onChange={setEndDate}
                 disabled={loading}
                 clearable={false}
+                disablePast={!isEdit}
                 min={startDate || undefined}
               />
             </div>
